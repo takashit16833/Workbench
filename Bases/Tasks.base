@@ -18,6 +18,9 @@ properties:
 views:
   - type: tasknotesTaskList
     name: Tasks
+    groupBy:
+      property: note.projects
+      direction: ASC
     order:
       - status
       - priority
