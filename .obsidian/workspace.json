@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "ONBOARDING.md",
+                "file": "Dashboard.md",
                 "mode": "preview",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "ONBOARDING"
+              "title": "Dashboard"
             }
           }
         ]
@@ -195,12 +195,13 @@
   },
   "active": "adf4d25401d19b67",
   "lastOpenFiles": [
+    "Tasks.base",
     "Dashboard.md",
-    "ONBOARDING.md",
+    "ARCHITECTURE.md",
     "README.md",
+    "ONBOARDING.md",
     "Scopes/Personal.md",
     "Tasks/牛乳を二本買うPersonal.md",
-    "Tasks.base",
     "Tasks/牛乳を買う.md",
     "TaskNotes/Start Here.md",
     "TaskNotes/Views/relationships.base",
@@ -218,7 +219,6 @@
     "FileClasses/Scope.md",
     "FileClasses/Note.md",
     "FileClasses/Idea.md",
-    "ARCHITECTURE.md",
     "AGENTS.md"
   ]
 }
