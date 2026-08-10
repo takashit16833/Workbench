@@ -31,6 +31,8 @@ Workbench optimizes for the **next correct action**, not for completeness.
 - TaskNotes provides capture/edit/workflow/Project association/views.
 - Do not use inline tasks as canonical Workbench Tasks.
 - `projects` may contain zero or more Project links.
+- Use TaskNotes' native Subtask relationship when a Task is meaningfully decomposed into child Tasks.
+- TaskNotes may use a parent Task as the child Task's Project anchor internally. Treat this as an implementation detail: user-facing workflow should present the relationship as parent Task -> Subtask, not as an ordinary Project assignment.
 
 ## Idea
 
