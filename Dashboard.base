@@ -1,0 +1,57 @@
+properties:
+  file.name:
+    displayName: Name
+  note.scopes:
+    displayName: Scopes
+  note.review_gate:
+    displayName: Review Gate
+  note.kind:
+    displayName: Kind
+  note.created:
+    displayName: Created
+views:
+  - type: table
+    name: Ideas
+    filters:
+      and:
+        - file.folder == "Ideas"
+        - file.ext == "md"
+    order:
+      - file.name
+      - scopes
+      - review_gate
+      - created
+    columnSize:
+      file.name: 320
+      note.scopes: 220
+      note.review_gate: 420
+      note.created: 140
+  - type: table
+    name: Scopes
+    filters:
+      and:
+        - file.folder == "Scopes"
+        - file.ext == "md"
+        - note.type == "scope"
+    order:
+      - file.name
+      - kind
+      - created
+    columnSize:
+      file.name: 320
+      note.kind: 160
+      note.created: 140
+  - type: table
+    name: Notes
+    filters:
+      and:
+        - file.folder == "Notes"
+        - file.ext == "md"
+    order:
+      - file.name
+      - scopes
+      - created
+    columnSize:
+      file.name: 360
+      note.scopes: 220
+      note.created: 140
