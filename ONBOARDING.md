@@ -57,29 +57,26 @@ Settings -> TaskNotes -> Task Properties -> Priority:
 
 - Default: **No default**
 
-### Scopes
+### Projects
 
-Settings -> TaskNotes -> Task Properties -> Custom User Fields:
+Settings -> TaskNotes -> Task Properties -> Projects:
 
 ```text
-Display Name: Scopes
-Property Name: scopes
-Type: List
-Default: empty
+Property key: projects
+Default projects: empty
 ```
 
-Autosuggestion filters:
+Autosuggest Filters:
 
 ```text
-Include folders: Scopes/
+Include folders: Projects/
 ```
 
 ### Creation modal
 
 Settings -> TaskNotes -> Modal Fields:
 
-1. **Sync user fields** を1回押す
-2. `Show in Creation` を次のようにする
+`Show in Creation` を次のようにします。
 
 ```text
 Basic Information
@@ -90,17 +87,14 @@ Metadata
   すべて       OFF
 
 Organization
-  すべて       OFF
+  Projects     ON
+  その他       OFF
 
 Dependencies
   すべて       OFF
-
-Custom Fields
-  Scopes       ON
-  その他       OFF
 ```
 
-`Scopes` は次の状態にします。
+`Projects` は次の状態にします。
 
 ```text
 Enabled:          ON
@@ -118,17 +112,15 @@ Settings -> Hotkeys:
 
 ## 4. First run
 
-1. `Scopes/` に `Personal` を作る
-2. `Templates/Scope.md` を適用する
-3. `kind: area` にする
-4. **Create new task** で `牛乳を買う` を作る
-5. Scopeを付ける場合は `[[` と入力して `Personal` を選ぶ
-6. [[Dashboard]] で確認する
-7. `Inbox -> Todo -> Doing -> Done` と動かす
+1. `Projects/` に `Personal.md` を作る
+2. **Create new task** で `牛乳を買う` を作る
+3. Projectに `Personal` を選ぶ
+4. [[Dashboard]] で確認する
+5. `Inbox -> Todo -> Doing -> Done` と動かす
 
 ## 使い分け
 
 - Task: やること
 - Idea: 後で再検討すること
 - Note: 保存しておく情報
-- Scope: それらのまとまり
+- Project: それらのまとまり
