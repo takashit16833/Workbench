@@ -4,11 +4,11 @@
     "type": "split",
     "children": [
       {
-        "id": "df6a79caf24652d3",
+        "id": "a127e31c764d54fb",
         "type": "tabs",
         "children": [
           {
-            "id": "325fd0370b27c58c",
+            "id": "9a8e3372fb93d1f1",
             "type": "leaf",
             "state": {
               "type": "markdown",
@@ -176,6 +176,7 @@
   },
   "left-ribbon": {
     "hiddenItems": {
+      "homepage:Open homepage": false,
       "switcher:クイックスイッチャーを開く": false,
       "graph:グラフビューを開く": false,
       "canvas:新規キャンバスを作成": false,
@@ -193,11 +194,12 @@
       "tasknotes:新しいタスクを作成": false
     }
   },
-  "active": "325fd0370b27c58c",
+  "active": "9a8e3372fb93d1f1",
   "lastOpenFiles": [
-    "Bases/Tasks.base",
     "Dashboard.md",
     "ONBOARDING.md",
+    "ARCHITECTURE.md",
+    "Bases/Tasks.base",
     "Ideas/テストプロジェクトのアイデア１.md",
     "Ideas/機能固有エラーをAppErrorへ変換する境界.md",
     "Tasks/テストプロジェクトのタスク２.md",
@@ -212,7 +214,6 @@
     "Tasks/新しいタスク.md",
     "TaskNotes/Start Here.md",
     "AGENTS.md",
-    "ARCHITECTURE.md",
     "README.md",
     "Ideas/機能固有エラーADTにcontext値を直接保持する.md",
     "Tasks/毛布を洗濯する.md",
