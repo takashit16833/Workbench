@@ -1,3 +1,7 @@
+filters:
+  and:
+    - file.folder == "Tasks"
+    - note.status && note.status != "" && note.status != null
 properties:
   file.name:
     displayName: Task
@@ -11,10 +15,6 @@ properties:
     displayName: Due
   note.scheduled:
     displayName: Scheduled
-filters:
-  and:
-    - file.folder == "Tasks"
-    - note.status && note.status != "" && note.status != null
 views:
   - type: tasknotesTaskList
     name: Tasks
