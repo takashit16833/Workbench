@@ -13,10 +13,10 @@ class ScopeSuggestModal extends FuzzySuggestModal {
   constructor(app, scopes) {
     super(app);
     this.scopes = scopes;
+    this.selected = null;
     this.promise = new Promise((resolve) => {
       this.resolve = resolve;
     });
-    this.done = false;
     this.setPlaceholder("Scopeを選択");
   }
 
@@ -29,12 +29,14 @@ class ScopeSuggestModal extends FuzzySuggestModal {
   }
 
   onChooseItem(file) {
-    this.done = true;
-    this.resolve(file);
+    // FuzzySuggestModal is still in the process of closing here.
+    // Resolve only from onClose so the next modal is opened after this one
+    // has fully finished closing.
+    this.selected = file;
   }
 
   onClose() {
-    if (!this.done) this.resolve(null);
+    this.resolve(this.selected);
   }
 }
 
