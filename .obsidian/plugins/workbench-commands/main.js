@@ -6,7 +6,7 @@ const {
   TFile,
 } = require("obsidian");
 
-const DATA_FOLDERS = ["Tasks", "Ideas", "Scopes"];
+const DATA_FOLDERS = ["Tasks", "Ideas", "Projects"];
 const COMPLETED_STATUSES = new Set(["done", "dropped"]);
 
 function makeChoiceRow(container, label, onChoose) {
@@ -22,48 +22,48 @@ function makeChoiceRow(container, label, onChoose) {
   });
 }
 
-class ClearScopeModal extends Modal {
-  constructor(app, plugin, scopes) {
+class ClearProjectModal extends Modal {
+  constructor(app, plugin, projects) {
     super(app);
     this.plugin = plugin;
-    this.scopes = scopes;
+    this.projects = projects;
   }
 
   onOpen() {
-    this.renderScopePicker();
+    this.renderProjectPicker();
   }
 
   onClose() {
     this.contentEl.empty();
   }
 
-  renderScopePicker() {
+  renderProjectPicker() {
     const { contentEl } = this;
     contentEl.empty();
-    contentEl.createEl("h2", { text: "Clear Scope" });
+    contentEl.createEl("h2", { text: "Clear Project" });
 
-    for (const scope of this.scopes) {
-      makeChoiceRow(contentEl, this.plugin.scopeName(scope), () =>
-        this.renderModePicker(scope)
+    for (const project of this.projects) {
+      makeChoiceRow(contentEl, this.plugin.projectName(project), () =>
+        this.renderModePicker(project)
       );
     }
   }
 
-  renderModePicker(scope) {
+  renderModePicker(project) {
     const { contentEl } = this;
     contentEl.empty();
 
-    const current = this.app.vault.getAbstractFileByPath(scope.path);
+    const current = this.app.vault.getAbstractFileByPath(project.path);
     if (!(current instanceof TFile)) {
-      new Notice("Scopeが見つかりません。");
+      new Notice("Projectが見つかりません。");
       this.close();
       return;
     }
 
-    contentEl.createEl("h2", { text: `Clear Scope: ${this.plugin.scopeName(current)}` });
+    contentEl.createEl("h2", { text: `Clear Project: ${this.plugin.projectName(current)}` });
 
     makeChoiceRow(contentEl, "完了のみ", () => {
-      const tasks = this.plugin.completedTasksForScope(current);
+      const tasks = this.plugin.completedTasksForProject(current);
       if (tasks.length === 0) {
         new Notice("完了済みTaskがありません。");
         return;
@@ -76,32 +76,32 @@ class ClearScopeModal extends Modal {
     );
   }
 
-  renderConfirmation(scope, mode) {
+  renderConfirmation(project, mode) {
     const { contentEl } = this;
     contentEl.empty();
 
-    const current = this.app.vault.getAbstractFileByPath(scope.path);
+    const current = this.app.vault.getAbstractFileByPath(project.path);
     if (!(current instanceof TFile)) {
-      new Notice("Scopeが見つかりません。");
+      new Notice("Projectが見つかりません。");
       this.close();
       return;
     }
 
     const completedOnly = mode === "completed";
     const label = completedOnly ? "完了のみ" : "すべて";
-    const { tasks, ideas } = this.plugin.filesForScope(current);
+    const { tasks, ideas } = this.plugin.filesForProject(current);
     const targetTasks = completedOnly
       ? tasks.filter((file) => this.plugin.isCompletedTask(file))
       : tasks;
 
     contentEl.createEl("h2", {
-      text: `Clear Scope: ${this.plugin.scopeName(current)} — ${label}`,
+      text: `Clear Project: ${this.plugin.projectName(current)} — ${label}`,
     });
     contentEl.createEl("p", { text: `Tasks: ${targetTasks.length}` });
 
     if (!completedOnly) {
       contentEl.createEl("p", { text: `Ideas: ${ideas.length}` });
-      contentEl.createEl("p", { text: "Scope: 1" });
+      contentEl.createEl("p", { text: "Project: 1" });
     }
 
     contentEl.createEl("p", { text: "Notesは変更しません。" });
@@ -134,7 +134,7 @@ class ClearScopeModal extends Modal {
           .onClick(async () => {
             if (value !== "RESET") return;
             clearButton.setDisabled(true);
-            await this.plugin.executeClearScope(current, mode);
+            await this.plugin.executeClearProject(current, mode);
             this.close();
           });
       });
@@ -188,7 +188,7 @@ class ClearAllModal extends Modal {
 
     if (!completedOnly) {
       contentEl.createEl("p", { text: `Ideas: ${groups.Ideas.length}` });
-      contentEl.createEl("p", { text: `Scopes: ${groups.Scopes.length}` });
+      contentEl.createEl("p", { text: `Projects: ${groups.Projects.length}` });
     }
 
     contentEl.createEl("p", { text: "Notesは変更しません。" });
@@ -231,9 +231,9 @@ class ClearAllModal extends Modal {
 module.exports = class WorkbenchCommands extends Plugin {
   onload() {
     this.addCommand({
-      id: "clear-scope",
-      name: "Clear Scope",
-      callback: () => this.openClearScope(),
+      id: "clear-project",
+      name: "Clear Project",
+      callback: () => this.openClearProject(),
     });
 
     this.addCommand({
@@ -250,14 +250,14 @@ module.exports = class WorkbenchCommands extends Plugin {
       .filter((file) => file.path.startsWith(prefix));
   }
 
-  scopes() {
-    return this.markdownFilesUnder("Scopes").sort((a, b) =>
+  projects() {
+    return this.markdownFilesUnder("Projects").sort((a, b) =>
       a.path.localeCompare(b.path)
     );
   }
 
-  scopeName(file) {
-    return file.path.replace(/^Scopes\//, "").replace(/\.md$/i, "");
+  projectName(file) {
+    return file.path.replace(/^Projects\//, "").replace(/\.md$/i, "");
   }
 
   taskStatus(file) {
@@ -277,14 +277,14 @@ module.exports = class WorkbenchCommands extends Plugin {
     );
   }
 
-  completedTasksForScope(scope) {
-    return this.filesForScope(scope).tasks.filter((file) =>
+  completedTasksForProject(project) {
+    return this.filesForProject(project).tasks.filter((file) =>
       this.isCompletedTask(file)
     );
   }
 
-  isScopesKey(key) {
-    return key === "scopes" || key.startsWith("scopes.") || key.startsWith("scopes[");
+  isProjectsKey(key) {
+    return key === "projects" || key.startsWith("projects.") || key.startsWith("projects[");
   }
 
   normalizeLinkpath(value) {
@@ -299,21 +299,21 @@ module.exports = class WorkbenchCommands extends Plugin {
     return linkpath.replace(/\.md$/i, "");
   }
 
-  matchesScopeLink(linkpath, sourcePath, scope) {
+  matchesProjectLink(linkpath, sourcePath, project) {
     const normalized = this.normalizeLinkpath(linkpath);
     if (!normalized) return false;
 
     const resolved = this.app.metadataCache.getFirstLinkpathDest(normalized, sourcePath);
-    if (resolved) return resolved.path === scope.path;
+    if (resolved) return resolved.path === project.path;
 
-    const scopePath = scope.path.replace(/\.md$/i, "");
-    return normalized === scopePath || normalized === scope.basename;
+    const projectPath = project.path.replace(/\.md$/i, "");
+    return normalized === projectPath || normalized === project.basename;
   }
 
-  frontmatterScopeLinks(file) {
+  frontmatterProjectLinks(file) {
     const cache = this.app.metadataCache.getFileCache(file);
     return (cache?.frontmatterLinks ?? [])
-      .filter((link) => this.isScopesKey(link.key ?? ""))
+      .filter((link) => this.isProjectsKey(link.key ?? ""))
       .map((link) => link.link)
       .filter(Boolean);
   }
@@ -324,29 +324,29 @@ module.exports = class WorkbenchCommands extends Plugin {
     return [];
   }
 
-  frontmatterScopeValues(file) {
+  frontmatterProjectValues(file) {
     const frontmatter = this.app.metadataCache.getFileCache(file)?.frontmatter;
-    return this.flattenStrings(frontmatter?.scopes);
+    return this.flattenStrings(frontmatter?.projects);
   }
 
-  referencesScope(file, scope) {
-    const cachedLinks = this.frontmatterScopeLinks(file);
-    if (cachedLinks.some((link) => this.matchesScopeLink(link, file.path, scope))) {
+  referencesProject(file, project) {
+    const cachedLinks = this.frontmatterProjectLinks(file);
+    if (cachedLinks.some((link) => this.matchesProjectLink(link, file.path, project))) {
       return true;
     }
 
-    return this.frontmatterScopeValues(file).some((value) =>
-      this.matchesScopeLink(value, file.path, scope)
+    return this.frontmatterProjectValues(file).some((value) =>
+      this.matchesProjectLink(value, file.path, project)
     );
   }
 
-  filesForScope(scope) {
+  filesForProject(project) {
     return {
       tasks: this.markdownFilesUnder("Tasks").filter((file) =>
-        this.referencesScope(file, scope)
+        this.referencesProject(file, project)
       ),
       ideas: this.markdownFilesUnder("Ideas").filter((file) =>
-        this.referencesScope(file, scope)
+        this.referencesProject(file, project)
       ),
     };
   }
@@ -357,19 +357,19 @@ module.exports = class WorkbenchCommands extends Plugin {
     );
   }
 
-  openClearScope() {
-    const scopes = this.scopes();
-    if (scopes.length === 0) {
-      new Notice("Scopeがありません。");
+  openClearProject() {
+    const projects = this.projects();
+    if (projects.length === 0) {
+      new Notice("Projectがありません。");
       return;
     }
 
-    new ClearScopeModal(this.app, this, scopes).open();
+    new ClearProjectModal(this.app, this, projects).open();
   }
 
   openClearAll() {
     const groups = this.allClearGroups();
-    const count = groups.Tasks.length + groups.Ideas.length + groups.Scopes.length;
+    const count = groups.Tasks.length + groups.Ideas.length + groups.Projects.length;
     if (count === 0) {
       new Notice("Clear対象がありません。");
       return;
@@ -407,14 +407,14 @@ module.exports = class WorkbenchCommands extends Plugin {
     new Notice(`${result.moved}件をTrashへ移動しました。`);
   }
 
-  async executeClearScope(scope, mode) {
-    const current = this.app.vault.getAbstractFileByPath(scope.path);
+  async executeClearProject(project, mode) {
+    const current = this.app.vault.getAbstractFileByPath(project.path);
     if (!(current instanceof TFile)) {
-      new Notice("Scopeが見つかりません。");
+      new Notice("Projectが見つかりません。");
       return;
     }
 
-    const { tasks, ideas } = this.filesForScope(current);
+    const { tasks, ideas } = this.filesForProject(current);
     const files = mode === "completed"
       ? tasks.filter((file) => this.isCompletedTask(file))
       : [...tasks, ...ideas, current];
@@ -427,7 +427,7 @@ module.exports = class WorkbenchCommands extends Plugin {
     const groups = this.allClearGroups();
     const files = mode === "completed"
       ? groups.Tasks.filter((file) => this.isCompletedTask(file))
-      : [...groups.Tasks, ...groups.Ideas, ...groups.Scopes];
+      : [...groups.Tasks, ...groups.Ideas, ...groups.Projects];
 
     const result = await this.trash(files);
     this.notifyResult(result);

@@ -2,7 +2,7 @@
 tags:
   - task
 status: todo
-scopes:
+projects:
   - "[[RAGScope]]"
 next_action: 出力境界を確認
 ---

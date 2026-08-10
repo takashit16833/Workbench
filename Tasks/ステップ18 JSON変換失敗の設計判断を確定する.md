@@ -2,7 +2,7 @@
 tags:
   - task
 status: todo
-scopes:
+projects:
   - "[[RAGScope]]"
 next_action: 実装・テスト結果から判断
 ---

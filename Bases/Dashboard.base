@@ -1,12 +1,10 @@
 properties:
   file.name:
     displayName: Name
-  note.scopes:
-    displayName: Scopes
+  note.projects:
+    displayName: Projects
   note.review_gate:
     displayName: Review Gate
-  note.kind:
-    displayName: Kind
   note.created:
     displayName: Created
 views:
@@ -18,25 +16,21 @@ views:
         - file.ext == "md"
     order:
       - file.name
-      - scopes
+      - projects
       - review_gate
       - created
     columnSize:
       file.name: 320
-      note.scopes: 220
+      note.projects: 220
       note.review_gate: 420
       note.created: 140
   - type: table
-    name: Scopes
+    name: Projects
     filters:
       and:
-        - file.folder == "Scopes"
+        - file.folder == "Projects"
         - file.ext == "md"
     order:
       - file.name
-      - kind
-      - created
     columnSize:
       file.name: 320
-      note.kind: 160
-      note.created: 140

@@ -2,7 +2,7 @@
 tags:
   - task
 status: todo
-scopes:
+projects:
   - "[[RAGScope]]"
 next_action: 差分と履歴を確認してPR準備
 ---
