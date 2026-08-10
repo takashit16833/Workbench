@@ -42,6 +42,11 @@ class ClearProjectModal extends Modal {
     contentEl.empty();
     contentEl.createEl("h2", { text: "Clear Project" });
 
+    const unassigned = this.plugin.filesWithoutProject();
+    if (unassigned.tasks.length > 0 || unassigned.ideas.length > 0) {
+      makeChoiceRow(contentEl, "無所属", () => this.renderModePicker(null));
+    }
+
     for (const project of this.projects) {
       makeChoiceRow(contentEl, this.plugin.projectName(project), () =>
         this.renderModePicker(project)
@@ -49,21 +54,33 @@ class ClearProjectModal extends Modal {
     }
   }
 
-  renderModePicker(project) {
-    const { contentEl } = this;
-    contentEl.empty();
+  resolveProject(project) {
+    if (!project) return null;
 
     const current = this.app.vault.getAbstractFileByPath(project.path);
     if (!(current instanceof TFile)) {
       new Notice("Projectが見つかりません。");
       this.close();
-      return;
+      return undefined;
     }
 
-    contentEl.createEl("h2", { text: `Clear Project: ${this.plugin.projectName(current)}` });
+    return current;
+  }
+
+  renderModePicker(project) {
+    const { contentEl } = this;
+    contentEl.empty();
+
+    const current = this.resolveProject(project);
+    if (current === undefined) return;
+
+    const projectLabel = current ? this.plugin.projectName(current) : "無所属";
+    contentEl.createEl("h2", { text: `Clear Project: ${projectLabel}` });
 
     makeChoiceRow(contentEl, "完了のみ", () => {
-      const tasks = this.plugin.completedTasksForProject(current);
+      const tasks = current
+        ? this.plugin.completedTasksForProject(current)
+        : this.plugin.completedTasksWithoutProject();
       if (tasks.length === 0) {
         new Notice("完了済みTaskがありません。");
         return;
@@ -80,28 +97,29 @@ class ClearProjectModal extends Modal {
     const { contentEl } = this;
     contentEl.empty();
 
-    const current = this.app.vault.getAbstractFileByPath(project.path);
-    if (!(current instanceof TFile)) {
-      new Notice("Projectが見つかりません。");
-      this.close();
-      return;
-    }
+    const current = this.resolveProject(project);
+    if (current === undefined) return;
 
     const completedOnly = mode === "completed";
     const label = completedOnly ? "完了のみ" : "すべて";
-    const { tasks, ideas } = this.plugin.filesForProject(current);
+    const projectLabel = current ? this.plugin.projectName(current) : "無所属";
+    const { tasks, ideas } = current
+      ? this.plugin.filesForProject(current)
+      : this.plugin.filesWithoutProject();
     const targetTasks = completedOnly
       ? tasks.filter((file) => this.plugin.isCompletedTask(file))
       : tasks;
 
     contentEl.createEl("h2", {
-      text: `Clear Project: ${this.plugin.projectName(current)} — ${label}`,
+      text: `Clear Project: ${projectLabel} — ${label}`,
     });
     contentEl.createEl("p", { text: `Tasks: ${targetTasks.length}` });
 
     if (!completedOnly) {
       contentEl.createEl("p", { text: `Ideas: ${ideas.length}` });
-      contentEl.createEl("p", { text: "Project: 1" });
+      if (current) {
+        contentEl.createEl("p", { text: "Project: 1" });
+      }
     }
 
     contentEl.createEl("p", { text: "Notesは変更しません。" });
@@ -283,6 +301,12 @@ module.exports = class WorkbenchCommands extends Plugin {
     );
   }
 
+  completedTasksWithoutProject() {
+    return this.filesWithoutProject().tasks.filter((file) =>
+      this.isCompletedTask(file)
+    );
+  }
+
   isProjectsKey(key) {
     return key === "projects" || key.startsWith("projects.") || key.startsWith("projects[");
   }
@@ -329,6 +353,13 @@ module.exports = class WorkbenchCommands extends Plugin {
     return this.flattenStrings(frontmatter?.projects);
   }
 
+  hasProjectAssignment(file) {
+    if (this.frontmatterProjectLinks(file).length > 0) return true;
+    return this.frontmatterProjectValues(file).some((value) =>
+      this.normalizeLinkpath(value) !== null
+    );
+  }
+
   referencesProject(file, project) {
     const cachedLinks = this.frontmatterProjectLinks(file);
     if (cachedLinks.some((link) => this.matchesProjectLink(link, file.path, project))) {
@@ -351,6 +382,17 @@ module.exports = class WorkbenchCommands extends Plugin {
     };
   }
 
+  filesWithoutProject() {
+    return {
+      tasks: this.markdownFilesUnder("Tasks").filter((file) =>
+        !this.hasProjectAssignment(file)
+      ),
+      ideas: this.markdownFilesUnder("Ideas").filter((file) =>
+        !this.hasProjectAssignment(file)
+      ),
+    };
+  }
+
   allClearGroups() {
     return Object.fromEntries(
       DATA_FOLDERS.map((folder) => [folder, this.markdownFilesUnder(folder)])
@@ -359,8 +401,11 @@ module.exports = class WorkbenchCommands extends Plugin {
 
   openClearProject() {
     const projects = this.projects();
-    if (projects.length === 0) {
-      new Notice("Projectがありません。");
+    const unassigned = this.filesWithoutProject();
+    const hasUnassigned = unassigned.tasks.length > 0 || unassigned.ideas.length > 0;
+
+    if (projects.length === 0 && !hasUnassigned) {
+      new Notice("Clear対象がありません。");
       return;
     }
 
@@ -408,16 +453,23 @@ module.exports = class WorkbenchCommands extends Plugin {
   }
 
   async executeClearProject(project, mode) {
-    const current = this.app.vault.getAbstractFileByPath(project.path);
-    if (!(current instanceof TFile)) {
-      new Notice("Projectが見つかりません。");
-      return;
+    let current = null;
+    if (project) {
+      current = this.app.vault.getAbstractFileByPath(project.path);
+      if (!(current instanceof TFile)) {
+        new Notice("Projectが見つかりません。");
+        return;
+      }
     }
 
-    const { tasks, ideas } = this.filesForProject(current);
+    const { tasks, ideas } = current
+      ? this.filesForProject(current)
+      : this.filesWithoutProject();
     const files = mode === "completed"
       ? tasks.filter((file) => this.isCompletedTask(file))
-      : [...tasks, ...ideas, current];
+      : current
+        ? [...tasks, ...ideas, current]
+        : [...tasks, ...ideas];
 
     const result = await this.trash(files);
     this.notifyResult(result);
