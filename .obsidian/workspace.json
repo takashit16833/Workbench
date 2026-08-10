@@ -14,7 +14,7 @@
               "type": "markdown",
               "state": {
                 "file": "Dashboard.md",
-                "mode": "preview",
+                "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
@@ -195,20 +195,25 @@
   },
   "active": "adf4d25401d19b67",
   "lastOpenFiles": [
-    "Bases/Tasks.base",
+    "Tasks/テストタスク.md",
     "Dashboard.md",
+    "Tasks/デフォルトタスク.md",
+    "ONBOARDING.md",
+    "Scopes/テストScope.md",
+    "Tasks/布団を干す.md",
+    "Scopes/生活.md",
+    "Tasks/牛乳を買う.md",
+    "Bases/Tasks.base",
     "Tasks/タスク.md",
     "Tasks/DeleteTest.md",
     "Scopes/DeleteTest.md",
     "Tasks/test.md",
     "Scopes/Test.md",
-    "ONBOARDING.md",
     "README.md",
     "ARCHITECTURE.md",
     "Tasks/タイトルを消した.md",
     "Tasks/タイトル.md",
     "Scopes/Personal.md",
-    "Tasks/牛乳を買う.md",
     "Tasks/牛乳を二本買う.md",
     "Bases",
     "TaskNotes/Views/kanban-default.base",
@@ -225,7 +230,6 @@
     "Templates/Note.md",
     "Templates/Idea.md",
     "FileClasses/Scope.md",
-    "FileClasses/Note.md",
-    "FileClasses/Idea.md"
+    "FileClasses/Note.md"
   ]
 }
