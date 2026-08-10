@@ -2,6 +2,8 @@ filters:
   and:
     - file.folder == "Tasks"
     - note.status && note.status != "" && note.status != null
+formulas:
+  source_link: 'if(source, link(source.toString(), "Open"))'
 properties:
   file.name:
     displayName: Task
@@ -11,7 +13,7 @@ properties:
     displayName: Priority
   note.projects:
     displayName: Projects
-  note.source:
+  formula.source_link:
     displayName: Source
   note.due:
     displayName: Due
@@ -30,7 +32,7 @@ views:
       - status
       - priority
       - projects
-      - source
+      - formula.source_link
       - due
       - scheduled
       - file.name
