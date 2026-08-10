@@ -1,3 +1,15 @@
 .DS_Store
 .trash/
 .obsidian/cache/
+.obsidian/workspace.json
+.obsidian/workspace-mobile.json
+
+# External community plugin runtime assets are installed from Plugins.lock.
+.obsidian/plugins/*/main.js
+.obsidian/plugins/*/manifest.json
+.obsidian/plugins/*/styles.css
+
+# Workbench is a local plugin maintained in this repository.
+!.obsidian/plugins/workbench-commands/main.js
+!.obsidian/plugins/workbench-commands/manifest.json
+!.obsidian/plugins/workbench-commands/styles.css
