@@ -3,12 +3,12 @@ filesPaths:
   - Notes
 icon: notebook
 fields:
-  - name: scopes
-    id: iScopes
+  - name: projects
+    id: iProjects
     type: MultiFile
     options:
       baseFile: Dashboard.base
-      viewName: Scopes
+      viewName: Projects
     path: ""
   - name: created
     id: iCreated
