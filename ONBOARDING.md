@@ -72,6 +72,18 @@ Autosuggest Filters:
 Include folders: Projects/
 ```
 
+### Source
+
+Settings -> TaskNotes -> Task Properties -> Custom Fields:
+
+```text
+Display name: Source
+Property key: source
+Type: Text
+```
+
+外部チケットや外部文書を正本とするTaskだけに設定します。
+
 ### Creation modal
 
 Settings -> TaskNotes -> Modal Fields:
@@ -91,6 +103,9 @@ Organization
 
 Dependencies
   すべて       OFF
+
+Custom Fields
+  Source       OFF
 ```
 
 `Projects` は次の状態にします。
@@ -98,6 +113,14 @@ Dependencies
 ```text
 Enabled:          ON
 Show in Creation: ON
+Show in Edit:     ON
+```
+
+`Source` は次の状態にします。
+
+```text
+Enabled:          ON
+Show in Creation: OFF
 Show in Edit:     ON
 ```
 
