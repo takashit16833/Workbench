@@ -109,7 +109,15 @@ Settings -> Hotkeys:
 
 - **TaskNotes: Create new task** に好みのキーを割り当てる
 
-## 4. First run
+## 4. Homepage
+
+設定済みです。
+
+- Homepage: `Dashboard`
+- 起動時にDashboardを開く
+- **⌥D**: Dashboardへ戻る
+
+## 5. First run
 
 1. `Projects/` に `Personal.md` を作る
 2. **Create new task** で `牛乳を買う` を作る
