@@ -314,7 +314,14 @@
   "apiAuthToken": "",
   "enableMCP": false,
   "webhooks": [],
-  "userFields": [],
+  "userFields": [
+    {
+      "id": "source",
+      "displayName": "Source",
+      "key": "source",
+      "type": "text"
+    }
+  ],
   "modalFieldsConfig": {
     "version": 1,
     "fields": [
@@ -407,6 +414,16 @@
         "visibleInCreation": false,
         "visibleInEdit": true,
         "order": 1,
+        "enabled": true
+      },
+      {
+        "id": "source",
+        "fieldType": "user",
+        "group": "custom",
+        "displayName": "Source",
+        "visibleInCreation": false,
+        "visibleInEdit": true,
+        "order": 0,
         "enabled": true
       }
     ],
