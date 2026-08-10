@@ -4,7 +4,7 @@
 
 ![[Tasks.base#Tasks]]
 
-- [[Tasks.base|Table]]
+- [[Tasks.base#Table|Table]]
 - [[Tasks.base#Kanban|Kanban]]
 
 ## Ideas
