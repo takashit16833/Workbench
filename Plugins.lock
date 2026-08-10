@@ -1,4 +1,4 @@
-# Workbench v2 plugin lock
+# Workbench plugin lock
 # Upgrade intentionally after checking release notes.
 tasknotes=4.12.3
 fileclass=0.2.10
