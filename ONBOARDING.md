@@ -78,9 +78,37 @@ Include folders: Scopes/
 
 Settings -> TaskNotes -> Modal Fields:
 
-- Title: visible
-- Scopes: visible
-- Priority / Status / Due / Scheduled / その他: hidden
+1. **Sync user fields** を1回押す
+2. `Show in Creation` を次のようにする
+
+```text
+Basic Information
+  Title        ON
+  Details      OFF
+
+Metadata
+  すべて       OFF
+
+Organization
+  すべて       OFF
+
+Dependencies
+  すべて       OFF
+
+Custom Fields
+  Scopes       ON
+  その他       OFF
+```
+
+`Scopes` は次の状態にします。
+
+```text
+Enabled:          ON
+Show in Creation: ON
+Show in Edit:     ON
+```
+
+その他の項目は、`Enabled` と `Show in Edit` はONのままで構いません。
 
 ### Hotkey
 
