@@ -1,5 +1,6 @@
 {
   "defaultViewMode": "preview",
   "showInlineTitle": false,
-  "alwaysUpdateLinks": true
+  "alwaysUpdateLinks": true,
+  "trashOption": "local"
 }

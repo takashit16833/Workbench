@@ -14,7 +14,7 @@
               "type": "markdown",
               "state": {
                 "file": "Dashboard.md",
-                "mode": "source",
+                "mode": "preview",
                 "source": false
               },
               "icon": "lucide-file",
@@ -195,13 +195,16 @@
   },
   "active": "adf4d25401d19b67",
   "lastOpenFiles": [
+    "Bases/Tasks.base",
+    "Dashboard.md",
+    "Tasks/タスク.md",
+    "Tasks/DeleteTest.md",
+    "Scopes/DeleteTest.md",
     "Tasks/test.md",
     "Scopes/Test.md",
-    "Dashboard.md",
     "ONBOARDING.md",
     "README.md",
     "ARCHITECTURE.md",
-    "Bases/Tasks.base",
     "Tasks/タイトルを消した.md",
     "Tasks/タイトル.md",
     "Scopes/Personal.md",
