@@ -195,8 +195,9 @@
   },
   "active": "adf4d25401d19b67",
   "lastOpenFiles": [
-    "Tasks/テストタスク.md",
+    "Scopes/RAGScope.md",
     "Dashboard.md",
+    "Tasks/テストタスク.md",
     "Tasks/デフォルトタスク.md",
     "ONBOARDING.md",
     "Scopes/テストScope.md",
@@ -229,7 +230,6 @@
     "Templates/Scope.md",
     "Templates/Note.md",
     "Templates/Idea.md",
-    "FileClasses/Scope.md",
-    "FileClasses/Note.md"
+    "FileClasses/Scope.md"
   ]
 }
