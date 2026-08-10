@@ -1,7 +1,7 @@
 ---
 fileClass: Idea
 type: idea
-scopes: []
+projects: []
 review_gate:
 created: {{date:YYYY-MM-DD}}
 ---
