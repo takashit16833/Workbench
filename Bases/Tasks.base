@@ -3,7 +3,7 @@ filters:
     - file.folder == "Tasks"
     - note.status && note.status != "" && note.status != null
 formulas:
-  source_link: 'if(source, link(source.toString(), "Open"))'
+  source_link: if(source, link(source.toString(), "Open"))
 properties:
   file.name:
     displayName: Task
@@ -22,9 +22,6 @@ properties:
 views:
   - type: tasknotesTaskList
     name: Tasks
-    filters:
-      and:
-        - status != "done"
     groupBy:
       property: projects
       direction: ASC
