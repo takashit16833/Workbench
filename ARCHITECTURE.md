@@ -1,10 +1,10 @@
-# Workbench v2 Architecture
+# Workbench Architecture
 
 ## Prime directive
 
 **Markdown files are the only Source of Truth.**
 
-Plugins are editors, indexers and views. They must not introduce a second authoritative store for Workbench entities or relationships.
+Plugins are editors, indexers and views. They must not introduce another authoritative store for Workbench entities or relationships.
 
 ## Entities
 
@@ -27,7 +27,7 @@ scopes:
   - "[[RAGScope]]"
 ```
 
-A Scope exists because a matching `Scopes/*.md` file exists. There is no separately maintained Scope registry.
+`Scopes/*.md` is the complete registry of Scopes.
 
 ```text
 Scopes/Personal.md
@@ -75,13 +75,13 @@ Owns **queries and overview views**, not data.
 
 `Scopes/*.md` is the canonical Scope registry by existence.
 
-Creating `Scopes/Personal.md` means `Personal` now exists as a Scope. TaskNotes and Fileclass are configured to suggest files from `Scopes/`, so Task / Idea / Note all point to the same file.
+Creating `Scopes/Personal.md` means `Personal` exists as a Scope. TaskNotes and Fileclass suggest files from `Scopes/`, so Task / Idea / Note all point to the same file.
 
 A Scope note may be almost empty. Its minimum purpose is identity; its body can later hold context that is useful to humans or AI.
 
 ## Task model
 
-Workbench deliberately uses **one Markdown note per Task**. It does not use inline tasks as canonical Workbench Tasks.
+Workbench uses **one Markdown note per Task**.
 
 Recommended workflow states:
 
@@ -121,4 +121,4 @@ A Note is passive information. It has no completion state and no review obligati
 
 ## Derived data rule
 
-Generated indexes, plugin caches and Base views may exist, but they are **rebuildable projections**. If deleting a generated artifact would destroy unique user meaning, that artifact has accidentally become a second Source of Truth and the design must be reconsidered.
+Generated indexes, plugin caches and Base views may exist, but they are **rebuildable projections**. If deleting a generated artifact would destroy unique user meaning, that artifact has accidentally become authoritative data and the design must be reconsidered.
