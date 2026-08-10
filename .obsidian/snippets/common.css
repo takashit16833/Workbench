@@ -1,0 +1,10 @@
+.theme-light,
+.theme-dark {
+  --file-line-width: 900px !important;
+}
+
+.mermaid svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
