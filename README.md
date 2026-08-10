@@ -12,9 +12,8 @@ Obsidianを再起動し、[[ONBOARDING]] の初回設定を行います。
 
 ## Use
 
-ホーム: [[Dashboard]]
-
-- Task: TaskNotes の **Create new task**
+- Dashboard: 起動時 / **⌥D**
+- Task: **⌥T** / TaskNotes の **Create new task**
 - Idea: `Ideas/`
 - Note: `Notes/`
 - Project: `Projects/`
