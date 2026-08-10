@@ -18,8 +18,11 @@ properties:
 views:
   - type: tasknotesTaskList
     name: Tasks
+    filters:
+      and:
+        - status != "done"
     groupBy:
-      property: note.projects
+      property: projects
       direction: ASC
     order:
       - status
