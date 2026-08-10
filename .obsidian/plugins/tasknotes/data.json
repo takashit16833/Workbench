@@ -323,7 +323,7 @@
         "fieldType": "core",
         "group": "basic",
         "displayName": "Title",
-        "visibleInCreation": true,
+        "visibleInCreation": false,
         "visibleInEdit": true,
         "order": 0,
         "enabled": true,
