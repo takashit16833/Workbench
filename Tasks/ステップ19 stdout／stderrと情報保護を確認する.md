@@ -6,7 +6,8 @@ projects:
   - "[[RAGScope]]"
   - "[[RS-0015 RAGScopeアプリケーションの共通エラー・構造化ログ基盤を実装する]]"
 next_action: 出力境界を確認
-dateModified: 2026-08-11T06:43:43.965+09:00
+dateModified: 2026-08-11T08:03:42.740+09:00
+priority: medium
 ---
 
 # ステップ19：stdout／stderrと情報保護を確認する

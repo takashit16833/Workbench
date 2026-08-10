@@ -6,7 +6,8 @@ projects:
   - "[[RAGScope]]"
   - "[[RS-0015 RAGScopeアプリケーションの共通エラー・構造化ログ基盤を実装する]]"
 next_action: Step 15完了後に着手
-dateModified: 2026-08-11T06:43:43.938+09:00
+dateModified: 2026-08-11T08:03:22.283+09:00
+priority: medium
 ---
 
 # ステップ16：Setupと本番Logger初期化を実装する

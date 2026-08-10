@@ -6,7 +6,8 @@ projects:
   - "[[RAGScope]]"
   - "[[RS-0015 RAGScopeアプリケーションの共通エラー・構造化ログ基盤を実装する]]"
 next_action: 実装・テスト結果から判断
-dateModified: 2026-08-11T06:43:43.959+09:00
+dateModified: 2026-08-11T08:03:33.562+09:00
+priority: medium
 ---
 
 # ステップ18：JSON変換失敗の設計判断を確定する
