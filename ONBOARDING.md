@@ -80,8 +80,7 @@ Settings -> TaskNotes -> Modal Fields:
 
 ```text
 Basic Information
-  Title        ON
-  Details      OFF
+  すべて       OFF
 
 Metadata
   すべて       OFF
