@@ -79,11 +79,9 @@ Property: scopes
 Type: List
 Autosuggestion:
   Include folders: Scopes/
-  Required property key: type
-  Required property value: scope
 ```
 
-これによりTaskも、Idea / Noteと同じ `Scopes/*.md` を参照します。
+これによりTaskも、Idea / Noteと同じ `Scopes/*.md` を直接参照します。
 
 ## Daily use
 
