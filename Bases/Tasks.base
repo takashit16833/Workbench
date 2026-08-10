@@ -11,6 +11,8 @@ properties:
     displayName: Priority
   note.projects:
     displayName: Projects
+  note.source:
+    displayName: Source
   note.due:
     displayName: Due
   note.scheduled:
@@ -28,6 +30,7 @@ views:
       - status
       - priority
       - projects
+      - source
       - due
       - scheduled
       - file.name
