@@ -2,7 +2,7 @@
 tags:
   - task
 status: todo
-scopes:
+projects:
   - "[[RAGScope]]"
 next_action: Step 16完了後に着手
 ---
