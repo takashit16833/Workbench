@@ -56,8 +56,11 @@ Workbench optimizes for the **next correct action**, not for completeness.
 
 ## Clear commands
 
-- `Workbench: Clear Scope`: Trash the selected Scope and Tasks / Ideas whose `scopes` resolve to it.
-- `Workbench: Clear All`: Trash Markdown files under `Tasks/`, `Ideas/` and `Scopes/`.
+- Both clear commands offer `完了のみ` and `すべて`.
+- `完了のみ`: Trash only Tasks with `status: done` or `status: dropped`.
+- `Workbench: Clear Scope` + `完了のみ`: limit those completed Tasks to the selected Scope; preserve Ideas and the Scope file.
+- `Workbench: Clear All` + `完了のみ`: Trash completed Tasks across all Scopes; preserve Ideas and Scope files.
+- `すべて` keeps the full-clear behavior: Clear Scope trashes matching Tasks / Ideas plus the selected Scope; Clear All trashes Markdown under `Tasks/`, `Ideas/` and `Scopes/`.
 - Never modify or Trash `Notes/` from either clear command.
 - Clear commands require exact `RESET` confirmation and use recoverable Trash behavior.
 
