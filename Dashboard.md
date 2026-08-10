@@ -11,6 +11,6 @@
 
 ![[Dashboard.base#Ideas]]
 
-## Scopes
+## Projects
 
-![[Dashboard.base#Scopes]]
+![[Dashboard.base#Projects]]
