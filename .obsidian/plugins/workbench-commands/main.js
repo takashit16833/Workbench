@@ -7,6 +7,20 @@ const {
 } = require("obsidian");
 
 const DATA_FOLDERS = ["Tasks", "Ideas", "Scopes"];
+const COMPLETED_STATUSES = new Set(["done", "dropped"]);
+
+function makeChoiceRow(container, label, onChoose) {
+  const row = new Setting(container).setName(label);
+  row.settingEl.style.cursor = "pointer";
+  row.settingEl.setAttribute("role", "button");
+  row.settingEl.tabIndex = 0;
+  row.settingEl.addEventListener("click", onChoose);
+  row.settingEl.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter" && event.key !== " ") return;
+    event.preventDefault();
+    onChoose();
+  });
+}
 
 class ClearScopeModal extends Modal {
   constructor(app, plugin, scopes) {
@@ -16,35 +30,26 @@ class ClearScopeModal extends Modal {
   }
 
   onOpen() {
-    this.renderPicker();
+    this.renderScopePicker();
   }
 
   onClose() {
     this.contentEl.empty();
   }
 
-  renderPicker() {
+  renderScopePicker() {
     const { contentEl } = this;
     contentEl.empty();
     contentEl.createEl("h2", { text: "Clear Scope" });
 
     for (const scope of this.scopes) {
-      const row = new Setting(contentEl).setName(this.plugin.scopeName(scope));
-      const select = () => this.renderConfirmation(scope);
-
-      row.settingEl.style.cursor = "pointer";
-      row.settingEl.setAttribute("role", "button");
-      row.settingEl.tabIndex = 0;
-      row.settingEl.addEventListener("click", select);
-      row.settingEl.addEventListener("keydown", (event) => {
-        if (event.key !== "Enter" && event.key !== " ") return;
-        event.preventDefault();
-        select();
-      });
+      makeChoiceRow(contentEl, this.plugin.scopeName(scope), () =>
+        this.renderModePicker(scope)
+      );
     }
   }
 
-  renderConfirmation(scope) {
+  renderModePicker(scope) {
     const { contentEl } = this;
     contentEl.empty();
 
@@ -55,12 +60,50 @@ class ClearScopeModal extends Modal {
       return;
     }
 
-    const { tasks, ideas } = this.plugin.filesForScope(current);
-
     contentEl.createEl("h2", { text: `Clear Scope: ${this.plugin.scopeName(current)}` });
-    contentEl.createEl("p", { text: `Tasks: ${tasks.length}` });
-    contentEl.createEl("p", { text: `Ideas: ${ideas.length}` });
-    contentEl.createEl("p", { text: "Scope: 1" });
+
+    makeChoiceRow(contentEl, "完了のみ", () => {
+      const tasks = this.plugin.completedTasksForScope(current);
+      if (tasks.length === 0) {
+        new Notice("完了済みTaskがありません。");
+        return;
+      }
+      this.renderConfirmation(current, "completed");
+    });
+
+    makeChoiceRow(contentEl, "すべて", () =>
+      this.renderConfirmation(current, "all")
+    );
+  }
+
+  renderConfirmation(scope, mode) {
+    const { contentEl } = this;
+    contentEl.empty();
+
+    const current = this.app.vault.getAbstractFileByPath(scope.path);
+    if (!(current instanceof TFile)) {
+      new Notice("Scopeが見つかりません。");
+      this.close();
+      return;
+    }
+
+    const completedOnly = mode === "completed";
+    const label = completedOnly ? "完了のみ" : "すべて";
+    const { tasks, ideas } = this.plugin.filesForScope(current);
+    const targetTasks = completedOnly
+      ? tasks.filter((file) => this.plugin.isCompletedTask(file))
+      : tasks;
+
+    contentEl.createEl("h2", {
+      text: `Clear Scope: ${this.plugin.scopeName(current)} — ${label}`,
+    });
+    contentEl.createEl("p", { text: `Tasks: ${targetTasks.length}` });
+
+    if (!completedOnly) {
+      contentEl.createEl("p", { text: `Ideas: ${ideas.length}` });
+      contentEl.createEl("p", { text: "Scope: 1" });
+    }
+
     contentEl.createEl("p", { text: "Notesは変更しません。" });
     contentEl.createEl("p", { text: "実行するには RESET と入力してください。" });
 
@@ -80,7 +123,7 @@ class ClearScopeModal extends Modal {
 
     new Setting(contentEl)
       .addButton((button) => {
-        button.setButtonText("Back").onClick(() => this.renderPicker());
+        button.setButtonText("Back").onClick(() => this.renderModePicker(current));
       })
       .addButton((button) => {
         clearButton = button;
@@ -91,7 +134,7 @@ class ClearScopeModal extends Modal {
           .onClick(async () => {
             if (value !== "RESET") return;
             clearButton.setDisabled(true);
-            await this.plugin.executeClearScope(current);
+            await this.plugin.executeClearScope(current, mode);
             this.close();
           });
       });
@@ -105,13 +148,49 @@ class ClearAllModal extends Modal {
   }
 
   onOpen() {
-    const { contentEl } = this;
-    const groups = this.plugin.allClearGroups();
+    this.renderModePicker();
+  }
 
+  onClose() {
+    this.contentEl.empty();
+  }
+
+  renderModePicker() {
+    const { contentEl } = this;
+    contentEl.empty();
     contentEl.createEl("h2", { text: "Clear All" });
-    contentEl.createEl("p", { text: `Tasks: ${groups.Tasks.length}` });
-    contentEl.createEl("p", { text: `Ideas: ${groups.Ideas.length}` });
-    contentEl.createEl("p", { text: `Scopes: ${groups.Scopes.length}` });
+
+    makeChoiceRow(contentEl, "完了のみ", () => {
+      const tasks = this.plugin.completedTasks();
+      if (tasks.length === 0) {
+        new Notice("完了済みTaskがありません。");
+        return;
+      }
+      this.renderConfirmation("completed");
+    });
+
+    makeChoiceRow(contentEl, "すべて", () => this.renderConfirmation("all"));
+  }
+
+  renderConfirmation(mode) {
+    const { contentEl } = this;
+    contentEl.empty();
+
+    const completedOnly = mode === "completed";
+    const label = completedOnly ? "完了のみ" : "すべて";
+    const groups = this.plugin.allClearGroups();
+    const targetTasks = completedOnly
+      ? groups.Tasks.filter((file) => this.plugin.isCompletedTask(file))
+      : groups.Tasks;
+
+    contentEl.createEl("h2", { text: `Clear All — ${label}` });
+    contentEl.createEl("p", { text: `Tasks: ${targetTasks.length}` });
+
+    if (!completedOnly) {
+      contentEl.createEl("p", { text: `Ideas: ${groups.Ideas.length}` });
+      contentEl.createEl("p", { text: `Scopes: ${groups.Scopes.length}` });
+    }
+
     contentEl.createEl("p", { text: "Notesは変更しません。" });
     contentEl.createEl("p", { text: "実行するには RESET と入力してください。" });
 
@@ -131,7 +210,7 @@ class ClearAllModal extends Modal {
 
     new Setting(contentEl)
       .addButton((button) => {
-        button.setButtonText("Cancel").onClick(() => this.close());
+        button.setButtonText("Back").onClick(() => this.renderModePicker());
       })
       .addButton((button) => {
         clearButton = button;
@@ -142,14 +221,10 @@ class ClearAllModal extends Modal {
           .onClick(async () => {
             if (value !== "RESET") return;
             clearButton.setDisabled(true);
-            await this.plugin.executeClearAll();
+            await this.plugin.executeClearAll(mode);
             this.close();
           });
       });
-  }
-
-  onClose() {
-    this.contentEl.empty();
   }
 }
 
@@ -183,6 +258,29 @@ module.exports = class WorkbenchCommands extends Plugin {
 
   scopeName(file) {
     return file.path.replace(/^Scopes\//, "").replace(/\.md$/i, "");
+  }
+
+  taskStatus(file) {
+    const frontmatter = this.app.metadataCache.getFileCache(file)?.frontmatter;
+    return typeof frontmatter?.status === "string"
+      ? frontmatter.status.trim().toLowerCase()
+      : "";
+  }
+
+  isCompletedTask(file) {
+    return COMPLETED_STATUSES.has(this.taskStatus(file));
+  }
+
+  completedTasks() {
+    return this.markdownFilesUnder("Tasks").filter((file) =>
+      this.isCompletedTask(file)
+    );
+  }
+
+  completedTasksForScope(scope) {
+    return this.filesForScope(scope).tasks.filter((file) =>
+      this.isCompletedTask(file)
+    );
   }
 
   isScopesKey(key) {
@@ -309,7 +407,7 @@ module.exports = class WorkbenchCommands extends Plugin {
     new Notice(`${result.moved}件をTrashへ移動しました。`);
   }
 
-  async executeClearScope(scope) {
+  async executeClearScope(scope, mode) {
     const current = this.app.vault.getAbstractFileByPath(scope.path);
     if (!(current instanceof TFile)) {
       new Notice("Scopeが見つかりません。");
@@ -317,17 +415,21 @@ module.exports = class WorkbenchCommands extends Plugin {
     }
 
     const { tasks, ideas } = this.filesForScope(current);
-    const result = await this.trash([...tasks, ...ideas, current]);
+    const files = mode === "completed"
+      ? tasks.filter((file) => this.isCompletedTask(file))
+      : [...tasks, ...ideas, current];
+
+    const result = await this.trash(files);
     this.notifyResult(result);
   }
 
-  async executeClearAll() {
+  async executeClearAll(mode) {
     const groups = this.allClearGroups();
-    const result = await this.trash([
-      ...groups.Tasks,
-      ...groups.Ideas,
-      ...groups.Scopes,
-    ]);
+    const files = mode === "completed"
+      ? groups.Tasks.filter((file) => this.isCompletedTask(file))
+      : [...groups.Tasks, ...groups.Ideas, ...groups.Scopes];
+
+    const result = await this.trash(files);
     this.notifyResult(result);
   }
 };
