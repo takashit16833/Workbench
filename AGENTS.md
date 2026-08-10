@@ -70,6 +70,7 @@ Workbench optimizes for the **next correct action**, not for completeness.
 - **TaskNotes**: Task UI/workflow/Projects
 - **Fileclass**: Idea / Note property editing
 - **Obsidian Bases**: queries/views
+- **Homepage**: open `Dashboard` at startup and provide quick return to it
 - **Workbench** (`workbench-commands`): Workbench-specific commands only
 
 ## Properties
