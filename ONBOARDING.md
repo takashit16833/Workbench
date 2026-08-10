@@ -88,11 +88,9 @@ Default: empty
 
 ```text
 Include folders: Scopes/
-Required property key: type
-Required property value: scope
 ```
 
-これがv2の重要な接続です。TaskNotesは別のScope一覧を持たず、`Scopes/` に実在する `type: scope` のMarkdownだけを候補にします。
+これがv2の重要な接続です。TaskNotesは別のScope一覧を持たず、`Scopes/` に実在するMarkdownをそのまま候補にします。
 
 Task作成時、Scopes欄で `[[` と入力すると登録済みScopeが候補に出ます。
 
@@ -132,7 +130,7 @@ kind: area
 ---
 ```
 
-**これだけでPersonalはWorkbenchに登録済みのScopeです。**
+**`Scopes/Personal.md` が存在する、それだけでPersonalはWorkbenchに登録済みのScopeです。**
 
 ## 2. Taskを作る
 
