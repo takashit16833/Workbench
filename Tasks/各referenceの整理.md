@@ -2,7 +2,7 @@
 tags:
   - task
 status: todo
-scopes:
+projects:
   - "[[Personal]]"
 dateCreated: 2026-08-06T18:03:00
 priority: normal
