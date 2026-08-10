@@ -44,6 +44,7 @@ Workbench optimizes for the **next correct action**, not for completeness.
 
 - Passive information with no workflow obligation.
 - `scopes` is optional.
+- Notes are retrieved by search, links or direct navigation; do not add a Notes overview to the Dashboard without a concrete need.
 - Do not convert it into a Task or Idea without a reason.
 
 ## Scope
