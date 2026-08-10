@@ -33,6 +33,8 @@ Workbench optimizes for the **next correct action**, not for completeness.
 - `projects` may contain zero or more Project links.
 - Use TaskNotes' native Subtask relationship when a Task is meaningfully decomposed into child Tasks.
 - TaskNotes may use a parent Task as the child Task's Project anchor internally. Treat this as an implementation detail: user-facing workflow should present the relationship as parent Task -> Subtask, not as an ordinary Project assignment.
+- `source` is optional. Use it when a Workbench Task is a local execution handle for an external authoritative ticket or document.
+- When `source` exists, keep the external system authoritative. Do not mirror its body into Workbench merely for duplication; store only the local execution notes and progress needed to do the work.
 
 ## Idea
 
@@ -78,7 +80,7 @@ Workbench optimizes for the **next correct action**, not for completeness.
 ## Properties
 
 - Use TaskNotes' standard `projects` property for Project membership.
-- Workbench-owned properties use lower_snake_case, including `type`, `review_gate` and `created`.
+- Workbench-owned properties use lower_snake_case, including `type`, `review_gate`, `created` and `source`.
 - Add a property only when it solves a concrete workflow need.
 
 ## Safety
