@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "Dashboard.md",
+                "file": "README.md",
                 "mode": "preview",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "Dashboard"
+              "title": "README"
             }
           }
         ]
@@ -195,30 +195,32 @@
   },
   "active": "adf4d25401d19b67",
   "lastOpenFiles": [
-    "Tasks.base",
-    "Dashboard.md",
+    "ONBOARDING.md",
     "ARCHITECTURE.md",
     "README.md",
-    "ONBOARDING.md",
+    "Dashboard.md",
+    "Bases/Tasks.base",
+    "Tasks/タイトルを消した.md",
+    "Tasks/タイトル.md",
     "Scopes/Personal.md",
-    "Tasks/牛乳を二本買うPersonal.md",
     "Tasks/牛乳を買う.md",
+    "Tasks/牛乳を二本買う.md",
+    "Bases",
+    "TaskNotes/Views/kanban-default.base",
+    "TaskNotes/Views/calendar-default.base",
+    "TaskNotes/Views/agenda-default.base",
+    "Bases/Dashboard.base",
+    "AGENTS.md",
     "TaskNotes/Start Here.md",
     "TaskNotes/Views/relationships.base",
     "TaskNotes/Views/pomodoro-stats.base",
-    "TaskNotes/Views/agenda-default.base",
-    "TaskNotes/Views/calendar-default.base",
     "TaskNotes/Views/tasks-default.base",
-    "TaskNotes/Views/kanban-default.base",
     "TaskNotes/Views/mini-calendar-default.base",
-    "TaskNotes/Views",
-    "TaskNotes",
     "Templates/Scope.md",
     "Templates/Note.md",
     "Templates/Idea.md",
     "FileClasses/Scope.md",
     "FileClasses/Note.md",
-    "FileClasses/Idea.md",
-    "AGENTS.md"
+    "FileClasses/Idea.md"
   ]
 }
