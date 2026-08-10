@@ -1,11 +1,11 @@
 ---
 fileClass: Scope
 type: scope
-kind: area
+kind: project
 created: 2026-08-10
 ---
 
-# 生活
+# RAGScope
 
 ## Context
 
