@@ -6,5 +6,13 @@
       ],
       "key": "T"
     }
+  ],
+  "homepage:open-homepage": [
+    {
+      "modifiers": [
+        "Alt"
+      ],
+      "key": "D"
+    }
   ]
 }
