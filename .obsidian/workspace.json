@@ -4,21 +4,17 @@
     "type": "split",
     "children": [
       {
-        "id": "0be8a2cf54a42c89",
+        "id": "df6a79caf24652d3",
         "type": "tabs",
         "children": [
           {
-            "id": "adf4d25401d19b67",
+            "id": "325fd0370b27c58c",
             "type": "leaf",
             "state": {
-              "type": "markdown",
-              "state": {
-                "file": "Dashboard.md",
-                "mode": "source",
-                "source": false
-              },
+              "type": "empty",
+              "state": {},
               "icon": "lucide-file",
-              "title": "Dashboard"
+              "title": "新規タブ"
             }
           }
         ]
@@ -193,19 +189,26 @@
       "tasknotes:新しいタスクを作成": false
     }
   },
-  "active": "adf4d25401d19b67",
+  "active": "325fd0370b27c58c",
   "lastOpenFiles": [
-    "Scopes/Personal.md",
+    "TaskNotes/Start Here.md",
+    "AGENTS.md",
+    "ARCHITECTURE.md",
     "Dashboard.md",
-    "Ideas/ExceptT AppError IOを共通失敗チャネルにする.md",
+    "ONBOARDING.md",
+    "README.md",
     "Ideas/ErrorContextとLoggingの安全な構造化値の共通化.md",
-    "Ideas/機能固有エラーをAppErrorへ変換する境界.md",
     "Ideas/機能固有エラーADTにcontext値を直接保持する.md",
+    "Ideas/機能固有エラーをAppErrorへ変換する境界.md",
+    "Ideas/ExceptT AppError IOを共通失敗チャネルにする.md",
+    "Tasks/毛布を洗濯する.md",
+    "Tasks/各referenceの整理.md",
+    "Tasks/TOEIC申し込む.md",
+    "Scopes/Personal.md",
     "Ideas/アプリケーション失敗とログ出力失敗が重なった場合の優先関係.md",
     "Scopes/RAGScope.md",
     "Tasks/テストタスク.md",
     "Tasks/デフォルトタスク.md",
-    "ONBOARDING.md",
     "Scopes/テストScope.md",
     "Tasks/布団を干す.md",
     "Scopes/生活.md",
@@ -215,12 +218,6 @@
     "Tasks/DeleteTest.md",
     "Scopes/DeleteTest.md",
     "Tasks/test.md",
-    "Scopes/Test.md",
-    "README.md",
-    "ARCHITECTURE.md",
-    "Tasks/タイトルを消した.md",
-    "Tasks/タイトル.md",
-    "Tasks/牛乳を二本買う.md",
     "Bases",
     "TaskNotes/Views/kanban-default.base",
     "TaskNotes/Views/calendar-default.base",
