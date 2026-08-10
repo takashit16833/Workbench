@@ -32,7 +32,6 @@ views:
       and:
         - file.folder == "Scopes"
         - file.ext == "md"
-        - note.type == "scope"
     order:
       - file.name
       - kind
