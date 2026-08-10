@@ -13,7 +13,6 @@ class ClearScopeModal extends Modal {
     super(app);
     this.plugin = plugin;
     this.scopes = scopes;
-    this.query = "";
   }
 
   onOpen() {
@@ -29,57 +28,19 @@ class ClearScopeModal extends Modal {
     contentEl.empty();
     contentEl.createEl("h2", { text: "Clear Scope" });
 
-    const search = new Setting(contentEl)
-      .setName("Scope")
-      .addText((text) => {
-        text.setPlaceholder("Scopeを検索");
-        text.setValue(this.query);
-        text.onChange((value) => {
-          this.query = value;
-          this.renderScopeList(listEl);
-        });
+    for (const scope of this.scopes) {
+      const row = new Setting(contentEl).setName(this.plugin.scopeName(scope));
+      const select = () => this.renderConfirmation(scope);
 
-        text.inputEl.addEventListener("keydown", (event) => {
-          if (event.key !== "Enter") return;
-          const matches = this.filteredScopes();
-          if (matches.length === 0) return;
-          event.preventDefault();
-          this.renderConfirmation(matches[0]);
-        });
-
-        setTimeout(() => text.inputEl.focus(), 0);
+      row.settingEl.style.cursor = "pointer";
+      row.settingEl.setAttribute("role", "button");
+      row.settingEl.tabIndex = 0;
+      row.settingEl.addEventListener("click", select);
+      row.settingEl.addEventListener("keydown", (event) => {
+        if (event.key !== "Enter" && event.key !== " ") return;
+        event.preventDefault();
+        select();
       });
-
-    const listEl = contentEl.createDiv({ cls: "workbench-scope-list" });
-    this.renderScopeList(listEl);
-  }
-
-  filteredScopes() {
-    const query = this.query.trim().toLowerCase();
-    if (!query) return this.scopes;
-
-    return this.scopes.filter((scope) =>
-      this.plugin.scopeName(scope).toLowerCase().includes(query)
-    );
-  }
-
-  renderScopeList(listEl) {
-    listEl.empty();
-    const scopes = this.filteredScopes();
-
-    if (scopes.length === 0) {
-      listEl.createEl("p", { text: "一致するScopeがありません。" });
-      return;
-    }
-
-    for (const scope of scopes) {
-      new Setting(listEl)
-        .setName(this.plugin.scopeName(scope))
-        .addButton((button) => {
-          button.setButtonText("Select").onClick(() => {
-            this.renderConfirmation(scope);
-          });
-        });
     }
   }
 
