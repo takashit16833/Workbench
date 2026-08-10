@@ -20,23 +20,8 @@
               "icon": "lucide-file",
               "title": "ONBOARDING"
             }
-          },
-          {
-            "id": "0613ab2091d68080",
-            "type": "leaf",
-            "state": {
-              "type": "markdown",
-              "state": {
-                "file": "Dashboard.md",
-                "mode": "preview",
-                "source": false
-              },
-              "icon": "lucide-file",
-              "title": "Dashboard"
-            }
           }
-        ],
-        "currentTab": 1
+        ]
       }
     ],
     "direction": "vertical"
@@ -209,7 +194,7 @@
       "tasknotes:新しいタスクを作成": false
     }
   },
-  "active": "0613ab2091d68080",
+  "active": "9a8e3372fb93d1f1",
   "lastOpenFiles": [
     "Tasks/ステップ15 共通エラー型を完成させる.md",
     "Dashboard.md",
