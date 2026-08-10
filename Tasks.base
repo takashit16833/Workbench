@@ -1,0 +1,36 @@
+filters:
+  and:
+    - file.folder == "Tasks"
+    - note.status && note.status != "" && note.status != null
+views:
+  - type: tasknotesTaskList
+    name: Tasks
+    order:
+      - status
+      - priority
+      - scopes
+      - due
+      - scheduled
+      - file.name
+    options:
+      showScheduled: true
+      showDue: true
+      showRecurring: false
+      showTimeEntries: false
+  - type: tasknotesKanban
+    name: Kanban
+    groupBy:
+      property: status
+      direction: ASC
+    order:
+      - status
+      - priority
+      - scopes
+      - due
+      - scheduled
+      - file.name
+    options:
+      columnWidth: 280
+      hideEmptyColumns: false
+    swimLane: note.status
+    explodeListColumns: true
