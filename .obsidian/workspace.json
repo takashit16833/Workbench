@@ -4,21 +4,21 @@
     "type": "split",
     "children": [
       {
-        "id": "1ee42941d26db078",
+        "id": "0be8a2cf54a42c89",
         "type": "tabs",
         "children": [
           {
-            "id": "fb1450cac2b91af1",
+            "id": "adf4d25401d19b67",
             "type": "leaf",
             "state": {
               "type": "markdown",
               "state": {
-                "file": "README.md",
+                "file": "ONBOARDING.md",
                 "mode": "preview",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "README"
+              "title": "ONBOARDING"
             }
           }
         ]
@@ -99,7 +99,6 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "README.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -118,7 +117,6 @@
             "state": {
               "type": "outgoing-link",
               "state": {
-                "file": "README.md",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               },
@@ -161,7 +159,6 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "README.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
@@ -185,30 +182,39 @@
       "daily-notes:今日のデイリーノートを開く": false,
       "templates:テンプレートを挿入": false,
       "command-palette:コマンドパレットを開く": false,
-      "bases:新規ベースを作成": false
+      "bases:新規ベースを作成": false,
+      "tasknotes:ミニカレンダービューを開く": false,
+      "tasknotes:カレンダービューを開く": false,
+      "tasknotes:タスクビューを開く": false,
+      "tasknotes:アジェンダビューを開く": false,
+      "tasknotes:カンバンボードを開く": false,
+      "tasknotes:ポモドーロタイマーを開く": false,
+      "tasknotes:ポモドーロ統計を開く": false,
+      "tasknotes:新しいタスクを作成": false
     }
   },
-  "active": "fb1450cac2b91af1",
+  "active": "adf4d25401d19b67",
   "lastOpenFiles": [
+    "Dashboard.md",
+    "README.md",
+    "ONBOARDING.md",
+    "TaskNotes/Start Here.md",
+    "TaskNotes/Views/relationships.base",
+    "TaskNotes/Views/pomodoro-stats.base",
+    "TaskNotes/Views/agenda-default.base",
+    "TaskNotes/Views/calendar-default.base",
+    "TaskNotes/Views/tasks-default.base",
+    "TaskNotes/Views/kanban-default.base",
+    "TaskNotes/Views/mini-calendar-default.base",
+    "TaskNotes/Views",
+    "TaskNotes",
     "Templates/Scope.md",
     "Templates/Note.md",
     "Templates/Idea.md",
     "Templates",
-    "Tasks",
-    "Tasks.base",
-    "Scripts/install-plugins.sh",
-    "Scripts",
-    "Scopes",
-    "README.md",
-    "Plugins.lock",
-    "ONBOARDING.md",
-    "Notes",
-    "Ideas",
     "FileClasses/Scope.md",
     "FileClasses/Note.md",
     "FileClasses/Idea.md",
-    "FileClasses",
-    "Dashboard.md",
     "ARCHITECTURE.md",
     "AGENTS.md"
   ]
