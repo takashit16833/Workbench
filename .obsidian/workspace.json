@@ -22,17 +22,17 @@
             }
           },
           {
-            "id": "a1abcd35bd2c8918",
+            "id": "4cbe8c12d96c93c3",
             "type": "leaf",
             "state": {
               "type": "markdown",
               "state": {
-                "file": "Dashboard.md",
+                "file": "Tasks/RS-0015 RAGScopeアプリケーションの共通エラー・構造化ログ基盤を実装する.md",
                 "mode": "preview",
-                "source": false
+                "source": true
               },
               "icon": "lucide-file",
-              "title": "Dashboard"
+              "title": "RS-0015 RAGScopeアプリケーションの共通エラー・構造化ログ基盤を実装する"
             }
           }
         ],
@@ -209,10 +209,10 @@
       "tasknotes:新しいタスクを作成": false
     }
   },
-  "active": "a1abcd35bd2c8918",
+  "active": "4cbe8c12d96c93c3",
   "lastOpenFiles": [
-    "ONBOARDING.md",
     "Dashboard.md",
+    "ONBOARDING.md",
     "Tasks/RS-0015 RAGScopeアプリケーションの共通エラー・構造化ログ基盤を実装する.md",
     "ARCHITECTURE.md",
     "Bases/Tasks.base",
