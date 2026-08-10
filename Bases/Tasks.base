@@ -9,8 +9,8 @@ properties:
     displayName: Status
   note.priority:
     displayName: Priority
-  note.scopes:
-    displayName: Scopes
+  note.projects:
+    displayName: Projects
   note.due:
     displayName: Due
   note.scheduled:
@@ -21,7 +21,7 @@ views:
     order:
       - status
       - priority
-      - scopes
+      - projects
       - due
       - scheduled
       - file.name
@@ -36,14 +36,14 @@ views:
       - file.name
       - status
       - priority
-      - scopes
+      - projects
       - due
       - scheduled
     columnSize:
       file.name: 360
       note.status: 130
       note.priority: 120
-      note.scopes: 220
+      note.projects: 220
       note.due: 140
       note.scheduled: 140
   - type: tasknotesKanban
@@ -54,7 +54,7 @@ views:
     order:
       - status
       - priority
-      - scopes
+      - projects
       - due
       - scheduled
       - file.name
