@@ -14,7 +14,7 @@
               "type": "markdown",
               "state": {
                 "file": "Dashboard.md",
-                "mode": "source",
+                "mode": "preview",
                 "source": false
               },
               "icon": "lucide-file",
@@ -195,10 +195,11 @@
   },
   "active": "325fd0370b27c58c",
   "lastOpenFiles": [
+    "Bases/Tasks.base",
+    "Dashboard.md",
     "ONBOARDING.md",
     "Ideas/テストプロジェクトのアイデア１.md",
     "Ideas/機能固有エラーをAppErrorへ変換する境界.md",
-    "Dashboard.md",
     "Tasks/テストプロジェクトのタスク２.md",
     "Projects/テストプロジェクト.md",
     "Tasks/テストプロジェクトのタスク１.md",
@@ -220,8 +221,6 @@
     "Ideas/アプリケーション失敗とログ出力失敗が重なった場合の優先関係.md",
     "Tasks/テストタスク.md",
     "Tasks/デフォルトタスク.md",
-    "Tasks/布団を干す.md",
-    "Bases/Tasks.base",
     "Bases",
     "TaskNotes/Views/kanban-default.base",
     "TaskNotes/Views/calendar-default.base",
