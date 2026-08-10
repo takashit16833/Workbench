@@ -54,11 +54,19 @@ Workbench optimizes for the **next correct action**, not for completeness.
 - `kind`: `project` or `area`.
 - Task / Idea / Note reference Scope notes with wikilinks.
 
+## Clear commands
+
+- `Workbench: Clear Scope`: Trash the selected Scope and Tasks / Ideas whose `scopes` resolve to it.
+- `Workbench: Clear All`: Trash Markdown files under `Tasks/`, `Ideas/` and `Scopes/`.
+- Never modify or Trash `Notes/` from either clear command.
+- Clear commands require exact `RESET` confirmation and use recoverable Trash behavior.
+
 ## Plugin boundaries
 
 - **TaskNotes**: Task UI/workflow
 - **Fileclass**: Idea / Note / Scope property editing
 - **Obsidian Bases**: queries/views
+- **Workbench** (`workbench-commands`): Workbench-specific commands only
 
 ## Properties
 
