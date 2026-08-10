@@ -1,0 +1,9 @@
+{
+  "id": "workbench-commands",
+  "name": "Workbench",
+  "version": "1.0.0",
+  "minAppVersion": "1.12.2",
+  "description": "Workbench-specific commands.",
+  "author": "Workbench",
+  "isDesktopOnly": false
+}
