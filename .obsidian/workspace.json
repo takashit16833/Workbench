@@ -27,12 +27,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "Tasks/RS-0015 RAGScopeアプリケーションの共通エラー・構造化ログ基盤を実装する.md",
+                "file": "Dashboard.md",
                 "mode": "preview",
                 "source": true
               },
               "icon": "lucide-file",
-              "title": "RS-0015 RAGScopeアプリケーションの共通エラー・構造化ログ基盤を実装する"
+              "title": "Dashboard"
             }
           }
         ],
@@ -211,9 +211,9 @@
   },
   "active": "4cbe8c12d96c93c3",
   "lastOpenFiles": [
+    "Tasks/RS-0015 RAGScopeアプリケーションの共通エラー・構造化ログ基盤を実装する.md",
     "Dashboard.md",
     "ONBOARDING.md",
-    "Tasks/RS-0015 RAGScopeアプリケーションの共通エラー・構造化ログ基盤を実装する.md",
     "ARCHITECTURE.md",
     "Bases/Tasks.base",
     "Ideas/テストプロジェクトのアイデア１.md",
