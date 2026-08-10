@@ -1,10 +1,10 @@
-# Workbench v2 Onboarding
+# Workbench Onboarding
 
 最初のセットアップと、5分で一周するためのガイドです。
 
-> [!important] v2の原則
+> [!important] Workbenchの原則
 > **Markdownが唯一のSource of Truthです。**
-> `Scopes/Personal.md` を作ったら、`Personal` というScopeが本当にWorkbenchに存在します。別のScope台帳はありません。
+> `Scopes/Personal.md` を作ったら、`Personal` というScopeがWorkbenchに存在します。
 
 ## 0. Plugins
 
@@ -16,7 +16,7 @@ bash Scripts/install-plugins.sh
 
 インストール後、Obsidianを再起動またはVaultをreloadしてください。
 
-Workbench v2で使うCommunity Pluginは次の2つだけです。
+Workbenchで使うCommunity Pluginは次の2つです。
 
 - TaskNotes: Taskのcapture / edit / workflow / views
 - Fileclass: Idea / Note / Scopeのtyped properties
@@ -90,7 +90,7 @@ Default: empty
 Include folders: Scopes/
 ```
 
-これがv2の重要な接続です。TaskNotesは別のScope一覧を持たず、`Scopes/` に実在するMarkdownをそのまま候補にします。
+`Scopes/` に存在するMarkdownファイルが、TaskのScope候補になります。
 
 Task作成時、Scopes欄で `[[` と入力すると登録済みScopeが候補に出ます。
 
