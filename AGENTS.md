@@ -1,63 +1,67 @@
 # Workbench Agent Rules
 
-This vault is a shared working surface for the user and AI agents.
+Read `ARCHITECTURE.md` before structural changes.
 
-## Prime directive
+## Noise budget
 
-**Markdown files are the only Source of Truth.**
+Workbench optimizes for the **next correct action**, not for completeness.
 
-Do not introduce a second authoritative registry, database, generated index, plugin-owned store, or duplicated relationship model for Workbench entities. Generated views/caches are allowed only when they are fully rebuildable from Markdown.
+- Capture must remain possible with only a title.
+- Scope, priority, dates and other metadata are optional at capture. Organize them later when useful.
+- Do not add prompts, fields, helper text, views, properties or plugins without a concrete workflow need.
+- Prefer useful defaults over questions.
+- Keep user-facing surfaces quiet. If removing text does not make the user's next action more likely to be wrong, remove it.
+- Keep internal rules small. If removing a rule does not increase the chance of breaking the architecture, remove it.
+- Do not expose architectural rationale in user-facing docs unless it is needed to operate, troubleshoot or make a decision.
 
-Read `ARCHITECTURE.md` before making structural changes.
+## Storage
 
-## Entities
+- Task: `Tasks/*.md`
+- Idea: `Ideas/*.md`
+- Note: `Notes/*.md`
+- Scope: `Scopes/*.md`
+- Scope membership uses wikilinks in `scopes`.
+- Generated views and caches must be rebuildable from Markdown.
+- Do not create another authoritative registry for Workbench entities or relationships.
 
-### Task
-- A Task is an action to perform.
-- Canonical storage: one Markdown file under `Tasks/`.
-- TaskNotes is the UI/workflow engine; the Markdown file is the data.
+## Task
+
+- An action to perform.
+- 1 Task = 1 Markdown file.
+- TaskNotes provides capture/edit/workflow/views.
 - Do not use inline tasks as canonical Workbench Tasks.
-- Quick capture should require only a title. Scope, priority and dates are optional.
-- A Task may belong to zero or more Scopes through `scopes`, using wikilinks to Scope notes.
+- `scopes` may contain zero or more Scope links.
 
-### Idea
-- One Idea is one Markdown file under `Ideas/`.
-- It is a reviewable decision unit distilled from brainstorming, often with AI.
-- Every active Idea should have a meaningful `review_gate`.
-- `review_gate` is a condition for reconsideration, not necessarily a date.
-- Do not create mirror Tasks/events merely so Workbench can detect a Review Gate.
-- After review: accepted -> create/organize Tasks as needed; rejected -> trash/archive; deferred -> update `review_gate`.
+## Idea
 
-### Note
-- One Note is one Markdown file under `Notes/`.
-- A Note is passive information and has no workflow obligation.
+- 1 Idea = 1 Markdown file.
+- A reviewable decision unit.
+- Active Ideas have a meaningful `review_gate`.
+- `review_gate` is a reconsideration condition, not necessarily a date.
+- After review: accepted -> create/organize Tasks; rejected -> Trash/Archive; deferred -> update `review_gate`.
+
+## Note
+
+- Passive information with no workflow obligation.
 - `scopes` is optional.
-- Never convert a Note into a Task or Idea without an explicit reason or user request.
+- Do not convert it into a Task or Idea without a reason.
 
-### Scope
-- A Scope is a first-class Workbench entity under `Scopes/`.
-- **The existence of `Scopes/<name>.md` is the canonical registration of that Scope.**
-- Scope is deliberately broader than Project; do not rename it to Project.
-- `kind` may be `project` (finite outcome) or `area` (ongoing responsibility/domain).
-- Task / Idea / Note Scope membership must point to Scope notes with wikilinks.
-- Do not maintain a separate hand-edited Scope registry.
+## Scope
+
+- 1 Scope = 1 Markdown file under `Scopes/`.
+- Broader than Project; do not rename the concept to Project.
+- `kind`: `project` or `area`.
+- Task / Idea / Note reference Scope notes with wikilinks.
 
 ## Plugin boundaries
 
-- **TaskNotes**: Task capture/edit/workflow/views only.
-- **Fileclass**: guided schema/property editing for Idea / Note / Scope only.
-- **Obsidian Bases**: projections/queries/dashboard only.
-- Plugins do not own Workbench truth; Markdown does.
+- **TaskNotes**: Task UI/workflow
+- **Fileclass**: Idea / Note / Scope property editing
+- **Obsidian Bases**: queries/views
 
-## Dashboard
+## Properties
 
-- `Dashboard.md` is the human-facing home surface.
-- `Tasks.base` is the TaskNotes-backed Task List / Kanban projection.
-- `Dashboard.base` owns Ideas / Scopes / Notes projections.
-
-## Property conventions
-
-Use lower_snake_case for Workbench-owned properties:
+Workbench-owned properties use lower_snake_case:
 
 - `type`
 - `kind`
@@ -65,10 +69,8 @@ Use lower_snake_case for Workbench-owned properties:
 - `review_gate`
 - `created`
 
-TaskNotes core task properties (`status`, `priority`, `due`, `scheduled`, etc.) keep their configured TaskNotes keys.
-
-Prefer a small model. Add a property only when it solves a concrete workflow need.
+Add a property only when it solves a concrete workflow need.
 
 ## Safety
 
-Prefer recoverable trash/archive behavior over permanent deletion. Preserve Scope definitions and Notes unless the user explicitly requests otherwise.
+Prefer recoverable Trash/Archive over permanent deletion. Preserve Scope definitions and Notes unless explicitly requested otherwise.
