@@ -3,12 +3,12 @@ filesPaths:
   - Ideas
 icon: lightbulb
 fields:
-  - name: scopes
-    id: iScopes
+  - name: projects
+    id: iProjects
     type: MultiFile
     options:
       baseFile: Dashboard.base
-      viewName: Scopes
+      viewName: Projects
     path: ""
   - name: review_gate
     id: iReviewGate

@@ -133,7 +133,9 @@
     ],
     "showAdvanced": false,
     "requiredTags": [],
-    "includeFolders": [],
+    "includeFolders": [
+      "Projects/"
+    ],
     "propertyKey": "",
     "propertyValue": ""
   },
@@ -312,22 +314,7 @@
   "apiAuthToken": "",
   "enableMCP": false,
   "webhooks": [],
-  "userFields": [
-    {
-      "id": "field_1786362062843",
-      "displayName": "Scopes",
-      "key": "scopes",
-      "type": "list",
-      "autosuggestFilter": {
-        "requiredTags": [],
-        "includeFolders": [
-          "Scopes/"
-        ],
-        "propertyKey": "",
-        "propertyValue": ""
-      }
-    }
-  ],
+  "userFields": [],
   "modalFieldsConfig": {
     "version": 1,
     "fields": [
@@ -336,7 +323,7 @@
         "fieldType": "core",
         "group": "basic",
         "displayName": "Title",
-        "visibleInCreation": false,
+        "visibleInCreation": true,
         "visibleInEdit": true,
         "order": 0,
         "enabled": true,
@@ -377,7 +364,7 @@
         "fieldType": "core",
         "group": "metadata",
         "displayName": "Time Estimate",
-        "visibleInCreation": true,
+        "visibleInCreation": false,
         "visibleInEdit": true,
         "order": 2,
         "enabled": true
@@ -387,7 +374,7 @@
         "fieldType": "organization",
         "group": "organization",
         "displayName": "Projects",
-        "visibleInCreation": false,
+        "visibleInCreation": true,
         "visibleInEdit": true,
         "order": 0,
         "enabled": true
@@ -420,16 +407,6 @@
         "visibleInCreation": false,
         "visibleInEdit": true,
         "order": 1,
-        "enabled": true
-      },
-      {
-        "id": "field_1786362062843",
-        "fieldType": "user",
-        "group": "custom",
-        "displayName": "Scopes",
-        "visibleInCreation": true,
-        "visibleInEdit": true,
-        "order": 0,
         "enabled": true
       }
     ],

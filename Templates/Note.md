@@ -1,7 +1,7 @@
 ---
 fileClass: Note
 type: note
-scopes: []
+projects: []
 created: {{date:YYYY-MM-DD}}
 ---
 
