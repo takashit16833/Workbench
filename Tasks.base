@@ -1,3 +1,16 @@
+properties:
+  file.name:
+    displayName: Task
+  note.status:
+    displayName: Status
+  note.priority:
+    displayName: Priority
+  note.scopes:
+    displayName: Scopes
+  note.due:
+    displayName: Due
+  note.scheduled:
+    displayName: Scheduled
 filters:
   and:
     - file.folder == "Tasks"
@@ -17,6 +30,22 @@ views:
       showDue: true
       showRecurring: false
       showTimeEntries: false
+  - type: table
+    name: Table
+    order:
+      - file.name
+      - status
+      - priority
+      - scopes
+      - due
+      - scheduled
+    columnSize:
+      file.name: 360
+      note.status: 130
+      note.priority: 120
+      note.scopes: 220
+      note.due: 140
+      note.scheduled: 140
   - type: tasknotesKanban
     name: Kanban
     groupBy:
