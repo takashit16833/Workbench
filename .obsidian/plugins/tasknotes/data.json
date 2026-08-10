@@ -341,7 +341,7 @@
         "fieldType": "core",
         "group": "basic",
         "displayName": "Details",
-        "visibleInCreation": false,
+        "visibleInCreation": true,
         "visibleInEdit": true,
         "order": 1,
         "enabled": true
