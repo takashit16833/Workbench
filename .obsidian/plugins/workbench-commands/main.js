@@ -185,31 +185,61 @@ module.exports = class WorkbenchCommands extends Plugin {
     return file.path.replace(/^Scopes\//, "").replace(/\.md$/i, "");
   }
 
-  scopeValues(file) {
-    const frontmatter = this.app.metadataCache.getFileCache(file)?.frontmatter;
-    const value = frontmatter?.scopes;
-    if (value == null) return [];
-    return Array.isArray(value) ? value : [value];
+  isScopesKey(key) {
+    return key === "scopes" || key.startsWith("scopes.") || key.startsWith("scopes[");
   }
 
-  linkpath(value) {
+  normalizeLinkpath(value) {
     if (typeof value !== "string") return null;
+
     const text = value.trim();
-    const match = text.match(/^\[\[([^\]|#]+)(?:#[^\]|]*)?(?:\|[^\]]+)?\]\]$/);
-    return (match ? match[1] : text).replace(/\.md$/i, "");
+    if (!text) return null;
+
+    const wikilink = text.match(/^\[\[([^\]|#]+)(?:#[^\]|]*)?(?:\|[^\]]+)?\]\]$/);
+    const linkpath = wikilink ? wikilink[1] : text;
+
+    return linkpath.replace(/\.md$/i, "");
+  }
+
+  matchesScopeLink(linkpath, sourcePath, scope) {
+    const normalized = this.normalizeLinkpath(linkpath);
+    if (!normalized) return false;
+
+    const resolved = this.app.metadataCache.getFirstLinkpathDest(normalized, sourcePath);
+    if (resolved) return resolved.path === scope.path;
+
+    const scopePath = scope.path.replace(/\.md$/i, "");
+    return normalized === scopePath || normalized === scope.basename;
+  }
+
+  frontmatterScopeLinks(file) {
+    const cache = this.app.metadataCache.getFileCache(file);
+    return (cache?.frontmatterLinks ?? [])
+      .filter((link) => this.isScopesKey(link.key ?? ""))
+      .map((link) => link.link)
+      .filter(Boolean);
+  }
+
+  flattenStrings(value) {
+    if (typeof value === "string") return [value];
+    if (Array.isArray(value)) return value.flatMap((item) => this.flattenStrings(item));
+    return [];
+  }
+
+  frontmatterScopeValues(file) {
+    const frontmatter = this.app.metadataCache.getFileCache(file)?.frontmatter;
+    return this.flattenStrings(frontmatter?.scopes);
   }
 
   referencesScope(file, scope) {
-    return this.scopeValues(file).some((value) => {
-      const linkpath = this.linkpath(value);
-      if (!linkpath) return false;
+    const cachedLinks = this.frontmatterScopeLinks(file);
+    if (cachedLinks.some((link) => this.matchesScopeLink(link, file.path, scope))) {
+      return true;
+    }
 
-      const resolved = this.app.metadataCache.getFirstLinkpathDest(linkpath, file.path);
-      if (resolved) return resolved.path === scope.path;
-
-      const scopePath = scope.path.replace(/\.md$/i, "");
-      return linkpath === scopePath || linkpath === scope.basename;
-    });
+    return this.frontmatterScopeValues(file).some((value) =>
+      this.matchesScopeLink(value, file.path, scope)
+    );
   }
 
   filesForScope(scope) {
