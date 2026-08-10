@@ -40,6 +40,7 @@ install_plugin() {
 mkdir -p "$PLUGIN_DIR"
 install_plugin tasknotes callumalpass/tasknotes
 install_plugin fileclass mdelobelle/fileclass
+install_plugin homepage mirnovov/obsidian-homepage
 
 python3 - "$COMMUNITY" <<'PY'
 import json
@@ -51,12 +52,12 @@ try:
     current = json.loads(path.read_text()) if path.exists() else []
 except Exception:
     current = []
-for plugin_id in ["tasknotes", "fileclass"]:
+for plugin_id in ["tasknotes", "fileclass", "homepage"]:
     if plugin_id not in current:
         current.append(plugin_id)
 path.write_text(json.dumps(current, ensure_ascii=False, indent=2) + "\n")
 PY
 
 echo
-echo "Installed TaskNotes and Fileclass."
+echo "Installed TaskNotes, Fileclass and Homepage."
 echo "Restart Obsidian or reload the vault, then follow ONBOARDING.md."
