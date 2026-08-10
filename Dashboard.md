@@ -14,7 +14,3 @@
 ## Scopes
 
 ![[Dashboard.base#Scopes]]
-
-## Notes
-
-![[Dashboard.base#Notes]]
