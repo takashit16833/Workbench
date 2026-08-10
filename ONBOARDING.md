@@ -1,12 +1,6 @@
 # Workbench Onboarding
 
-最初のセットアップと、5分で一周するためのガイドです。
-
-> [!important] Workbenchの原則
-> **Markdownが唯一のSource of Truthです。**
-> `Scopes/Personal.md` を作ったら、`Personal` というScopeがWorkbenchに存在します。
-
-## 0. Plugins
+## 1. Plugins
 
 Vaultルートで実行します。
 
@@ -14,20 +8,15 @@ Vaultルートで実行します。
 bash Scripts/install-plugins.sh
 ```
 
-インストール後、Obsidianを再起動またはVaultをreloadしてください。
+Obsidianを再起動またはVaultをreloadします。
 
-Workbenchで使うCommunity Pluginは次の2つです。
+## 2. Fileclass
 
-- TaskNotes: Taskのcapture / edit / workflow / views
-- Fileclass: Idea / Note / Scopeのtyped properties
+Settings -> Fileclass:
 
-Obsidian BasesはCore Pluginを使います。
+- **Class files folder**: `FileClasses`
 
-## 1. Fileclass one-time setup
-
-Settings -> Fileclass で **Class files folder** を `FileClasses` に設定します。
-
-## 2. TaskNotes one-time setup
+## 3. TaskNotes
 
 ### General
 
@@ -41,11 +30,9 @@ Settings -> TaskNotes -> Task Properties -> Title:
 
 - **Store title in filename**: ON
 
-これにより `牛乳を買う.md` のように、人間にも読める普通のMarkdownファイルがTaskになります。
-
 ### Status
 
-Settings -> TaskNotes -> Task Properties -> Status で、次の順番にします。
+Settings -> TaskNotes -> Task Properties -> Status:
 
 | Value | Label | Completed |
 |---|---|---|
@@ -57,7 +44,6 @@ Settings -> TaskNotes -> Task Properties -> Status で、次の順番にしま�
 | `dropped` | Dropped | ON |
 
 - Default: `inbox`
-- `dropped` は通常のcycleから外してもOKです。
 
 ### Priority
 
@@ -71,11 +57,9 @@ Settings -> TaskNotes -> Task Properties -> Priority:
 
 - Default: **No default**
 
-Priorityは必要なTaskだけに付けます。
+### Scopes
 
-### Scopes custom field
-
-Settings -> TaskNotes -> Task Properties -> Custom User Fields で追加します。
+Settings -> TaskNotes -> Task Properties -> Custom User Fields:
 
 ```text
 Display Name: Scopes
@@ -84,107 +68,39 @@ Type: List
 Default: empty
 ```
 
-**Autosuggestion filters (Advanced)**:
+Autosuggestion filters:
 
 ```text
 Include folders: Scopes/
 ```
 
-`Scopes/` に存在するMarkdownファイルが、TaskのScope候補になります。
-
-Task作成時、Scopes欄で `[[` と入力すると登録済みScopeが候補に出ます。
-
 ### Creation modal
 
-Settings -> TaskNotes -> Modal Fields で、最初は必要なものだけ見せるのがおすすめです。
+Settings -> TaskNotes -> Modal Fields:
 
 - Title: visible
 - Scopes: visible
-- Priority: visible（任意）
-- Status: 非表示でもOK。新規Taskは自動でInboxになります。
-- Due / Scheduled /その他: 必要になるまで非表示でOK
+- Priority / Status / Due / Scheduled / その他: hidden
 
 ### Hotkey
 
-Settings -> Hotkeys で **TaskNotes: Create new task** に好みのワンストロークキーを割り当てます。
+Settings -> Hotkeys:
 
-Capture時はタイトルだけで保存できる状態を維持します。Scopeが最初から分かっている場合だけ、その場で選んで構いません。
+- **TaskNotes: Create new task** に好みのキーを割り当てる
 
----
+## 4. First run
 
-# 最初の5分
-
-## 1. Personal Scopeを作る
-
-1. `Scopes/` で `Personal` という新規ノートを作る
-2. `Templates/Scope.md` を適用
+1. `Scopes/` に `Personal` を作る
+2. `Templates/Scope.md` を適用する
 3. `kind: area` にする
+4. **Create new task** で `牛乳を買う` を作る
+5. Scopeを付ける場合は `[[` と入力して `Personal` を選ぶ
+6. [[Dashboard]] で確認する
+7. `Inbox -> Todo -> Doing -> Done` と動かす
 
-結果:
+## 使い分け
 
-```yaml
----
-fileClass: Scope
-type: scope
-kind: area
----
-```
-
-**`Scopes/Personal.md` が存在する、それだけでPersonalはWorkbenchに登録済みのScopeです。**
-
-## 2. Taskを作る
-
-TaskNotesの **Create new task** を開きます。
-
-```text
-牛乳を買う
-```
-
-Scopeも付けるならScopes欄で `[[` と入力し、候補の `Personal` を選択します。
-
-保存後は `Tasks/` に普通のMarkdown Taskが作られます。
-
-## 3. Dashboardで確認する
-
-[[Dashboard]] を開きます。
-
-Taskは [[Tasks.base]] のTaskNotes viewに出ます。
-
-```text
-Inbox -> Todo -> Doing -> Waiting / Done
-```
-
-まず1つのTaskを `Inbox -> Todo -> Doing -> Done` と動かしてみます。
-
-## 4. Ideaを作る
-
-AIとのブレストなどで「後で採否を判断したい」単位ができたら、`Ideas/` にノートを作り `Templates/Idea.md` を適用します。
-
-最低限:
-
-```yaml
-scopes:
-  - "[[Personal]]"
-review_gate: 次にこのテーマを設計するとき
-```
-
-- 採用 -> 必要なTaskを作る
-- 不採用 -> Trash / Archive
-- 保留 -> `review_gate` を更新
-
-## 5. Note
-
-行動も再レビューも要求しない情報は `Notes/` に保存します。Scopeは任意です。
-
----
-
-## 迷ったら
-
-**やる必要がある？** -> Task  
-**後で採否を判断したい？** -> Idea  
-**情報として残したいだけ？** -> Note  
-**それらが何に関係するかを表したい？** -> Scope
-
-> Taskは脊髄反射、Ideaは熟考、Noteは無責任に保存。
-
-設計原則は [[ARCHITECTURE]]、詳細な環境構築は [[README]] を参照してください。
+- Task: やること
+- Idea: 後で再検討すること
+- Note: 保存しておく情報
+- Scope: それらのまとまり
