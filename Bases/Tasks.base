@@ -39,6 +39,11 @@ views:
       - projects
       - due
       - scheduled
+    sort:
+      - property: projects
+        direction: DESC
+      - property: status
+        direction: DESC
     columnSize:
       file.name: 360
       note.status: 130
