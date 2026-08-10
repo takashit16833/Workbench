@@ -1,4 +1,4 @@
-# Workbench v2
+# Workbench
 
 Obsidian上で Task / Idea / Note / Scope を扱う、自分 + AI 共用のWork OSです。
 
@@ -6,7 +6,7 @@ Obsidian上で Task / Idea / Note / Scope を扱う、自分 + AI 共用のWork 
 
 ## Core idea
 
-Workbench v2では、**MarkdownファイルだけがSource of Truth**です。
+Workbenchでは、**MarkdownファイルだけがSource of Truth**です。
 
 ```text
 Tasks/*.md    = Task
@@ -22,7 +22,7 @@ scopes:
   - "[[Personal]]"
 ```
 
-`Scopes/Personal.md` の存在そのものが、`Personal` Scopeの登録です。手動同期する別台帳はありません。
+`Scopes/Personal.md` の存在そのものが、`Personal` Scopeの登録です。
 
 ## Structure
 
@@ -55,7 +55,7 @@ Pluginsはデータの所有者ではなく、Markdownを操作・表示するUI
 
 ## Install
 
-Workbench v2はplugin versionを `Plugins.lock` に固定しています。
+Plugin versionは `Plugins.lock` に固定しています。
 
 ```bash
 bash Scripts/install-plugins.sh
@@ -81,7 +81,7 @@ Autosuggestion:
   Include folders: Scopes/
 ```
 
-これによりTaskも、Idea / Noteと同じ `Scopes/*.md` を直接参照します。
+Task / Idea / Note は、同じ `Scopes/*.md` をScopeとして参照します。
 
 ## Daily use
 
