@@ -22,6 +22,7 @@ projects:
 - **Fileclass**: Idea / Note のproperty編集
 - **Obsidian Bases**: query / dashboard
 - **Homepage**: `Dashboard` の起動時表示 / quick access
+- **Obsidian Git**: Git commit / pull / push の操作
 
 永続データはMarkdownに置き、生成ビューやcacheは再構築可能にします。
 
