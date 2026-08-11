@@ -45,6 +45,10 @@ formulas:
 views:
   - type: tasknotesCalendar
     name: Calendar
+    filters:
+      and:
+        - status != "done"
+        - status != "dropped"
     order:
       - status
       - priority
