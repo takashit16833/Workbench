@@ -721,11 +721,90 @@ module.exports = class WorkbenchCommands extends Plugin {
         return;
       }
     }
-    const { tasks, ideas } = current ? this.filesForProject(current) : this.filesWithoutProject();
-    const files = mode === "completed"
+
+    if (!current) {
+      const { tasks, ideas } = this.filesWithoutProject();
+      const files = mode === "completed"
+        ? tasks.filter((file) => this.isCompletedTask(file))
+        : [...tasks, ...ideas];
+      this.notifyResult(await this.trash(files));
+      return;
+    }
+
+    const { tasks, ideas } = this.filesForProject(current);
+    const targetTasks = mode === "completed"
       ? tasks.filter((file) => this.isCompletedTask(file))
-      : current ? [...tasks, ...ideas, current] : [...tasks, ...ideas];
-    this.notifyResult(await this.trash(files));
+      : tasks;
+    const targetIdeas = mode === "completed" ? [] : ideas;
+    const unlinkActions = [];
+    const trashFiles = [];
+
+    for (const file of [...targetTasks, ...targetIdeas]) {
+      const remainingProjects = this.frontmatterProjectValues(file).filter((value) =>
+        this.normalizeLinkpath(value) !== null &&
+        !this.matchesProjectLink(value, file.path, current)
+      );
+
+      if (remainingProjects.length > 0) {
+        unlinkActions.push({ file, remainingProjects });
+      } else {
+        trashFiles.push(file);
+      }
+    }
+
+    let unlinked = 0;
+    const unlinkFailed = [];
+    for (const action of unlinkActions) {
+      const file = this.app.vault.getAbstractFileByPath(action.file.path);
+      if (!(file instanceof TFile)) {
+        unlinkFailed.push(action.file.path);
+        continue;
+      }
+
+      try {
+        await this.app.fileManager.processFrontMatter(file, (fm) => {
+          fm.projects = action.remainingProjects;
+        });
+        unlinked += 1;
+      } catch (error) {
+        unlinkFailed.push(action.file.path);
+        console.error("Workbench project unlink failed:", action.file.path, error);
+      }
+    }
+
+    if (unlinkFailed.length > 0) {
+      new Notice(
+        `${unlinked}件のProject紐付けを解除。${unlinkFailed.length}件失敗したためProjectは保持しました。`
+      );
+      return;
+    }
+
+    const entityResult = await this.trash(trashFiles);
+    if (entityResult.failed.length > 0) {
+      new Notice(
+        `${entityResult.moved}件をTrashへ移動、${unlinked}件のProject紐付けを解除。` +
+        `${entityResult.failed.length}件失敗したためProjectは保持しました。`
+      );
+      return;
+    }
+
+    let projectMoved = 0;
+    if (mode === "all") {
+      const projectResult = await this.trash([current]);
+      projectMoved = projectResult.moved;
+      if (projectResult.failed.length > 0) {
+        new Notice(
+          `${entityResult.moved}件をTrashへ移動、${unlinked}件のProject紐付けを解除。` +
+          "ProjectのTrashに失敗しました。"
+        );
+        return;
+      }
+    }
+
+    new Notice(
+      `${entityResult.moved + projectMoved}件をTrashへ移動、` +
+      `${unlinked}件のProject紐付けを解除しました。`
+    );
   }
 
   async executeClearAll(mode) {
