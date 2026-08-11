@@ -23,6 +23,7 @@ projects:
 - **Obsidian Bases**: query / dashboard
 - **Homepage**: `Dashboard` の起動時表示 / quick access
 - **Obsidian Git**: Git commit / pull / push の操作
+- **Workbench**: Holiday作成 / Project単位のschedule shiftなどWorkbench固有操作
 
 永続データはMarkdownに置き、生成ビューやcacheは再構築可能にします。
 
@@ -32,6 +33,7 @@ projects:
 - Status: `Inbox -> Todo -> Doing -> Waiting -> Done`, または `Dropped`
 - Priority: `High / Medium / Low`、任意
 - `projects` は0個以上
+- Holidayはschedule用の特殊Task。`type: holiday`、`archived: true`、`scheduled`、1個以上の`projects`を持ち、通常workflow・Task view・Statisticsの対象外とする。Calendarには表示する。
 
 ## Idea
 

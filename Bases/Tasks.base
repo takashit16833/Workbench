@@ -2,6 +2,7 @@ filters:
   and:
     - file.folder == "Tasks"
     - note.status && note.status != "" && note.status != null
+    - note.archived != true
 formulas:
   source_link: if(source, link(source.toString(), "Open"))
 properties:
