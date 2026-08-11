@@ -22,7 +22,7 @@ properties:
     displayName: Scheduled
 views:
   - type: tasknotesCalendar
-    name: Tasks
+    name: Today
     order:
       - status
       - priority
@@ -38,6 +38,29 @@ views:
     startDateProperty: file.ctime
     listDayCount: 1
     titleProperty: file.basename
+  - type: tasknotesTaskList
+    name: Tasks
+    filters:
+      and:
+        - status != "done"
+        - status != "dropped"
+    groupBy:
+      property: projects
+      direction: ASC
+    order:
+      - status
+      - priority
+      - projects
+      - formula.source_link
+      - due
+      - scheduled
+      - file.name
+    options:
+      showScheduled: true
+      showDue: true
+      showRecurring: false
+      showTimeEntries: false
+    defaultCollapsedState: Collapsed
   - type: table
     name: Table
     order:
