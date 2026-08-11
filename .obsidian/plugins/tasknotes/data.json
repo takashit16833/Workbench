@@ -526,21 +526,9 @@
   "lastSeenVersion": "4.12.3",
   "lastSelectedTaskPath": "Tasks/各タスクのスケジュールを設定する.md",
   "pomodoroState": {
-    "isRunning": true,
+    "isRunning": false,
     "timeRemaining": 1500,
-    "currentSession": {
-      "id": "1786415158162",
-      "taskPath": "Tasks/各タスクのスケジュールを設定する.md",
-      "startTime": "2026-08-11T11:25:58.162+09:00",
-      "plannedDuration": 25,
-      "type": "work",
-      "completed": false,
-      "activePeriods": [
-        {
-          "startTime": "2026-08-11T11:25:58.162+09:00"
-        }
-      ]
-    }
+    "nextSessionType": "work"
   },
   "lastPomodoroDate": "2026-08-10",
   "pomodoroHistory": [
@@ -570,6 +558,35 @@
         {
           "startTime": "2026-08-11T11:19:24.151+09:00",
           "endTime": "2026-08-11T11:24:24.151+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1786415158162",
+      "startTime": "2026-08-11T11:25:58.162+09:00",
+      "endTime": "2026-08-11T11:50:58.162+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "taskPath": "Tasks/各タスクのスケジュールを設定する.md",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-11T11:25:58.162+09:00",
+          "endTime": "2026-08-11T11:50:58.162+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1786416659268",
+      "startTime": "2026-08-11T11:50:59.268+09:00",
+      "endTime": "2026-08-11T11:55:59.268+09:00",
+      "plannedDuration": 5,
+      "type": "short-break",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-11T11:50:59.268+09:00",
+          "endTime": "2026-08-11T11:55:59.268+09:00"
         }
       ]
     }
