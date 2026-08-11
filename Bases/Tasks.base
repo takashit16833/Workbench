@@ -21,6 +21,23 @@ properties:
   note.scheduled:
     displayName: Scheduled
 views:
+  - type: tasknotesCalendar
+    name: Today
+    order:
+      - status
+      - priority
+      - due
+      - scheduled
+      - projects
+      - file.name
+    options:
+      showPropertyBasedEvents: false
+      showOverdueOnToday: true
+      createDailyNotesFromDateLinks: true
+    calendarView: listWeek
+    startDateProperty: file.ctime
+    listDayCount: 1
+    titleProperty: file.basename
   - type: tasknotesTaskList
     name: Tasks
     filters:
