@@ -35,6 +35,8 @@ Workbench optimizes for the **next correct action**, not for completeness.
 - TaskNotes may use a parent Task as the child Task's Project anchor internally. Treat this as an implementation detail: user-facing workflow should present the relationship as parent Task -> Subtask, not as an ordinary Project assignment.
 - `source` is optional. Use it when a Workbench Task is a local execution handle for an external authoritative ticket or document.
 - When `source` exists, keep the external system authoritative. Do not mirror its body into Workbench merely for duplication; store only the local execution notes and progress needed to do the work.
+- Holiday Task is a scheduling-only exception: `type: holiday`, `archived: true`, a `scheduled` date, and one or more `projects`. It does not follow the normal Task status workflow.
+- Holiday Task title is `休み`. Keep it visible on Calendar while excluding archived Tasks from ordinary Task views and TaskNotes Statistics.
 
 ## Idea
 
@@ -73,6 +75,15 @@ Workbench optimizes for the **next correct action**, not for completeness.
 - `Workbench: Clear All` + `すべて`: Trash Markdown under `Tasks/`, `Ideas/` and `Projects/`.
 - Never modify or Trash `Notes/` from either clear command.
 - Clear commands require exact `RESET` confirmation and use recoverable Trash behavior.
+
+## Schedule commands
+
+- `Workbench: Create Holiday` creates or extends a Project-scoped Holiday Task; normal Task capture remains unchanged.
+- `Workbench: Shift Schedule` always operates on one selected Project.
+- Shift uses Project-related Holiday Tasks as excluded workdays.
+- The selected baseline Task keeps its `scheduled` date; only its `due` moves. Other eligible Tasks are shifted only when their `scheduled` date is on or after the baseline Task's original `due` date.
+- Tasks before that boundary are never changed. `done`, `dropped`, archived, and Holiday Tasks are not shifted.
+- Show a preview before bulk schedule changes. Warn when a changed Task belongs to multiple Projects.
 
 ## Plugin boundaries
 
