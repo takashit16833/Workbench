@@ -524,7 +524,7 @@
   },
   "enableDebugLogging": false,
   "lastSeenVersion": "4.12.3",
-  "lastSelectedTaskPath": "Tasks/各タスクのスケジュールを設定する.md",
+  "lastSelectedTaskPath": "Tasks/ステップ15 共通エラー型を完成させる.md",
   "pomodoroState": {
     "isRunning": false,
     "timeRemaining": 1500,
@@ -587,6 +587,64 @@
         {
           "startTime": "2026-08-11T11:50:59.268+09:00",
           "endTime": "2026-08-11T11:55:59.268+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1786436896724",
+      "startTime": "2026-08-11T17:28:16.724+09:00",
+      "endTime": "2026-08-11T17:53:16.724+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "taskPath": "Tasks/ステップ15 共通エラー型を完成させる.md",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-11T17:28:16.724+09:00",
+          "endTime": "2026-08-11T17:53:16.724+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1786438397932",
+      "startTime": "2026-08-11T17:53:17.932+09:00",
+      "endTime": "2026-08-11T17:58:17.932+09:00",
+      "plannedDuration": 5,
+      "type": "short-break",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-11T17:53:17.932+09:00",
+          "endTime": "2026-08-11T17:58:17.932+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1786439308943",
+      "startTime": "2026-08-11T18:08:28.943+09:00",
+      "endTime": "2026-08-11T18:33:28.943+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "taskPath": "Tasks/ステップ15 共通エラー型を完成させる.md",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-11T18:08:28.943+09:00",
+          "endTime": "2026-08-11T18:33:28.943+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1786440810172",
+      "startTime": "2026-08-11T18:33:30.172+09:00",
+      "endTime": "2026-08-11T18:48:30.172+09:00",
+      "plannedDuration": 15,
+      "type": "long-break",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-11T18:33:30.172+09:00",
+          "endTime": "2026-08-11T18:48:30.172+09:00"
         }
       ]
     }

@@ -2,7 +2,7 @@
 
 ## Tasks
 
-![[Tasks.base#Tasks]]
+![[Tasks.base#Today]]
 
 - [[Tasks.base#Table|Table]]
 - [[Tasks.base#Kanban|Kanban]]
