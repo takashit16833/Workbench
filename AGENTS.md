@@ -64,11 +64,13 @@ Workbench optimizes for the **next correct action**, not for completeness.
 ## Clear commands
 
 - Both clear commands offer `完了のみ` and `すべて`.
-- `完了のみ`: Trash only Tasks with `status: done` or `status: dropped`.
+- `完了のみ`: affect only Tasks with `status: done` or `status: dropped`.
 - `Workbench: Clear Project` can select a Project or `無所属`.
 - `無所属` means Tasks / Ideas with no non-empty `projects` assignment. A Subtask linked to a parent Task through TaskNotes' project anchor is therefore not unassigned.
-- `Workbench: Clear Project` + Project + `完了のみ`: limit completed Tasks to the selected Project; preserve Ideas and the Project file.
-- `Workbench: Clear Project` + Project + `すべて`: Trash matching Tasks / Ideas plus the selected Project.
+- When clearing a selected Project, a matching Task / Idea that still has another `projects` assignment keeps the file and removes only the selected Project link. If no other Project assignment remains, Trash the file.
+- The same multi-Project unlink rule applies to Holiday Tasks.
+- `Workbench: Clear Project` + Project + `完了のみ`: apply the rule above only to completed Tasks; preserve Ideas and the Project file.
+- `Workbench: Clear Project` + Project + `すべて`: apply the rule above to matching Tasks / Ideas, then Trash the selected Project after entity updates succeed.
 - `Workbench: Clear Project` + `無所属` + `完了のみ`: Trash only completed unassigned Tasks.
 - `Workbench: Clear Project` + `無所属` + `すべて`: Trash unassigned Tasks / Ideas; there is no Project file to remove.
 - `Workbench: Clear All` + `完了のみ`: Trash completed Tasks across all Projects; preserve Ideas and Project files.
