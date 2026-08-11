@@ -22,6 +22,10 @@ properties:
 views:
   - type: tasknotesTaskList
     name: Tasks
+    filters:
+      and:
+        - status != "done"
+        - status != "dropped"
     groupBy:
       property: projects
       direction: ASC
