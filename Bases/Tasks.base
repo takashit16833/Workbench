@@ -43,6 +43,7 @@ views:
       showDue: true
       showRecurring: false
       showTimeEntries: false
+      defaultCollapsedState: Collapsed
   - type: table
     name: Table
     order:
