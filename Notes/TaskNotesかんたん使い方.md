@@ -27,7 +27,7 @@ created: 2026-08-11
 
 ## Pomodoro
 
-コマンドパレットから **TaskNotes: Open Pomodoro View** を開く。
+コマンドパレットから **TaskNotes: モドーロタイマーを開く** を開く。
 
 1. 作業するTaskを選ぶ
 2. Pomodoroを開始する
