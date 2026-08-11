@@ -1,5 +1,9 @@
 # Workbench
 
+## Today
+
+![[Tasks.base#Today]]
+
 ## Tasks
 
 ![[Tasks.base#Tasks]]
