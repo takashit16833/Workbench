@@ -20,6 +20,26 @@ git branch --track feat/foo origin/feat/foo
 
 Lazygit では作成後、そのブランチへ checkout する。
 
+# Commit
+
+## 複数コミットを1つにまとめる
+
+直近3コミットを1つにまとめる。
+
+```bash
+git rebase -i HEAD~3
+```
+
+2つ目以降を `squash` に変更する。
+
+```text
+pick    abc1234 commit 1
+squash  def5678 commit 2
+squash  ghi9012 commit 3
+```
+
+保存後、コミットメッセージを編集する。
+
 # Worktree
 
 ## リモートブランチから worktree を作る
