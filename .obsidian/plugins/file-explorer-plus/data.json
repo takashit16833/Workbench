@@ -81,6 +81,13 @@
         "type": "DIRECTORIES",
         "pattern": "Bases",
         "patternType": "STRICT"
+      },
+      {
+        "name": "",
+        "active": true,
+        "type": "DIRECTORIES",
+        "pattern": "Projects",
+        "patternType": "STRICT"
       }
     ],
     "frontMatter": [
