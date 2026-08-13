@@ -1,7 +1,5 @@
 # Workbench Agent Rules
 
-Read `ARCHITECTURE.md` before structural changes.
-
 ## Noise budget
 
 Workbench optimizes for the **next correct action**, not for completeness.
