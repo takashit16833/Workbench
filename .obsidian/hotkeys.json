@@ -22,5 +22,13 @@
       ],
       "key": "D"
     }
+  ],
+  "zenmode:toggle-zen-mode": [
+    {
+      "modifiers": [
+        "Alt"
+      ],
+      "key": "Z"
+    }
   ]
 }
