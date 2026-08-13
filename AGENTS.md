@@ -9,6 +9,7 @@ Workbench optimizes for the **next correct action**, not for completeness.
 - Do not add prompts, fields, helper text, views, properties or plugins without a concrete workflow need.
 - Prefer useful defaults over questions.
 - Keep user-facing surfaces quiet. If removing text does not make the user's next action more likely to be wrong, remove it.
+- The noise budget primarily applies to UI, metadata, prompts, generated helper surfaces and similar operational clutter. It does not require shortening substantive Task bodies or Notes that preserve useful working context.
 - Keep internal rules small. If removing a rule does not increase the chance of breaking the architecture, remove it.
 - Do not expose architectural rationale in user-facing docs unless it is needed to operate, troubleshoot or make a decision.
 
@@ -36,10 +37,12 @@ Workbench optimizes for the **next correct action**, not for completeness.
 - TaskNotes provides capture/edit/workflow/Project association/views.
 - Do not use inline tasks as canonical Workbench Tasks.
 - `projects` may contain zero or more Project links.
+- Task bodies may contain whatever working context is useful for executing or handing off the work, including investigation results, implementation notes, decisions, next steps and relevant references.
 - Use TaskNotes' native Subtask relationship when a Task is meaningfully decomposed into child Tasks.
 - TaskNotes may use a parent Task as the child Task's Project anchor internally. Treat this as an implementation detail: user-facing workflow should present the relationship as parent Task -> Subtask, not as an ordinary Project assignment.
 - `source` is optional. Use it when a Workbench Task is a local execution handle for an external authoritative ticket or document.
 - When `source` exists, keep the external system authoritative. Do not mirror its body into Workbench merely for duplication; store only the local execution notes and progress needed to do the work.
+- Avoid needless duplication of an external source, but do not shorten or remove useful local working context merely for brevity.
 - Holiday Task is a scheduling-only exception: `type: holiday`, `archived: true`, a `scheduled` date, and one or more `projects`. It does not follow the normal Task status workflow.
 - Holiday Task title is `休み`. Keep it visible on Calendar while excluding archived Tasks from ordinary Task views and TaskNotes Statistics.
 
@@ -56,6 +59,7 @@ Workbench optimizes for the **next correct action**, not for completeness.
 
 - Passive information with no workflow obligation.
 - `projects` is optional.
+- Notes may be as detailed or informal as useful for preserving information, investigation results, technical context or other material worth keeping.
 - Notes are retrieved by search, links or direct navigation; do not add a Notes overview to the Dashboard without a concrete need.
 - Do not convert it into a Task or Idea without a reason.
 
