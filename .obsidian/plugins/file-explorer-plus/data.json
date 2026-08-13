@@ -88,6 +88,27 @@
         "type": "DIRECTORIES",
         "pattern": "Projects",
         "patternType": "STRICT"
+      },
+      {
+        "name": "",
+        "active": true,
+        "type": "DIRECTORIES",
+        "pattern": "Ideas",
+        "patternType": "STRICT"
+      },
+      {
+        "name": "",
+        "active": true,
+        "type": "DIRECTORIES",
+        "pattern": "Tasks",
+        "patternType": "STRICT"
+      },
+      {
+        "name": "",
+        "active": true,
+        "type": "FILES",
+        "pattern": "AGENTS.md",
+        "patternType": "STRICT"
       }
     ],
     "frontMatter": [
