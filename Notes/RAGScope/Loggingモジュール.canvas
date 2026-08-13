@@ -1,284 +1,37 @@
 {
-	"nodes": [
-		{
-			"id": "g-public",
-			"type": "group",
-			"x": -380,
-			"y": -840,
-			"width": 2940,
-			"height": 2080,
-			"color": "5",
-			"label": "ragscope-logging"
-		},
-		{
-			"id": "g-internal",
-			"type": "group",
-			"x": 1120,
-			"y": -660,
-			"width": 1310,
-			"height": 1800,
-			"color": "6",
-			"label": "ragscope-logging / 内部モジュール"
-		},
-		{
-			"id": "g-outside",
-			"type": "group",
-			"x": -1440,
-			"y": -600,
-			"width": 540,
-			"height": 1500,
-			"color": "4",
-			"label": "Logging の外側（利用側）"
-		},
-		{
-			"id": "setup",
-			"type": "text",
-			"text": "# `RAGScope.Logging.Setup`\n\n**production環境をLoggerへ配線する場所**\n\n`Runtime` はUUIDの作り方・現在時刻の取り方・出力先を決めない。`Setup` が本番では何を使うかを選び、`mkLogger`へ注入する。\n\n現在の配線:\n- `RAGScopeApp` + execution / service context\n- EventId = UUID v4\n- Clock = 現在UTC時刻\n- Sink = `aesonStderrSink`\n\n`newExecutionId`を分離し、1回のCLI実行で同じExecutionIdを共有できる。\n\n**存在意義:** `Main` を `Core` / `Runtime` / Backend の詳細から守り、本番固有の選択を1か所へ集約する。\n",
-			"x": -160,
-			"y": 540,
-			"width": 480,
-			"height": 560,
-			"color": "5"
-		},
-		{
-			"id": "core",
-			"type": "text",
-			"text": "# `RAGScope.Logging.Core`\n\n**「ログとは何か」を定義する純粋な層**\n\nLogging基盤で共有する**語彙・データ構造・不変条件**を持つ。\n\n主なもの:\n- `ExecutionId` / `EventId` / `Timestamp`\n- `Component` / `EventContext` / `LogLevel`\n- `Payload` / `LogError`\n- 機能側で意味が確定した `EventSpec`\n- Runtimeが共通情報を足した完成形 `LogEvent`\n- `ToEventSpec`\n\n`failedEventSpec` などのconstructorで、「失敗ならevent=failed・level=error・error必須」のような規則も表現する。\n\n**しないこと:** UUID生成、現在時刻取得、level filter、出力。I/Oを持たない。\n\n**Runtimeとの違い:** Coreは「何を表すか」、Runtimeは「それをどう処理するか」。\n",
-			"x": 1210,
-			"y": -595,
-			"width": 620,
-			"height": 540,
-			"color": "6"
-		},
-		{
-			"id": "runtime",
-			"type": "text",
-			"text": "# `RAGScope.Logging.Runtime`\n\n**「Loggerがどう動くか」を定義する実行機構**\n\n`Logger` は、最低ログレベル・component・contextに加え、差し替え可能な依存を保持する。\n\n- `EventIdSource :: IO EventId`\n- `Clock :: IO Timestamp`\n- `Sink :: LogEvent -> IO ...`\n\n`emit` の流れ:\n1. 機能イベント → `EventSpec`\n2. minimum levelでfilter\n3. EventId / Timestampを取得\n4. Coreの型を使って`LogEvent`を完成\n5. 注入されたSinkへ渡す\n\n**知らないこと:** UUIDをどう生成するか、時刻をどこから取るか、JSON/stderrへ出すか。具体実装は外から注入される。\n\n**Coreとの違い:** Coreが型と規則、Runtimeが実際のログ処理。\n",
-			"x": 1800,
-			"y": 120,
-			"width": 590,
-			"height": 610,
-			"color": "6"
-		},
-		{
-			"id": "aeson",
-			"type": "text",
-			"text": "# `RAGScope.Logging.Backend.Aeson`\n\n**純粋なJSON変換境界**\n\n`Core`をAeson非依存に保ったまま、ログモデルの`ToJSON` instanceとJSON表記上の差をここへ集約する。\n\n現在対応済み:\n- `SchemaVersion`: `SchemaV1 -> 1`\n- `LogLevel`: Generic + `Options`でlowercase\n- `EventId` / `ExecutionId`: UUIDの既存instanceへ委譲\n- `OperationName` / `EventName` / `ErrorCode` / `SafeMessage`: Textの既存instanceへ委譲\n\n**しないこと:** stderrへの書き込みなどのI/O。\n\n**存在意義:** 「JSONでどう表すか」と「どこへ出力するか」を分離する。\n",
-			"x": 1210,
-			"y": 745,
-			"width": 560,
-			"height": 365,
-			"color": "6"
-		},
-		{
-			"id": "backend",
-			"type": "text",
-			"text": "# `RAGScope.Logging.Backend.AesonStderr`\n\n**productionのstderr配送Backend**\n\n完成済み`LogEvent`をAesonでserializeし、stderrへ1イベント1行で出力するSinkを提供する。\n\n- 出力時の`IOException`を`LoggingSinkFailure`へ変換\n- JSON表現の意味は`Backend.Aeson`へ委譲\n- 目標形は`encode logEvent`してstderrへ出すだけの薄いBackend\n\n現状は旧来の`encodeLogEvent` / `encode*`手書き変換がまだ残っており、Step16で`Backend.Aeson`へ移行中。\n\nいつ・何をログにするかは決めない。そこはRuntimeの責務。\n",
-			"x": 1820,
-			"y": 810,
-			"width": 560,
-			"height": 300,
-			"color": "6"
-		},
-		{
-			"id": "logging",
-			"type": "text",
-			"text": "# `RAGScope.Logging`\n\n**通常利用の入口**\n\n`Logger` / `emit` / `LoggingFailure` を公開し、`Runtime` を通常の機能処理から隠す。\n\n機能処理は基本的にここだけを見ればよい。\n",
-			"x": -120,
-			"y": -735,
-			"width": 400,
-			"height": 280,
-			"color": "5"
-		},
-		{
-			"id": "eventspec",
-			"type": "text",
-			"text": "# `RAGScope.Logging.EventSpec`\n\n**機能イベント定義の入口**\n\n`EventSpec`・`Payload`・`LogError`・`ToEventSpec` など、機能固有イベントを共通表現へ写像するためのAPIを公開。\n\n`Core` の低水準APIを必要な範囲だけ見せる。\n",
-			"x": -120,
-			"y": -365,
-			"width": 400,
-			"height": 310,
-			"color": "5"
-		},
-		{
-			"id": "testing",
-			"type": "text",
-			"text": "# `RAGScope.Logging.Testing`\n\n**test専用の入口**\n\n固定ID・固定Clock・Memory Sink・Failure Sinkなどを提供し、productionとは別の依存を`Runtime`へ注入できるようにする。\n\nテストから内部moduleを直接触らせないためのFacade。\n",
-			"x": -160,
-			"y": 75,
-			"width": 480,
-			"height": 280,
-			"color": "5"
-		},
-		{
-			"id": "process",
-			"type": "text",
-			"text": "## main library / 機能処理\n\n**通常のログ利用者**\n\n- `Logger` と機能固有イベントを使う\n- `emit` するだけ\n\nUUID・時刻・JSON・出力先・内部moduleは知らない。\n",
-			"x": -1340,
-			"y": -500,
-			"width": 350,
-			"height": 250,
-			"color": "4"
-		},
-		{
-			"id": "tests",
-			"type": "text",
-			"text": "## test-suite `ragscope-test`\n\n`RAGScope.Logging` と `RAGScope.Logging.Testing` を利用。\n\n固定ID・時刻やMemory / Failure Sinkで挙動を検査し、内部moduleへ直接依存しない。\n",
-			"x": -1340,
-			"y": 585,
-			"width": 350,
-			"height": 230,
-			"color": "4"
-		},
-		{
-			"id": "main",
-			"type": "text",
-			"text": "## executable `ragscope` / `Main`\n\n**composition root**\n\n- `ExecutionId` を1回生成\n- `Setup` からproduction `Logger`を取得\n- Loggerをmain libraryへ渡す\n",
-			"x": -1340,
-			"y": 235,
-			"width": 350,
-			"height": 230,
-			"color": "4"
-		},
-		{
-			"id": "featurelogging",
-			"type": "text",
-			"text": "## main library / 機能ログ定義\n\n機能固有の閉じたイベントを、`ToEventSpec` で共通 `EventSpec` へ対応付ける。\n\n低水準のEventSpec APIを使う境界。\n",
-			"x": -1340,
-			"y": -135,
-			"width": 350,
-			"height": 210,
-			"color": "4"
-		}
+	"nodes":[
+		{"id":"g-public","type":"group","x":-380,"y":-840,"width":2940,"height":2600,"color":"5","label":"ragscope-logging"},
+		{"id":"g-internal","type":"group","x":1120,"y":-680,"width":1360,"height":2360,"color":"6","label":"ragscope-logging / 内部モジュール"},
+		{"id":"g-outside","type":"group","x":-1440,"y":-600,"width":540,"height":1500,"color":"4","label":"Logging の外側（利用側）"},
+		{"id":"core","type":"text","text":"# `RAGScope.Logging.Core`\n\n**「ログとは何か」を定義する純粋な層**\n\nLogging基盤で共有する**語彙・データ構造・不変条件**を持つ。\n\n主なもの:\n- `ExecutionId` / `EventId` / `Timestamp`\n- `Component` / `EventContext` / `LogLevel`\n- `Payload` / `LogError`\n- 機能側で意味が確定した `EventSpec`\n- Runtimeが共通情報を足した完成形 `LogEvent`\n- `ToEventSpec`\n\n`failedEventSpec` などのconstructorで、「失敗ならevent=failed・level=error・error必須」のような規則も表現する。\n\n**しないこと:** UUID生成、現在時刻取得、level filter、出力。I/Oを持たない。\n\n**Runtimeとの違い:** Coreは「何を表すか」、Runtimeは「それをどう処理するか」。\n","x":1210,"y":-595,"width":620,"height":540,"color":"6"},
+		{"id":"process","type":"text","text":"## main library / 機能処理\n\n**通常のログ利用者**\n\n- `Logger` と機能固有イベントを使う\n- `emit` するだけ\n\nUUID・時刻・JSON・出力先・内部moduleは知らない。\n","x":-1340,"y":-500,"width":350,"height":250,"color":"4"},
+		{"id":"tests","type":"text","text":"## test-suite `ragscope-test`\n\n`RAGScope.Logging` と `RAGScope.Logging.Testing` を利用。\n\n固定ID・時刻やMemory / Failure Sinkで挙動を検査し、内部moduleへ直接依存しない。\n","x":-1340,"y":585,"width":350,"height":230,"color":"4"},
+		{"id":"main","type":"text","text":"## executable `ragscope` / `Main`\n\n**composition root**\n\n- `ExecutionId` を1回生成\n- `Setup` からproduction `Logger`を取得\n- Loggerをmain libraryへ渡す\n","x":-1340,"y":235,"width":350,"height":230,"color":"4"},
+		{"id":"featurelogging","type":"text","text":"## main library / 機能ログ定義\n\n機能固有の閉じたイベントを、`ToEventSpec` で共通 `EventSpec` へ対応付ける。\n\n低水準のEventSpec APIを使う境界。\n","x":-1340,"y":-135,"width":350,"height":210,"color":"4"},
+		{"id":"runtime","type":"text","text":"# `RAGScope.Logging.Runtime`\n\n**「Loggerがどう動くか」を定義する実行機構**\n\n`Logger` は、最低ログレベル・component・contextに加え、差し替え可能な依存を保持する。\n\n- `EventIdSource :: IO EventId`\n- `Clock :: IO Timestamp`\n- `Sink :: LogEvent -> IO ...`\n\n`emit` の流れ:\n1. 機能イベント → `EventSpec`\n2. minimum levelでfilter\n3. EventId / Timestampを取得\n4. Coreの型を使って`LogEvent`を完成\n5. 注入されたSinkへ渡す\n\n**知らないこと:** UUIDをどう生成するか、時刻をどこから取るか、JSON/stderrへ出すか。具体実装は外から注入される。\n\n**Coreとの違い:** Coreが型と規則、Runtimeが実際のログ処理。\n","x":1830,"y":75,"width":590,"height":610,"color":"6"},
+		{"id":"aeson","type":"text","text":"# `RAGScope.Logging.Backend.Aeson`\n\n**純粋なJSON変換境界**\n\n`Core`をAeson非依存に保ったまま、ログモデルの`ToJSON` instanceとJSON表記上の差をここへ集約する。\n\n現在対応済み:\n- `SchemaVersion`: `SchemaV1 -> 1`\n- `LogLevel`: Generic + `Options`でlowercase\n- `EventId` / `ExecutionId`: UUIDの既存instanceへ委譲\n- `OperationName` / `EventName` / `ErrorCode` / `SafeMessage`: Textの既存instanceへ委譲\n\n**しないこと:** stderrへの書き込みなどのI/O。\n\n**存在意義:** 「JSONでどう表すか」と「どこへ出力するか」を分離する。\n","x":1210,"y":585,"width":560,"height":455,"color":"6"},
+		{"id":"backend","type":"text","text":"# `RAGScope.Logging.Backend.AesonStderr`\n\n**productionのstderr配送Backend**\n\n完成済み`LogEvent`をAesonでserializeし、stderrへ1イベント1行で出力するSinkを提供する。\n\n- 出力時の`IOException`を`LoggingSinkFailure`へ変換\n- JSON表現の意味は`Backend.Aeson`へ委譲\n- 目標形は`encode logEvent`してstderrへ出すだけの薄いBackend\n\n現状は旧来の`encodeLogEvent` / `encode*`手書き変換がまだ残っており、Step16で`Backend.Aeson`へ移行中。\n\nいつ・何をログにするかは決めない。そこはRuntimeの責務。\n","x":1845,"y":1200,"width":560,"height":390,"color":"6"},
+		{"id":"testing","type":"text","text":"# `RAGScope.Logging.Testing`\n\n**test専用の入口**\n\n固定ID・固定Clock・Memory Sink・Failure Sinkなどを提供し、productionとは別の依存を`Runtime`へ注入できるようにする。\n\nテストから内部moduleを直接触らせないためのFacade。\n","x":-120,"y":445,"width":480,"height":280,"color":"5"},
+		{"id":"eventspec","type":"text","text":"# `RAGScope.Logging.EventSpec`\n\n**機能イベント定義の入口**\n\n`EventSpec`・`Payload`・`LogError`・`ToEventSpec` など、機能固有イベントを共通表現へ写像するためのAPIを公開。\n\n`Core` の低水準APIを必要な範囲だけ見せる。\n","x":-80,"y":-210,"width":400,"height":310,"color":"5"},
+		{"id":"setup","type":"text","text":"# `RAGScope.Logging.Setup`\n\n**production環境をLoggerへ配線する場所**\n\n`Runtime` はUUIDの作り方・現在時刻の取り方・出力先を決めない。`Setup` が本番では何を使うかを選び、`mkLogger`へ注入する。\n\n現在の配線:\n- `RAGScopeApp` + execution / service context\n- EventId = UUID v4\n- Clock = 現在UTC時刻\n- Sink = `aesonStderrSink`\n\n`newExecutionId`を分離し、1回のCLI実行で同じExecutionIdを共有できる。\n\n**存在意義:** `Main` を `Core` / `Runtime` / Backend の詳細から守り、本番固有の選択を1か所へ集約する。\n","x":-120,"y":920,"width":480,"height":560,"color":"5"},
+		{"id":"logging","type":"text","text":"# `RAGScope.Logging`\n\n**通常利用の入口**\n\n`Logger` / `emit` / `LoggingFailure` を公開し、`Runtime` を通常の機能処理から隠す。\n\n機能処理は基本的にここだけを見ればよい。\n","x":-80,"y":-640,"width":400,"height":280,"color":"5"}
 	],
-	"edges": [
-		{
-			"id": "e-main-setup",
-			"fromNode": "main",
-			"fromSide": "right",
-			"toNode": "setup",
-			"toSide": "left",
-			"label": "production Logger 初期化"
-		},
-		{
-			"id": "e-process-logging",
-			"fromNode": "process",
-			"fromSide": "right",
-			"toNode": "logging",
-			"toSide": "left",
-			"label": "Logger / emit"
-		},
-		{
-			"id": "e-feature-eventspec",
-			"fromNode": "featurelogging",
-			"fromSide": "right",
-			"toNode": "eventspec",
-			"toSide": "left",
-			"label": "ToEventSpec / EventSpec"
-		},
-		{
-			"id": "e-tests-logging",
-			"fromNode": "tests",
-			"fromSide": "right",
-			"toNode": "logging",
-			"toSide": "left",
-			"label": "emit"
-		},
-		{
-			"id": "e-tests-testing",
-			"fromNode": "tests",
-			"fromSide": "right",
-			"toNode": "testing",
-			"toSide": "left",
-			"label": "test support"
-		},
-		{
-			"id": "e-logging-runtime",
-			"fromNode": "logging",
-			"fromSide": "right",
-			"toNode": "runtime",
-			"toSide": "left",
-			"label": "emitを委譲"
-		},
-		{
-			"id": "e-eventspec-core",
-			"fromNode": "eventspec",
-			"fromSide": "right",
-			"toNode": "core",
-			"toSide": "left",
-			"label": "EventSpec構築API"
-		},
-		{
-			"id": "e-setup-core",
-			"fromNode": "setup",
-			"fromSide": "right",
-			"toNode": "core",
-			"toSide": "left",
-			"label": "型 / context"
-		},
-		{
-			"id": "e-setup-runtime",
-			"fromNode": "setup",
-			"fromSide": "right",
-			"toNode": "runtime",
-			"toSide": "left",
-			"label": "mkLogger"
-		},
-		{
-			"id": "e-setup-backend",
-			"fromNode": "setup",
-			"fromSide": "right",
-			"toNode": "backend",
-			"toSide": "left",
-			"label": "本番Sink"
-		},
-		{
-			"id": "e-testing-core",
-			"fromNode": "testing",
-			"fromSide": "right",
-			"toNode": "core",
-			"toSide": "left",
-			"label": "固定値 / LogEvent"
-		},
-		{
-			"id": "e-testing-runtime",
-			"fromNode": "testing",
-			"fromSide": "right",
-			"toNode": "runtime",
-			"toSide": "left",
-			"label": "差し替え依存でmkLogger"
-		},
-		{
-			"id": "e-runtime-core",
-			"fromNode": "runtime",
-			"fromSide": "top",
-			"toNode": "core",
-			"toSide": "bottom",
-			"label": "型を使ってLogEvent完成"
-		},
-		{
-			"id": "e-aeson-core",
-			"fromNode": "aeson",
-			"fromSide": "top",
-			"toNode": "core",
-			"toSide": "bottom",
-			"label": "ToJSON / JSON表現"
-		},
-		{
-			"id": "e-backend-aeson",
-			"fromNode": "backend",
-			"fromSide": "left",
-			"toNode": "aeson",
-			"toSide": "right",
-			"label": "serialize"
-		},
-		{
-			"id": "e-backend-runtime",
-			"fromNode": "backend",
-			"fromSide": "top",
-			"toNode": "runtime",
-			"toSide": "bottom",
-			"label": "Sink / LoggingFailure"
-		}
+	"edges":[
+		{"id":"e-main-setup","fromNode":"main","fromSide":"right","toNode":"setup","toSide":"left","label":"production Logger 初期化"},
+		{"id":"e-process-logging","fromNode":"process","fromSide":"right","toNode":"logging","toSide":"left","label":"Logger / emit"},
+		{"id":"e-feature-eventspec","fromNode":"featurelogging","fromSide":"right","toNode":"eventspec","toSide":"left","label":"ToEventSpec / EventSpec"},
+		{"id":"e-tests-logging","fromNode":"tests","fromSide":"right","toNode":"logging","toSide":"left","label":"emit"},
+		{"id":"e-tests-testing","fromNode":"tests","fromSide":"right","toNode":"testing","toSide":"left","label":"test support"},
+		{"id":"e-logging-runtime","fromNode":"logging","fromSide":"right","toNode":"runtime","toSide":"left","label":"emitを委譲"},
+		{"id":"e-eventspec-core","fromNode":"eventspec","fromSide":"right","toNode":"core","toSide":"left","label":"EventSpec構築API"},
+		{"id":"e-setup-core","fromNode":"setup","fromSide":"right","toNode":"core","toSide":"left","label":"型 / context"},
+		{"id":"e-setup-runtime","fromNode":"setup","fromSide":"right","toNode":"runtime","toSide":"left","label":"mkLogger"},
+		{"id":"e-setup-backend","fromNode":"setup","fromSide":"right","toNode":"backend","toSide":"left","label":"本番Sink"},
+		{"id":"e-testing-core","fromNode":"testing","fromSide":"right","toNode":"core","toSide":"left","label":"固定値 / LogEvent"},
+		{"id":"e-testing-runtime","fromNode":"testing","fromSide":"right","toNode":"runtime","toSide":"left","label":"差し替え依存でmkLogger"},
+		{"id":"e-runtime-core","fromNode":"runtime","fromSide":"top","toNode":"core","toSide":"bottom","label":"型を使ってLogEvent完成"},
+		{"id":"e-backend-runtime","fromNode":"backend","fromSide":"top","toNode":"runtime","toSide":"bottom","label":"Sink / LoggingFailure"},
+		{"id":"e-aeson-core","fromNode":"aeson","fromSide":"top","toNode":"core","toSide":"bottom","label":"ToJSON / JSON表現"},
+		{"id":"e-backend-aeson","fromNode":"backend","fromSide":"left","toNode":"aeson","toSide":"right","label":"serialize"}
 	]
 }
