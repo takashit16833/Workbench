@@ -1,4 +1,5 @@
 const {
+  MarkdownView,
   Modal,
   Notice,
   Plugin,
@@ -11,6 +12,11 @@ const DATA_FOLDERS = ["Tasks", "Ideas", "Projects"];
 const COMPLETED_STATUSES = new Set(["done", "dropped"]);
 const HOLIDAY_TYPE = "holiday";
 const HOLIDAY_TITLE = "休み";
+const DASHBOARD_PATH = "Dashboard.md";
+const TASKS_BASE_PATH = "Bases/Tasks.base";
+const CALENDAR_BASE_PATH = "TaskNotes/Views/calendar-default.base";
+const DASHBOARD_KEYS = new Set(["p", "t", "c", "k"]);
+const TASKS_VIEW_NAMES = new Set(["Today", "Tasks", "Table", "Kanban"]);
 
 function makeChoiceRow(container, label, onChoose) {
   const row = new Setting(container).setName(label);
@@ -27,6 +33,15 @@ function makeChoiceRow(container, label, onChoose) {
 
 function errorMessage(error) {
   return error instanceof Error ? error.message : String(error);
+}
+
+function normalizeText(value) {
+  return String(value ?? "").replace(/\s+/g, " ").trim();
+}
+
+function isVisibleElement(element) {
+  if (!element || typeof element.getClientRects !== "function") return false;
+  return element.getClientRects().length > 0;
 }
 
 function getDatePart(value) {
@@ -562,6 +577,124 @@ module.exports = class WorkbenchCommands extends Plugin {
     this.addCommand({ id: "clear-all", name: "Clear All", callback: () => this.openClearAll() });
     this.addCommand({ id: "create-holiday", name: "Create Holiday", callback: () => this.openCreateHoliday() });
     this.addCommand({ id: "shift-schedule", name: "Shift Schedule", callback: () => this.openShiftSchedule() });
+    this.registerDomEvent(document, "keydown", (event) => this.handleDashboardKeydown(event));
+  }
+
+  activeDashboardReadingView() {
+    const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+    if (!view || view.file?.path !== DASHBOARD_PATH || view.getMode() !== "preview") return null;
+    return view;
+  }
+
+  isEditableTarget(target) {
+    if (!target || typeof target.closest !== "function") return false;
+    return Boolean(target.closest("input, textarea, select, [contenteditable='true'], [contenteditable=''], .cm-editor"));
+  }
+
+  handleDashboardKeydown(event) {
+    if (
+      event.defaultPrevented ||
+      event.repeat ||
+      event.metaKey ||
+      event.ctrlKey ||
+      event.altKey ||
+      event.shiftKey
+    ) return;
+
+    const key = event.key.toLowerCase();
+    if (!DASHBOARD_KEYS.has(key)) return;
+
+    const view = this.activeDashboardReadingView();
+    if (!view || this.isEditableTarget(event.target)) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (key === "p") {
+      void this.switchDashboardTasksView(view, "Tasks");
+      return;
+    }
+    if (key === "t") {
+      void this.switchDashboardTasksView(view, "Today");
+      return;
+    }
+    if (key === "c") {
+      void this.app.workspace.openLinkText(`${CALENDAR_BASE_PATH}#Calendar`, DASHBOARD_PATH, false);
+      return;
+    }
+    if (key === "k") {
+      void this.app.workspace.openLinkText(`${TASKS_BASE_PATH}#Kanban`, DASHBOARD_PATH, false);
+    }
+  }
+
+  baseViewButton(root) {
+    const toolbar = root.querySelector(".bases-toolbar") ?? root;
+    const candidates = [...toolbar.querySelectorAll("button, [role='button']")];
+    return candidates.find((element) => TASKS_VIEW_NAMES.has(normalizeText(element.textContent))) ?? null;
+  }
+
+  dashboardTasksEmbed(view) {
+    const root = view.previewMode?.containerEl ?? view.containerEl;
+    const candidates = [...root.querySelectorAll(".internal-embed, .bases-embed")];
+
+    const bySource = candidates.find((element) => {
+      const source = [
+        element.getAttribute("src"),
+        element.getAttribute("data-path"),
+        element.getAttribute("data-file"),
+        element.getAttribute("data-source"),
+      ].filter(Boolean).join(" ");
+      return source.includes("Tasks.base") || source.includes(TASKS_BASE_PATH);
+    });
+    if (bySource) return bySource;
+
+    return candidates.find((element) => this.baseViewButton(element) !== null) ?? null;
+  }
+
+  menuItemText(element) {
+    const label = element.querySelector(".menu-item-title, .suggestion-title, .text-button-label");
+    return normalizeText(label?.textContent ?? element.textContent);
+  }
+
+  findVisibleMenuItem(documentRef, viewName) {
+    const candidates = [...documentRef.querySelectorAll(
+      ".menu-item, [role='menuitem'], .bases-toolbar-menu-item, .suggestion-item"
+    )];
+    return candidates.find((element) =>
+      isVisibleElement(element) && this.menuItemText(element) === viewName
+    ) ?? null;
+  }
+
+  async waitForMenuItem(documentRef, viewName) {
+    for (let attempt = 0; attempt < 20; attempt += 1) {
+      const item = this.findVisibleMenuItem(documentRef, viewName);
+      if (item) return item;
+      await new Promise((resolve) => setTimeout(resolve, 25));
+    }
+    return null;
+  }
+
+  async switchDashboardTasksView(view, viewName) {
+    const embed = this.dashboardTasksEmbed(view);
+    if (!embed) {
+      new Notice("DashboardのTasksビューが見つかりません。");
+      return;
+    }
+
+    const button = this.baseViewButton(embed);
+    if (!button) {
+      new Notice("Tasksのビュー切り替えが見つかりません。");
+      return;
+    }
+    if (normalizeText(button.textContent) === viewName) return;
+
+    button.click();
+    const item = await this.waitForMenuItem(embed.ownerDocument, viewName);
+    if (!item) {
+      new Notice(`${viewName}ビューが見つかりません。`);
+      return;
+    }
+    item.click();
   }
 
   markdownFilesUnder(folder) {
