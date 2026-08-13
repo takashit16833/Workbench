@@ -1,12 +1,8 @@
-# Workbench
-
-## Tasks
-
-### Today
+# Today
 
 ![[Tasks.base#Today]]
 
-### Tasks
+# Tasks
 
 ![[Tasks.base#Tasks]]
 
@@ -14,10 +10,10 @@
 - [[Tasks.base#Kanban|Kanban]]
 - [[TaskNotes/Views/calendar-default.base#Calendar|Calendar]]
 
-## Ideas
+# Ideas
 
 ![[Dashboard.base#Ideas]]
 
-## Projects
+# Projects
 
 ![[Dashboard.base#Projects]]
