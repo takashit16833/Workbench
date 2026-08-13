@@ -490,7 +490,7 @@ class ShiftAmountModal extends Modal {
           try {
             const plan = this.plugin.createShiftPlan(this.project, this.baseline, this.amount);
             this.close();
-            new ShiftPreviewModal(this.app, this.plugin, this.project, file).open();
+            new ShiftPreviewModal(this.app, this.plugin, this.project, this.baseline, plan).open();
           } catch (error) {
             new Notice(`Shiftできません: ${errorMessage(error)}`);
           }
