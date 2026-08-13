@@ -6,7 +6,7 @@ projects:
   - "[[RAGScope]]"
   - "[[RS-0015 RAGScopeアプリケーションの共通エラー・構造化ログ基盤を実装する]]"
 next_action: ADR-0003に従い、Aeson標準機能を優先してJSON契約と変換実装をログモデルの型構造へ整合させる
-dateModified: 2026-08-13T14:57:00+09:00
+dateModified: 2026-08-13T15:08:00+09:00
 priority: medium
 ---
 
@@ -15,6 +15,22 @@ priority: medium
 RS-0015のRAGScopeアプリケーション側を完成させるための作業ハンドル。
 
 `task/Step16`では`RAGScope.Logging.Setup`による本番Logger初期化まで実装済み。ADR-0003で、構造化ログのJSON構造をHaskellのログモデルの意味上の型構造と整合させ、AesonのGeneric導出を積極的に利用する方針を採用した。
+
+## 作業開始時に確認する正本
+
+このTaskは作業ハンドルであり、現在仕様・採用済み設計・実装状態はRAGScope正本リポジトリを正とする。別のAIへ引き継ぐ場合も、このTaskだけで判断せず、`task/Step16`の最新内容を確認してから作業する。
+
+- [ADR-0003 — 構造化ログのJSON構造をログモデルの型構造と整合させる](https://github.com/takashit16833/RAGScope/blob/task/Step16/project-docs/adr/ADR-0003%20%E6%A7%8B%E9%80%A0%E5%8C%96%E3%83%AD%E3%82%B0%E3%81%AEJSON%E6%A7%8B%E9%80%A0%E3%82%92%E3%83%AD%E3%82%B0%E3%83%A2%E3%83%87%E3%83%AB%E3%81%AE%E5%9E%8B%E6%A7%8B%E9%80%A0%E3%81%A8%E6%95%B4%E5%90%88%E3%81%95%E3%81%9B%E3%82%8B.md)
+- [RS-0015 RAGScopeアプリケーションの共通エラー・構造化ログ基盤を実装する](https://github.com/takashit16833/RAGScope/blob/task/Step16/project-docs/project-management/milestones/v0.0/error-logging/RS-0015%20RAGScope%E3%82%A2%E3%83%97%E3%83%AA%E3%82%B1%E3%83%BC%E3%82%B7%E3%83%A7%E3%83%B3%E3%81%AE%E5%85%B1%E9%80%9A%E3%82%A8%E3%83%A9%E3%83%BC%E3%83%BB%E6%A7%8B%E9%80%A0%E5%8C%96%E3%83%AD%E3%82%B0%E5%9F%BA%E7%9B%A4%E3%82%92%E5%AE%9F%E8%A3%85%E3%81%99%E3%82%8B.md)
+- [構造化ログ基本設計](https://github.com/takashit16833/RAGScope/blob/task/Step16/project-docs/design/%E6%A7%8B%E9%80%A0%E5%8C%96%E3%83%AD%E3%82%B0%E5%9F%BA%E6%9C%AC%E8%A8%AD%E8%A8%88.md)
+- [構造化ログ詳細設計](https://github.com/takashit16833/RAGScope/blob/task/Step16/project-docs/design/%E6%A7%8B%E9%80%A0%E5%8C%96%E3%83%AD%E3%82%B0%E8%A9%B3%E7%B4%B0%E8%A8%AD%E8%A8%88.md)
+- [`RAGScope.Logging.Core`](https://github.com/takashit16833/RAGScope/blob/task/Step16/ragscope-app/logging-src/RAGScope/Logging/Core.hs)
+- [`RAGScope.Logging.Backend.AesonStderr`](https://github.com/takashit16833/RAGScope/blob/task/Step16/ragscope-app/logging-src/RAGScope/Logging/Backend/AesonStderr.hs)
+- [`log-event.schema.json`](https://github.com/takashit16833/RAGScope/blob/task/Step16/contracts/logging/v1/log-event.schema.json)
+- [valid fixture](https://github.com/takashit16833/RAGScope/tree/task/Step16/contracts/logging/v1/fixtures/valid) / [invalid fixture](https://github.com/takashit16833/RAGScope/tree/task/Step16/contracts/logging/v1/fixtures/invalid)
+- [`ragscope.cabal`](https://github.com/takashit16833/RAGScope/blob/task/Step16/ragscope-app/ragscope.cabal)
+
+Aesonの挙動は記憶や自前実装を前提にせず、実装時の依存バージョンを`ragscope.cabal`で確認したうえで、[Data.Aeson](https://hackage.haskell.org/package/aeson/docs/Data-Aeson.html)と[Data.Aeson.Types](https://hackage.haskell.org/package/aeson/docs/Data-Aeson-Types.html)の一次資料を再確認する。
 
 ## 現在地
 
