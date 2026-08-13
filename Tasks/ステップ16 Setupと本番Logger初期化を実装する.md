@@ -44,3 +44,10 @@ RS-0015のうち、composition rootが内部モジュールへ直接依存せず
 - executable側がlogging内部モジュールを知らずにLoggerを取得できる
 - private sublibraryのFacade・依存方向が現在設計と一致している
 - 追加・変更したコードのテストとビルドが成功する
+
+## Step16完了後のRS-0015残タスク
+
+- JSON / Schema適合テストを追加し、valid fixtureが通りinvalid fixtureが拒否されることを確認する
+- production `Logger`をcomposition rootへ接続する
+- 正常結果のstdoutと構造化ログのstderrが混在しないことを確認する
+- 設計との最終整合を確認し、`make check`成功後にRS-0015の結果とstatusを更新する
