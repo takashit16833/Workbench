@@ -526,21 +526,9 @@
   "lastSeenVersion": "4.12.3",
   "lastSelectedTaskPath": "Tasks/RS-0015 RAGScopeアプリケーションの共通エラー・構造化ログ基盤を実装する.md",
   "pomodoroState": {
-    "isRunning": true,
+    "isRunning": false,
     "timeRemaining": 1500,
-    "currentSession": {
-      "id": "1786600978230",
-      "taskPath": "Tasks/RS-0015 RAGScopeアプリケーションの共通エラー・構造化ログ基盤を実装する.md",
-      "startTime": "2026-08-13T15:02:58.230+09:00",
-      "plannedDuration": 25,
-      "type": "work",
-      "completed": false,
-      "activePeriods": [
-        {
-          "startTime": "2026-08-13T15:02:58.230+09:00"
-        }
-      ]
-    }
+    "nextSessionType": "work"
   },
   "lastPomodoroDate": "2026-08-12",
   "pomodoroHistory": [
@@ -774,6 +762,180 @@
         {
           "startTime": "2026-08-13T14:55:48.735+09:00",
           "endTime": "2026-08-13T15:00:48.735+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1786600978230",
+      "startTime": "2026-08-13T15:02:58.230+09:00",
+      "endTime": "2026-08-13T15:27:58.230+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "taskPath": "Tasks/RS-0015 RAGScopeアプリケーションの共通エラー・構造化ログ基盤を実装する.md",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-13T15:02:58.230+09:00",
+          "endTime": "2026-08-13T15:27:58.230+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1786602479312",
+      "startTime": "2026-08-13T15:27:59.312+09:00",
+      "endTime": "2026-08-13T15:42:59.312+09:00",
+      "plannedDuration": 15,
+      "type": "long-break",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-13T15:27:59.312+09:00",
+          "endTime": "2026-08-13T15:42:59.312+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1786603490502",
+      "startTime": "2026-08-13T15:44:50.502+09:00",
+      "endTime": "2026-08-13T16:09:50.502+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "taskPath": "Tasks/RS-0015 RAGScopeアプリケーションの共通エラー・構造化ログ基盤を実装する.md",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-13T15:44:50.502+09:00",
+          "endTime": "2026-08-13T16:09:50.502+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1786604991585",
+      "startTime": "2026-08-13T16:09:51.585+09:00",
+      "endTime": "2026-08-13T16:14:51.585+09:00",
+      "plannedDuration": 5,
+      "type": "short-break",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-13T16:09:51.585+09:00",
+          "endTime": "2026-08-13T16:14:51.585+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1786605452411",
+      "startTime": "2026-08-13T16:17:32.411+09:00",
+      "endTime": "2026-08-13T16:42:32.411+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "taskPath": "Tasks/RS-0015 RAGScopeアプリケーションの共通エラー・構造化ログ基盤を実装する.md",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-13T16:17:32.411+09:00",
+          "endTime": "2026-08-13T16:42:32.411+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1786606953517",
+      "startTime": "2026-08-13T16:42:33.517+09:00",
+      "endTime": "2026-08-13T16:47:33.517+09:00",
+      "plannedDuration": 5,
+      "type": "short-break",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-13T16:42:33.517+09:00",
+          "endTime": "2026-08-13T16:47:33.517+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1786607541859",
+      "startTime": "2026-08-13T16:52:21.859+09:00",
+      "endTime": "2026-08-13T17:17:21.859+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "taskPath": "Tasks/RS-0015 RAGScopeアプリケーションの共通エラー・構造化ログ基盤を実装する.md",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-13T16:52:21.859+09:00",
+          "endTime": "2026-08-13T17:17:21.859+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1786609042960",
+      "startTime": "2026-08-13T17:17:22.960+09:00",
+      "endTime": "2026-08-13T17:22:22.960+09:00",
+      "plannedDuration": 5,
+      "type": "short-break",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-13T17:17:22.960+09:00",
+          "endTime": "2026-08-13T17:22:22.960+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1786609367201",
+      "startTime": "2026-08-13T17:22:47.201+09:00",
+      "endTime": "2026-08-13T17:47:47.201+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "taskPath": "Tasks/RS-0015 RAGScopeアプリケーションの共通エラー・構造化ログ基盤を実装する.md",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-13T17:22:47.201+09:00",
+          "endTime": "2026-08-13T17:47:47.201+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1786610868285",
+      "startTime": "2026-08-13T17:47:48.285+09:00",
+      "endTime": "2026-08-13T17:54:13.917+09:00",
+      "plannedDuration": 15,
+      "type": "long-break",
+      "completed": false,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-13T17:47:48.285+09:00",
+          "endTime": "2026-08-13T17:54:13.917+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1786611288068",
+      "startTime": "2026-08-13T17:54:48.068+09:00",
+      "endTime": "2026-08-13T18:19:48.068+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "taskPath": "Tasks/RS-0015 RAGScopeアプリケーションの共通エラー・構造化ログ基盤を実装する.md",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-13T17:54:48.068+09:00",
+          "endTime": "2026-08-13T18:19:48.068+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1786612790086",
+      "startTime": "2026-08-13T18:19:50.086+09:00",
+      "endTime": "2026-08-13T18:24:50.086+09:00",
+      "plannedDuration": 5,
+      "type": "short-break",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-13T18:19:50.086+09:00",
+          "endTime": "2026-08-13T18:24:50.086+09:00"
         }
       ]
     }
