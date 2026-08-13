@@ -84,6 +84,18 @@ Type: Text
 
 外部チケットや外部文書を正本とするTaskだけに設定します。
 
+### Branch
+
+Settings -> TaskNotes -> Task Properties -> Custom Fields:
+
+```text
+Display name: Branch
+Property key: branch
+Type: Text
+```
+
+作業ブランチを持つTaskだけに設定します。
+
 ### Creation modal
 
 Settings -> TaskNotes -> Modal Fields:
@@ -106,6 +118,7 @@ Dependencies
 
 Custom Fields
   Source       OFF
+  Branch       OFF
 ```
 
 `Projects` は次の状態にします。
@@ -116,7 +129,7 @@ Show in Creation: ON
 Show in Edit:     ON
 ```
 
-`Source` は次の状態にします。
+`Source` と `Branch` は次の状態にします。
 
 ```text
 Enabled:          ON
