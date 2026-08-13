@@ -526,9 +526,21 @@
   "lastSeenVersion": "4.12.3",
   "lastSelectedTaskPath": "Tasks/RS-0015 RAGScopeアプリケーションの共通エラー・構造化ログ基盤を実装する.md",
   "pomodoroState": {
-    "isRunning": false,
+    "isRunning": true,
     "timeRemaining": 1500,
-    "nextSessionType": "work"
+    "currentSession": {
+      "id": "1786585472951",
+      "taskPath": "Tasks/RS-0015 RAGScopeアプリケーションの共通エラー・構造化ログ基盤を実装する.md",
+      "startTime": "2026-08-13T10:44:32.951+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "completed": false,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-13T10:44:32.951+09:00"
+        }
+      ]
+    }
   },
   "lastPomodoroDate": "2026-08-12",
   "pomodoroHistory": [
