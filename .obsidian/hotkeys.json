@@ -30,5 +30,21 @@
       ],
       "key": "Z"
     }
+  ],
+  "pane-relief:go-next": [
+    {
+      "modifiers": [
+        "Ctrl"
+      ],
+      "key": "PageDown"
+    }
+  ],
+  "pane-relief:go-prev": [
+    {
+      "modifiers": [
+        "Ctrl"
+      ],
+      "key": "PageUp"
+    }
   ]
 }
