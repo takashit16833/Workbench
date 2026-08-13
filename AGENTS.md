@@ -14,6 +14,13 @@ Workbench optimizes for the **next correct action**, not for completeness.
 - Keep internal rules small. If removing a rule does not increase the chance of breaking the architecture, remove it.
 - Do not expose architectural rationale in user-facing docs unless it is needed to operate, troubleshoot or make a decision.
 
+## Repository workflow
+
+- Work on a feature branch unless the user explicitly requests direct work on `main`.
+- Before every write, refresh the target branch head. Do not assume a previously observed commit is still current.
+- Preserve user commits that arrive while work is in progress. If the base branch advances, integrate it without force-pushing or rewriting unrelated history.
+- After changing a large or generated runtime file, inspect the resulting diff before considering the change complete. Stop and correct any unrelated line changes.
+
 ## Storage
 
 - Task: `Tasks/*.md`
@@ -95,6 +102,14 @@ Workbench optimizes for the **next correct action**, not for completeness.
 - **Homepage**: open `Dashboard` at startup and provide quick return to it
 - **Obsidian Git**: Git commit / pull / push UI
 - **Workbench** (`workbench-commands`): Workbench-specific commands only
+
+## Obsidian plugin implementation
+
+- Prefer Obsidian's public APIs, commands, and native hotkey configuration over DOM selectors or undocumented internals.
+- Treat DOM structure and CSS classes inside Obsidian or third-party plugins as unstable implementation details. Use them only when no supported API exists, keep the scope narrow, and document the fragility.
+- Before changing plugin loading, packaging, build output, or API usage, verify the current official Obsidian documentation instead of assuming a Node-style runtime layout is supported.
+- `.obsidian/plugins/workbench-commands/main.js` is the deployed runtime entrypoint in this repository. Do not split it into sibling runtime modules unless a deliberate build/bundle pipeline is introduced and verified. Source modules are fine only when they are bundled into the production `main.js`.
+- For existing third-party commands, prefer assigning `.obsidian/hotkeys.json` to the command ID rather than reimplementing the command or intercepting the keyboard in Workbench.
 
 ## Properties
 
