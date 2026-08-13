@@ -23,7 +23,7 @@
       "key": "D"
     }
   ],
-  "zenmode:toggle-zen-mode": [
+  "pane-relief:maximize": [
     {
       "modifiers": [
         "Alt"
