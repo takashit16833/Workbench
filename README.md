@@ -14,7 +14,6 @@ Obsidianを再起動し、[[ONBOARDING]] の初回設定を行います。
 
 - Dashboard: 起動時 / **⌥D**
 - Task: **⌥T** / TaskNotes の **Create new task**
-- Pomodoro: **⌥P** / TaskNotes の **ポモドーロタイマーを開く**
 - Maximize pane: **⌥Z** / Pane Relief の **Maximize active tab (Toggle)**
 - Idea: `Ideas/`
 - Note: `Notes/`
