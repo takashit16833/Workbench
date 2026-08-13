@@ -14,9 +14,12 @@ Obsidianを再起動し、[[ONBOARDING]] の初回設定を行います。
 
 - Dashboard: 起動時 / **⌥D**
 - Task: **⌥T** / TaskNotes の **Create new task**
+- Pomodoro: **⌥P** / TaskNotes の **ポモドーロタイマーを開く**
 - Idea: `Ideas/`
 - Note: `Notes/`
 - Project: `Projects/`
+
+DashboardにはToday / Tasksを表示します。Reading viewでは **c** でCalendar、**k** でKanbanを開きます。
 
 ## Workbench commands
 
