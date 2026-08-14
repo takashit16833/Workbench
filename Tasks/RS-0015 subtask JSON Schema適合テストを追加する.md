@@ -2,8 +2,8 @@
 status: inbox
 priority: medium
 scheduled: 2026-08-14
-dateCreated: 2026-08-14T06:56:18.424+09:00
-dateModified: 2026-08-14T07:01:26.354+09:00
+dateCreated: 2026-08-14T09:28:30.406+09:00
+dateModified: 2026-08-14T09:30:13.822+09:00
 tags:
   - task
 due: 2026-08-13
@@ -11,22 +11,28 @@ projects:
   - "[[RAGScope]]"
   - "[[RS-0015 RAGScopeアプリケーションの共通エラー・構造化ログ基盤を実装する]]"
 blockedBy:
-  - uid: "[[2.ADR-0003に合わせてJSON契約とstderr出力を切り替える]]"
+  - uid: "[[RS-0015 subtask ADR-0003に合わせてJSON契約とstderr出力を切り替える]]"
     reltype: FINISHTOSTART
+source: RS-0015/schema-validation
 ---
 
-task/RS-0015-schema-validation
-JSON Schema適合テストを追加する
-# JSON Schema適合テストを追加する
+## Squash merge commit body
+
+- valid fixtureがJSON Schemaへ適合することを自動テストする
+- invalid fixtureがJSON Schemaから拒否されることを自動テストする
+- Haskellが生成した代表的な`LogEvent`のSchema適合性を検証する
+- execution / service、通常 / failed、optional fieldを代表ケースとして固定する
+
+## 目的
 
 RAGScopeアプリケーションが生成する構造化ログと共通fixtureが、`log-event.schema.json`へ適合することを自動テストで保証する。
 
-JSONの項目順ではなく、Schemaへの適合性とJSONの意味を検査する。
+JSON objectの項目順ではなく、Schemaへの適合性とJSONの意味を検査する。
 
 ## やること
 
 - Draft 2020-12を検証できるJSON Schema validatorを選定する
-- 採用前に使用ライブラリの一次資料と現在の依存関係を確認する
+- 採用前に一次資料と現在の依存関係を確認する
 - valid fixtureがすべてSchemaへ適合することを検査する
 - invalid fixtureがSchemaから拒否されることを検査する
 - Haskellから生成した代表的な`LogEvent`がSchemaへ適合することを検査する

@@ -2,8 +2,8 @@
 status: inbox
 priority: medium
 scheduled: 2026-08-14
-dateCreated: 2026-08-14T07:02:10.067+09:00
-dateModified: 2026-08-14T07:02:51.229+09:00
+dateCreated: 2026-08-14T09:38:53.223+09:00
+dateModified: 2026-08-14T09:40:02.774+09:00
 tags:
   - task
 due: 2026-08-13
@@ -11,17 +11,23 @@ projects:
   - "[[RAGScope]]"
   - "[[RS-0015 RAGScopeアプリケーションの共通エラー・構造化ログ基盤を実装する]]"
 blockedBy:
-  - uid: "[[4.ログ出力境界とSink失敗時の挙動を検証する]]"
+  - uid: "[[RS-0015 subtask 共通エラーと構造化ログの設計書を実装へ同期する]]"
     reltype: FINISHTOSTART
+branch: RS-0015/finalize
 ---
 
-task/RS-0015-design-sync
-共通エラーと構造化ログの設計書を実装へ同期する
-# 共通エラーと構造化ログの設計書を実装へ同期する
+## Squash merge commit body
+
+- ADR-0003の`spec`構造と現在のJSON契約を構造化ログ設計へ反映する
+- `Core`、Aeson Backend、Runtime、Setupの現在の責務境界を設計書へ同期する
+- totalなJSON変換、optional field、省略規則、Sink failureの現在設計を反映する
+- コード、Schema、ADR、設計書の未解消差異をなくす
+
+## 目的
 
 RS-0015で完成した実装、JSON Schema、ADR-0003の内容を、現在設計の正本へ反映する。
 
-実装が安定した後に行い、作業途中の案やWorkbench固有の情報は設計書へ持ち込まない。
+実装が安定した後に行い、作業途中の案やWorkbench固有の情報は正本リポジトリの設計書へ持ち込まない。
 
 ## 対象
 
@@ -33,22 +39,22 @@ RS-0015で完成した実装、JSON Schema、ADR-0003の内容を、現在設計
 
 - ADR-0003の`spec`構造を現在設計へ反映する
 - JSON Schemaとの現在の関係を反映する
-- `Core`
-- `Backend.Aeson`
-- `Backend.AesonStderr`
-- `Runtime`
-- `Setup`
-  の現在の責務境界を実装と照合する
+- 以下の現在の責務境界を実装と照合する
+  - `Core`
+  - `Backend.Aeson`
+  - `Backend.AesonStderr`
+  - `Runtime`
+  - `Setup`
 - Aesonによるtotalな純粋JSON変換を反映する
 - stderr Sinkで扱うfailureがIO由来のSink failureであることを反映する
 - stdout / stderrの責務分離を反映する
 - optional fieldの省略規則を反映する
 - 実装で変更されていないエラー設計を不必要に書き換えない
-- コード、Schema、ADR、設計書の間に未解消の差異がないか確認する
+- コード、Schema、ADR、設計書の間に未解消の差異がないことを確認する
 
 ## 完了条件
 
 - 現在の実装と設計書が一致している
 - ADR-0003の決定が構造化ログ設計へ反映されている
 - JSON Schemaと設計書が矛盾していない
-- Workbenchへの依存や参照を正本リポジトリへ作っていない
+- Workbenchへのリンク、参照、前提条件を正本リポジトリへ作っていない

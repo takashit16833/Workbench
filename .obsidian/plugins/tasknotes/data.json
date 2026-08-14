@@ -320,6 +320,12 @@
       "displayName": "Source",
       "key": "source",
       "type": "text"
+    },
+    {
+      "id": "field_1786662078490",
+      "displayName": "Branch",
+      "key": "branch",
+      "type": "text"
     }
   ],
   "modalFieldsConfig": {
@@ -424,6 +430,16 @@
         "visibleInCreation": false,
         "visibleInEdit": true,
         "order": 0,
+        "enabled": true
+      },
+      {
+        "id": "field_1786662078490",
+        "fieldType": "user",
+        "group": "custom",
+        "displayName": "Branch",
+        "visibleInCreation": true,
+        "visibleInEdit": true,
+        "order": 1,
         "enabled": true
       }
     ],
