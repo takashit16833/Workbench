@@ -2,24 +2,29 @@
 status: inbox
 priority: medium
 scheduled: 2026-08-14
-dateCreated: 2026-08-14T06:52:32.462+09:00
-dateModified: 2026-08-14T07:00:55.143+09:00
+dateCreated: 2026-08-14T09:26:07.066+09:00
+dateModified: 2026-08-14T09:30:13.812+09:00
 tags:
   - task
 due: 2026-08-13
 projects:
   - "[[RAGScope]]"
   - "[[RS-0015 RAGScopeアプリケーションの共通エラー・構造化ログ基盤を実装する]]"
+branch: RS-0015/aeson-serialization
 ---
 
-task/RS-0015-aeson-serialization
-AesonによるLogEventのJSON serializationを完成させる
+## Squash merge commit body
 
-# AesonによるLogEventのJSON serializationを完成させる
+- `Component`から`LogEvent`までのAesonによるJSON serializationを完成させる
+- `Payload`、`LogValue`、`EventContext`、`LogError`をJSON契約に沿って変換する
+- optional fieldを`Nothing`の場合に省略し、Haskellのconstructor名をJSONへ露出させない
+- `toJSON`と`encode`が同じJSON表現になることをテストで固定する
 
-RS-0015の構造化ログについて、`RAGScope.Logging.Backend.Aeson`へJSON表現の責務を集約し、完成済み`LogEvent`をAesonの`ToJSON` / `toEncoding`で純粋にJSONへ変換できる状態にする。
+## 目的
 
-ADR-0003に従い、Haskellのログモデルの意味上の型構造とJSON構造をできるだけ整合させる。AesonのGeneric、Options、既存instanceを優先し、必要以上の手書きencoderを作らない。
+RS-0015の構造化ログについて、`RAGScope.Logging.Backend.Aeson`へJSON表現の責務を集約し、完成済み`LogEvent`をAesonの`ToJSON` / `toEncoding`によって純粋にJSONへ変換できる状態にする。
+
+ADR-0003に従い、Haskellのログモデルの意味上の型構造とJSON構造をできるだけ整合させる。AesonのGeneric、`Options`、既存instanceを優先し、必要以上の手書きencoderを作らない。
 
 ## 現在地
 
@@ -34,16 +39,16 @@ ADR-0003に従い、Haskellのログモデルの意味上の型構造とJSON構�
 - `ErrorCode`
 - `SafeMessage`
 
-`AesonStderr`には旧来のroot平坦化を行う手書きencoderが残っているため、このTaskではまず新しいAeson変換を完成させる。
+`AesonStderr`には旧来のroot平坦化を行う手書きencoderが残っている。
 
 ## やること
 
-- `Component`のJSON変換を実装する
+- `Component`をJSONへ変換する
   - `RAGScopeApp -> "ragscope_app"`
   - `AIService -> "ai_service"`
-- `LogErrorCategory`のJSON変換を実装する
-  - `Log` prefixを除去した外部表現へ変換する
-- `Timestamp`についてAeson既存`UTCTime`のencodingを確認し、採用する外部表現を固定する
+- `LogErrorCategory`をJSONへ変換する
+  - `Log` prefixを除去した外部表現にする
+- `Timestamp`についてAeson既存`UTCTime`のencodingを確認し、採用する表現を固定する
 - `FieldName` / `Payload`について`ToJSONKey`と`Map`の既存変換を利用できる形にする
 - `LogValue`をstring / number / boolean / array / objectへconstructor tagなしで変換する
 - `EventContext`を`scope` discriminatorを持つJSON objectへ変換する
@@ -59,14 +64,14 @@ ADR-0003に従い、Haskellのログモデルの意味上の型構造とJSON構�
 - JSON Schemaの更新
 - fixtureの更新
 - JSON Schema validatorによる適合テスト
-- `AesonStderr`の旧encoder削除とproduction出力の切り替え
+- productionのstderr出力の新serializerへの切り替え
 
-productionのJSON出力は、Schemaと同時に切り替えるまで現在の経路を維持する。
+Schemaとの同時切り替えまで、現在のproduction出力経路は維持する。
 
 ## 完了条件
 
 - 完成済み`LogEvent`を`toJSON` / `encode`できる
-- ADR-0003で意図した`spec`構造がAeson変換テストで確認できる
+- ADR-0003で意図した`spec`構造をAeson変換テストで確認できる
 - optional fieldが`Nothing`の場合に省略される
 - `LogValue`へHaskell constructor名が露出しない
 - `toJSON`と`encode`が同じJSON契約を表現する
