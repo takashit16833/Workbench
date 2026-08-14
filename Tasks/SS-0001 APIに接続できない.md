@@ -3,7 +3,7 @@ status: todo
 projects:
   - "[[SadServers]]"
 dateCreated: 2026-08-15T08:20:00+09:00
-dateModified: 2026-08-15T08:20:00+09:00
+dateModified: 2026-08-15T08:49:00+09:00
 tags:
   - task
 priority: medium
@@ -22,18 +22,27 @@ APIを正常に利用できる状態へ復旧する。
 
 ## 開始
 
+SadServers-Labで、このScenario専用のfixブランチを作成する。
+
 ```bash
+git switch -c fix/SS-0001
 cd scenarios/SS-0001
 bash start.sh
 ```
 
-## 完了条件
+`main` は壊れた問題原本として維持するため、fixブランチを `main` へマージしない。
 
-```bash
-bash check.sh
-```
+# Definition of Done
 
-がPASSすること。
+このScenarioは、次のすべてを満たしたときに完了とする。
+
+- [ ] `fix/SS-0001` ブランチ上で復旧作業を行った
+- [ ] `bash check.sh` がPASSした
+- [ ] AIによる `main...fix/SS-0001` のfixレビューがOKになった
+- [ ] 障害報告書を作成した
+- [ ] AIによる障害報告書レビューがOKになった
+
+`check.sh` のPASSだけではScenario Completeではない。
 
 # 調査ログ
 
@@ -49,9 +58,18 @@ bash check.sh
 ## 仮説・観測・判断
 
 
+# Fixレビュー
+
+`bash check.sh` がPASSしたら、障害報告書を書く前にAIへ `main...fix/SS-0001` のレビューを依頼する。
+
+AIレビューでは、正常状態へ戻っているだけでなく、修正が原因に対して妥当か、不要・過剰な変更がないか、別の問題を生んでいないかを確認する。
+
+## レビュー結果
+
+
 # 障害報告書
 
-復旧後に記入し、AIレビューを受ける。
+Fixレビューで技術的復旧がOKになった後に記入し、AIレビューを受ける。
 
 ## 1. 概要
 
@@ -86,6 +104,6 @@ bash check.sh
 ## 11. 今回の学び
 
 
-# AIレビュー
+# 障害報告書 AIレビュー
 
 障害報告書のレビュー結果と修正ポイントをここに残す。
