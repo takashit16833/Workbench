@@ -3,7 +3,7 @@ status: todo
 priority: medium
 scheduled: 2026-08-14
 dateCreated: 2026-08-14T09:38:53.223+09:00
-dateModified: 2026-08-14T09:43:37.984+09:00
+dateModified: 2026-08-14T09:58:40.874+09:00
 tags:
   - task
 due: 2026-08-13
@@ -18,43 +18,52 @@ branch: RS-0015/finalize
 
 ## Squash merge commit body
 
-- ADR-0003の`spec`構造と現在のJSON契約を構造化ログ設計へ反映する
-- `Core`、Aeson Backend、Runtime、Setupの現在の責務境界を設計書へ同期する
-- totalなJSON変換、optional field、省略規則、Sink failureの現在設計を反映する
-- コード、Schema、ADR、設計書の未解消差異をなくす
+- RS-0015の全完了条件をコード、テスト、Schema、設計と照合する
+- `make check`を含む最終検証を実行して結果を確認する
+- RS-0015 Ticketの`結果`へ実装内容、確認方法、既知の制約を記録する
+- Ticket完了用の`status: done`を親ブランチへ含め、main向けPull Requestを準備できる状態にする
 
 ## 目的
 
-RS-0015で完成した実装、JSON Schema、ADR-0003の内容を、現在設計の正本へ反映する。
+RS-0015全体について、正本Ticketの完了条件と実際のコード、テスト、Contract、Schema、設計を照合する。
 
-実装が安定した後に行い、作業途中の案やWorkbench固有の情報は正本リポジトリの設計書へ持ち込まない。
-
-## 対象
-
-- `design/エラー設計.md`
-- `design/構造化ログ基本設計.md`
-- `design/構造化ログ詳細設計.md`
+不足が見つかった場合は無理に完了扱いにせず、該当するSubtaskへ戻る。
 
 ## やること
 
-- ADR-0003の`spec`構造を現在設計へ反映する
-- JSON Schemaとの現在の関係を反映する
-- 以下の現在の責務境界を実装と照合する
-  - `Core`
-  - `Backend.Aeson`
-  - `Backend.AesonStderr`
-  - `Runtime`
-  - `Setup`
-- Aesonによるtotalな純粋JSON変換を反映する
-- stderr Sinkで扱うfailureがIO由来のSink failureであることを反映する
-- stdout / stderrの責務分離を反映する
-- optional fieldの省略規則を反映する
-- 実装で変更されていないエラー設計を不必要に書き換えない
-- コード、Schema、ADR、設計書の間に未解消の差異がないことを確認する
+- RS-0015の完了条件を上から順に実装・テスト・Schema・設計と照合する
+- 共通エラーとログ構造を確認する
+- モジュール境界とFacadeを確認する
+- JSON変換とSchema適合を確認する
+- stdout / stderrとSink境界を確認する
+- Sink失敗時の挙動を確認する
+- 情報保護を確認する
+- 設計書との未解消差異がないことを確認する
+- プロジェクトで定めた最終テストコマンドを実行する
+- `make check`を含む必要な検証が成功することを確認する
+- RS-0015 Ticketの`結果`へ以下を記録する
+  - 実装した共通エラーと構造化ログ基盤
+  - 利用できる出力処理とcontext
+  - 実行した確認コマンドと結果
+  - 設計へ反映した内容
+  - 後続機能へ残る適用事項
+  - 既知の制約
+  - 関連Pull Request
+- 完了条件を満たしている場合は、Ticketを完了するPull Requestへ`status: done`を含める
+- RS-0015親ブランチからmainへのPull Request準備に必要な情報を整理する
 
 ## 完了条件
 
-- 現在の実装と設計書が一致している
-- ADR-0003の決定が構造化ログ設計へ反映されている
-- JSON Schemaと設計書が矛盾していない
-- Workbenchへのリンク、参照、前提条件を正本リポジトリへ作っていない
+- RS-0015の全完了条件について根拠を確認できる
+- 最終テストが成功する
+- Ticketの`結果`が記入されている
+- 未解消の重大な設計・Schema・実装差異がない
+- Ticketを完了する`status: done`を含め、親ブランチがmain向けPull Requestを作成できる状態になっている
+
+## 注意
+
+正本のプロジェクト管理規約では、実質的な変更については関連する変更がデフォルトブランチへ反映されて初めてTicketの`done`条件が成立する。
+
+そのため、このSubtaskで`status: done`をPull Request対象へ含めても、最終的な完了確認は親ブランチがmainへmergeされた後に行う。
+
+Pull Request作成、Ready for review、merge、branch削除はそれぞれ独立した操作として扱う。

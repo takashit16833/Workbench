@@ -3,7 +3,7 @@ status: todo
 priority: medium
 scheduled: 2026-08-14
 dateCreated: 2026-08-14T09:27:31.093+09:00
-dateModified: 2026-08-14T09:43:24.244+09:00
+dateModified: 2026-08-14T10:02:21.232+09:00
 tags:
   - task
 projects:
@@ -33,7 +33,7 @@ ADR-0003で採用したログモデルの型構造に対応するJSONへ、Schem
 
 現在のJSON Schemaと`AesonStderr`は、`operation`、`event`、`level`、`payload`、`error`をrootへ平坦化する旧構造を使用している。
 
-Subtask 1で新しいAeson serializationを完成させた後、このTaskで契約とproductionを同時に切り替える。
+先行するAeson serializationのSubtaskで新しい変換を完成させた後、このTaskで契約とproductionを同時に切り替える。
 
 ## やること
 
@@ -50,7 +50,7 @@ Subtask 1で新しいAeson serializationを完成させた後、このTaskで契
   - `error`必須
   のSchema条件を新構造へ合わせる
 - `EventContext`のSchemaをAeson表現と整合させる
-- Timestamp制約をSubtask 1で確定した表現と整合させる
+- Timestamp制約を先行するAeson serializationで確定した表現と整合させる
 - valid fixtureを新構造へ更新する
 - invalid fixtureを新構造へ更新する
 - `AesonStderr`を完成済み`ToJSON LogEvent`へ接続する
