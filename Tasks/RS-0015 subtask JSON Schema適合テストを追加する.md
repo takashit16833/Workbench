@@ -3,7 +3,7 @@ status: todo
 priority: medium
 scheduled: 2026-08-14
 dateCreated: 2026-08-14T09:28:30.406+09:00
-dateModified: 2026-08-14T09:43:34.218+09:00
+dateModified: 2026-08-14T09:57:35.710+09:00
 tags:
   - task
 due: 2026-08-13
@@ -13,7 +13,7 @@ projects:
 blockedBy:
   - uid: "[[RS-0015 subtask ADR-0003に合わせてJSON契約とstderr出力を切り替える]]"
     reltype: FINISHTOSTART
-source: RS-0015/schema-validation
+branch: RS-0015/schema-validation
 ---
 
 ## Squash merge commit body
