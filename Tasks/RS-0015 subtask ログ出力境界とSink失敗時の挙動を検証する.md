@@ -3,7 +3,7 @@ status: todo
 priority: medium
 scheduled: 2026-08-14
 dateCreated: 2026-08-14T09:31:38.703+09:00
-dateModified: 2026-08-14T09:43:35.495+09:00
+dateModified: 2026-08-14T11:09:00+09:00
 tags:
   - task
 due: 2026-08-13
@@ -20,6 +20,7 @@ branch: RS-0015/output-boundaries
 
 - stdoutの正常結果とstderrの構造化ログが混在しないことを検証する
 - memory Sinkとfailure Sinkによる出力境界のテストを完成させる
+- `Backend.Stderr`がJSON / Aeson固有の変換責務を持たないことを確認する
 - IO失敗だけを`LoggingSinkFailure`として扱うことを確認する
 - 記録対象外の文書本文、秘密情報、認証情報などを不用意にログへ出さないことを確認する
 
@@ -35,6 +36,7 @@ RS-0015で要求されているstdout / stderrの分離、差し替え可能なS
 - 構造化ログがstderrへ出力される境界を確認する
 - 正常結果とログが混在しないことをテストまたは代表実行で確認する
 - 機能処理が具体的なstderr実装へ直接依存していないことを確認する
+- `Backend.Stderr`がJSON / Aeson固有の変換を持たず、stderrへの出力とIO failure処理だけを担っていることを確認する
 - memory Sinkを使用して`LogEvent`を自動テストから検査できることを確認する
 - failure Sinkを使用して`LoggingSinkFailure`の挙動を確認する
 - Sink失敗を元の機能処理の失敗と区別できることを確認する
@@ -47,6 +49,7 @@ RS-0015で要求されているstdout / stderrの分離、差し替え可能なS
 
 - stdoutとstderrの責務が分離されている
 - Sinkを差し替えられる
+- `Backend.Stderr`が出力形式から独立している
 - memory Sinkによる検査ができる
 - failure Sinkの挙動が自動テストで固定されている
 - JSON変換に不要な回復可能failure modelが存在しない
