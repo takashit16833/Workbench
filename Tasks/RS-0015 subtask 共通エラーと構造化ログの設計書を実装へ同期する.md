@@ -3,7 +3,7 @@ status: todo
 priority: medium
 scheduled: 2026-08-14
 dateCreated: 2026-08-14T09:32:42.162+09:00
-dateModified: 2026-08-14T09:43:36.679+09:00
+dateModified: 2026-08-14T11:09:00+09:00
 tags:
   - task
 due: 2026-08-13
@@ -19,7 +19,7 @@ branch: RS-0015/design-sync
 ## Squash merge commit body
 
 - ADR-0003の`spec`構造と現在のJSON契約を構造化ログ設計へ反映する
-- `Core`、Aeson Backend、Runtime、Setupの現在の責務境界を設計書へ同期する
+- `Core`、Json Backend、Stderr Backend、Runtime、Setupの現在の責務境界を設計書へ同期する
 - totalなJSON変換、optional field、省略規則、Sink failureの現在設計を反映する
 - コード、Schema、ADR、設計書の未解消差異をなくす
 
@@ -41,11 +41,13 @@ RS-0015で完成した実装、JSON Schema、ADR-0003の内容を、現在設計
 - JSON Schemaとの現在の関係を反映する
 - 以下の現在の責務境界を実装と照合する
   - `Core`
-  - `Backend.Aeson`
-  - `Backend.AesonStderr`
+  - `Backend.Json`
+  - `Backend.Stderr`
   - `Runtime`
   - `Setup`
-- Aesonによるtotalな純粋JSON変換を反映する
+- `Backend.Json`によるtotalな純粋JSON変換を反映する
+- `Backend.Stderr`がJSON / Aeson固有の変換責務を持たず、stderr出力とIO failure処理だけを担うことを反映する
+- productionの出力経路で`Backend.Json`と`Backend.Stderr`を組み合わせる責務境界を反映する
 - stderr Sinkで扱うfailureがIO由来のSink failureであることを反映する
 - stdout / stderrの責務分離を反映する
 - optional fieldの省略規則を反映する
