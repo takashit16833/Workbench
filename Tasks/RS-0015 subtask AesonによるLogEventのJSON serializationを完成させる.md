@@ -1,9 +1,9 @@
 ---
-status: inbox
+status: todo
 priority: medium
 scheduled: 2026-08-14
 dateCreated: 2026-08-14T09:26:07.066+09:00
-dateModified: 2026-08-14T09:30:13.812+09:00
+dateModified: 2026-08-14T09:43:25.189+09:00
 tags:
   - task
 due: 2026-08-13
