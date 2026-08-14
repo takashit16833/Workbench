@@ -3,7 +3,7 @@ status: todo
 priority: medium
 scheduled: 2026-08-14
 dateCreated: 2026-08-14T09:26:07.066+09:00
-dateModified: 2026-08-14T09:43:25.189+09:00
+dateModified: 2026-08-14T11:09:00+09:00
 tags:
   - task
 due: 2026-08-13
@@ -22,7 +22,7 @@ branch: RS-0015/aeson-serialization
 
 ## 目的
 
-RS-0015の構造化ログについて、`RAGScope.Logging.Backend.Aeson`へJSON表現の責務を集約し、完成済み`LogEvent`をAesonの`ToJSON` / `toEncoding`によって純粋にJSONへ変換できる状態にする。
+RS-0015の構造化ログについて、`RAGScope.Logging.Backend.Json`へJSON表現の責務を集約し、完成済み`LogEvent`をAesonの`ToJSON` / `toEncoding`によって純粋にJSONへ変換できる状態にする。
 
 ADR-0003に従い、Haskellのログモデルの意味上の型構造とJSON構造をできるだけ整合させる。AesonのGeneric、`Options`、既存instanceを優先し、必要以上の手書きencoderを作らない。
 
@@ -39,7 +39,7 @@ ADR-0003に従い、Haskellのログモデルの意味上の型構造とJSON構�
 - `ErrorCode`
 - `SafeMessage`
 
-`AesonStderr`には旧来のroot平坦化を行う手書きencoderが残っている。
+productionのstderr出力経路には、旧来のroot平坦化を行う手書きencoderが残っている。
 
 ## やること
 
@@ -57,7 +57,7 @@ ADR-0003に従い、Haskellのログモデルの意味上の型構造とJSON構�
 - `LogEvent`をADR-0003の型構造に対応するJSONへ変換する
 - 必要な型で`Generic`を利用できるようにする
 - custom変換では`toJSON`と`toEncoding`を一致させる
-- `AesonSpec`で`toJSON`と`encode`の両方を検査する
+- `JsonSpec`で`toJSON`と`encode`の両方を検査する
 
 ## このTaskではまだやらないこと
 
@@ -71,7 +71,7 @@ Schemaとの同時切り替えまで、現在のproduction出力経路は維持�
 ## 完了条件
 
 - 完成済み`LogEvent`を`toJSON` / `encode`できる
-- ADR-0003で意図した`spec`構造をAeson変換テストで確認できる
+- ADR-0003で意図した`spec`構造をJSON変換テストで確認できる
 - optional fieldが`Nothing`の場合に省略される
 - `LogValue`へHaskell constructor名が露出しない
 - `toJSON`と`encode`が同じJSON契約を表現する
