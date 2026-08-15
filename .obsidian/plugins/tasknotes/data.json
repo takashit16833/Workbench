@@ -540,13 +540,24 @@
   },
   "enableDebugLogging": false,
   "lastSeenVersion": "4.12.3",
-  "lastSelectedTaskPath": "Tasks/RS-0015 RAGScopeアプリケーションの共通エラー・構造化ログ基盤を実装する.md",
   "pomodoroState": {
-    "isRunning": false,
+    "isRunning": true,
     "timeRemaining": 1500,
-    "nextSessionType": "work"
+    "currentSession": {
+      "id": "1786755337864",
+      "taskPath": "Tasks/SS-0001 APIに接続できない.md",
+      "startTime": "2026-08-15T09:55:37.864+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "completed": false,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-15T09:55:37.864+09:00"
+        }
+      ]
+    }
   },
-  "lastPomodoroDate": "2026-08-12",
+  "lastPomodoroDate": "2026-08-14",
   "pomodoroHistory": [
     {
       "id": "1786413262882",
@@ -954,6 +965,36 @@
           "endTime": "2026-08-13T18:24:50.086+09:00"
         }
       ]
+    },
+    {
+      "id": "1786753347767",
+      "startTime": "2026-08-15T09:22:27.767+09:00",
+      "endTime": "2026-08-15T09:47:27.767+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "taskPath": "Tasks/SS-0001 APIに接続できない.md",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-15T09:22:27.767+09:00",
+          "endTime": "2026-08-15T09:47:27.767+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1786754848894",
+      "startTime": "2026-08-15T09:47:28.894+09:00",
+      "endTime": "2026-08-15T09:52:28.894+09:00",
+      "plannedDuration": 5,
+      "type": "short-break",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-15T09:47:28.894+09:00",
+          "endTime": "2026-08-15T09:52:28.894+09:00"
+        }
+      ]
     }
-  ]
+  ],
+  "lastSelectedTaskPath": "Tasks/SS-0001 APIに接続できない.md"
 }

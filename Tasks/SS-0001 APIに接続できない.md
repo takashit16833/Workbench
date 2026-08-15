@@ -3,11 +3,17 @@ status: todo
 projects:
   - "[[SadServers]]"
 dateCreated: 2026-08-15T08:20:00+09:00
-dateModified: 2026-08-15T08:49:00+09:00
+dateModified: 2026-08-15T09:55:37.869+09:00
 tags:
   - task
 priority: medium
 source: https://github.com/takashit16833/SadServers-Lab/tree/main/scenarios/SS-0001
+timeEntries:
+  - startTime: 2026-08-15T00:22:27.779Z
+    description: Work session
+    endTime: 2026-08-15T00:47:27.851Z
+  - startTime: 2026-08-15T00:55:37.869Z
+    description: Work session
 ---
 
 # 問題
