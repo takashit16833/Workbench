@@ -541,20 +541,9 @@
   "enableDebugLogging": false,
   "lastSeenVersion": "4.12.3",
   "pomodoroState": {
-    "isRunning": true,
-    "timeRemaining": 300,
-    "currentSession": {
-      "id": "1786763659295",
-      "startTime": "2026-08-15T12:14:19.295+09:00",
-      "plannedDuration": 5,
-      "type": "short-break",
-      "completed": false,
-      "activePeriods": [
-        {
-          "startTime": "2026-08-15T12:14:19.295+09:00"
-        }
-      ]
-    }
+    "isRunning": false,
+    "timeRemaining": 1500,
+    "nextSessionType": "work"
   },
   "lastPomodoroDate": "2026-08-14",
   "pomodoroHistory": [
@@ -1093,6 +1082,107 @@
         {
           "startTime": "2026-08-15T11:49:18.128+09:00",
           "endTime": "2026-08-15T12:14:18.128+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1786763659295",
+      "startTime": "2026-08-15T12:14:19.295+09:00",
+      "endTime": "2026-08-15T12:19:19.295+09:00",
+      "plannedDuration": 5,
+      "type": "short-break",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-15T12:14:19.295+09:00",
+          "endTime": "2026-08-15T12:19:19.295+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1786765073331",
+      "startTime": "2026-08-15T12:37:53.331+09:00",
+      "endTime": "2026-08-15T13:02:53.331+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "taskPath": "Tasks/SS-0001 APIに接続できない.md",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-15T12:37:53.331+09:00",
+          "endTime": "2026-08-15T13:02:53.331+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1786766574418",
+      "startTime": "2026-08-15T13:02:54.418+09:00",
+      "endTime": "2026-08-15T13:07:54.418+09:00",
+      "plannedDuration": 5,
+      "type": "short-break",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-15T13:02:54.418+09:00",
+          "endTime": "2026-08-15T13:07:54.418+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1786768375623",
+      "startTime": "2026-08-15T13:32:55.623+09:00",
+      "endTime": "2026-08-15T13:57:55.623+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "taskPath": "Tasks/SS-0001 APIに接続できない.md",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-15T13:32:55.623+09:00",
+          "endTime": "2026-08-15T13:57:55.623+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1786769876727",
+      "startTime": "2026-08-15T13:57:56.727+09:00",
+      "endTime": "2026-08-15T14:02:56.727+09:00",
+      "plannedDuration": 5,
+      "type": "short-break",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-15T13:57:56.727+09:00",
+          "endTime": "2026-08-15T14:02:56.727+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1786770993562",
+      "startTime": "2026-08-15T14:16:33.562+09:00",
+      "endTime": "2026-08-15T14:41:33.562+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "taskPath": "Tasks/SS-0001 APIに接続できない.md",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-15T14:16:33.562+09:00",
+          "endTime": "2026-08-15T14:41:33.562+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1786772495552",
+      "startTime": "2026-08-15T14:41:35.552+09:00",
+      "endTime": "2026-08-15T14:56:35.552+09:00",
+      "plannedDuration": 15,
+      "type": "long-break",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-15T14:41:35.552+09:00",
+          "endTime": "2026-08-15T14:56:35.552+09:00"
         }
       ]
     }
