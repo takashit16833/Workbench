@@ -44,11 +44,14 @@ Scenarioは、1つ以上の知識を実際の経験と結びつけるための�
 
 主なIDは次の形式を想定する。
 
+- `TUT-0001`, `TUT-0002`, ... : SystemsLabの進め方や基礎ツールを学ぶGuided Tutorial
 - `NET-0001`, `NET-0002`, ... : Network
 - `SEC-0001`, `SEC-0002`, ... : Security
 - `INT-0001`, `INT-0002`, ... : Integrated
 
 Scenarioの性質は固定せず、目的に応じてExperiment、Build / Configuration、Troubleshooting、Offensive、Defensive、Incident Investigationなどを使い分ける。
+
+Tutorialは通常Scenarioとは異なり、SystemsLabでの学び方や基本的なツール操作を身につけるためのGuided Scenarioとして扱う。コマンドや観測ポイントを段階的に案内してよいが、単なるコマンド入力ではなく、実際の観測を座学上の概念と結びつけることを重視する。
 
 ### Integrated Scenario
 
