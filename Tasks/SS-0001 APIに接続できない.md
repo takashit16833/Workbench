@@ -3,7 +3,7 @@ status: todo
 projects:
   - "[[SadServers]]"
 dateCreated: 2026-08-15T08:20:00+09:00
-dateModified: 2026-08-15T11:49:18.133+09:00
+dateModified: 2026-08-15T12:14:18.193+09:00
 tags:
   - task
 priority: medium
@@ -23,6 +23,7 @@ timeEntries:
     endTime: 2026-08-15T02:34:12.933Z
   - startTime: 2026-08-15T02:49:18.133Z
     description: Work session
+    endTime: 2026-08-15T03:14:18.193Z
 ---
 
 # 問題

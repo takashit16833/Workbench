@@ -542,17 +542,16 @@
   "lastSeenVersion": "4.12.3",
   "pomodoroState": {
     "isRunning": true,
-    "timeRemaining": 1500,
+    "timeRemaining": 300,
     "currentSession": {
-      "id": "1786762158128",
-      "taskPath": "Tasks/SS-0001 APIに接続できない.md",
-      "startTime": "2026-08-15T11:49:18.128+09:00",
-      "plannedDuration": 25,
-      "type": "work",
+      "id": "1786763659295",
+      "startTime": "2026-08-15T12:14:19.295+09:00",
+      "plannedDuration": 5,
+      "type": "short-break",
       "completed": false,
       "activePeriods": [
         {
-          "startTime": "2026-08-15T11:49:18.128+09:00"
+          "startTime": "2026-08-15T12:14:19.295+09:00"
         }
       ]
     }
@@ -1079,6 +1078,21 @@
         {
           "startTime": "2026-08-15T11:34:13.959+09:00",
           "endTime": "2026-08-15T11:49:13.959+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1786762158128",
+      "startTime": "2026-08-15T11:49:18.128+09:00",
+      "endTime": "2026-08-15T12:14:18.128+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "taskPath": "Tasks/SS-0001 APIに接続できない.md",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-15T11:49:18.128+09:00",
+          "endTime": "2026-08-15T12:14:18.128+09:00"
         }
       ]
     }
