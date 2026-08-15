@@ -544,15 +544,15 @@
     "isRunning": true,
     "timeRemaining": 1500,
     "currentSession": {
-      "id": "1786755337864",
+      "id": "1786757879365",
       "taskPath": "Tasks/SS-0001 APIに接続できない.md",
-      "startTime": "2026-08-15T09:55:37.864+09:00",
+      "startTime": "2026-08-15T10:37:59.365+09:00",
       "plannedDuration": 25,
       "type": "work",
       "completed": false,
       "activePeriods": [
         {
-          "startTime": "2026-08-15T09:55:37.864+09:00"
+          "startTime": "2026-08-15T10:37:59.365+09:00"
         }
       ]
     }
@@ -992,6 +992,35 @@
         {
           "startTime": "2026-08-15T09:47:28.894+09:00",
           "endTime": "2026-08-15T09:52:28.894+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1786755337864",
+      "startTime": "2026-08-15T09:55:37.864+09:00",
+      "endTime": "2026-08-15T10:20:37.864+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "taskPath": "Tasks/SS-0001 APIに接続できない.md",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-15T09:55:37.864+09:00",
+          "endTime": "2026-08-15T10:20:37.864+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1786756838947",
+      "startTime": "2026-08-15T10:20:38.947+09:00",
+      "endTime": "2026-08-15T10:25:38.947+09:00",
+      "plannedDuration": 5,
+      "type": "short-break",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-15T10:20:38.947+09:00",
+          "endTime": "2026-08-15T10:25:38.947+09:00"
         }
       ]
     }
