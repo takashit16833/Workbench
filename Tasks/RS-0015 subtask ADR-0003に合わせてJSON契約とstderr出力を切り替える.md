@@ -1,9 +1,9 @@
 ---
-status: doing
+status: done
 priority: medium
 scheduled: 2026-08-14
 dateCreated: 2026-08-14T09:27:31.093+09:00
-dateModified: 2026-08-16T17:19:27.583+09:00
+dateModified: 2026-08-16T17:40:31.135+09:00
 tags:
   - task
 projects:
@@ -26,6 +26,7 @@ timeEntries:
     endTime: 2026-08-16T08:11:31.444Z
   - startTime: 2026-08-16T08:19:27.583Z
     description: Work session
+    endTime: 2026-08-16T08:40:31.135Z
 ---
 
 ## Squash merge commit body
@@ -43,29 +44,12 @@ ADR-0003で採用したログモデルの型構造に対応するJSONへ、Schem
 
 JSONへの変換とstderrへの出力を別責務とし、`Backend.Json`をJSON表現とencoding、`Backend.Stderr`を出力形式に依存しないstderr出力、`Setup`をproduction Sinkの組み立て境界として分離する。
 
-## 現在地
+## 完了結果
 
-先行するAeson serializationのSubtaskは完了し、親branchへSquash merge済み。`Backend.Json`では完成済み`LogEvent`を`spec`構造のJSONへ変換でき、optional fieldの省略とAeson標準の`UTCTime`表現もテストで固定されている。
-
-このbranchでは、`log-event.schema.json`とvalid / invalid fixtureをADR-0003の`spec`構造へ更新済み。`EventContext`のSchemaは`Backend.Json`の表現と整合しており、Timestamp制約も整数秒と小数秒を扱える形へ更新済み。
-
-残っているのはproductionのstderr出力経路の切り替えである。現在の`Backend.JsonStderr`には旧root平坦化JSONを組み立てる`encodeLogEvent`と型別の旧手書き`encode*`関数が残っている。
-
-## 残りのやること
-
-- `Backend.Json`側で、完成済み`LogEvent`をproduction出力へ渡せるJSON表現へencodingする
-- JSON / Aesonに依存しない`Backend.Stderr`を作り、encoding済みの1イベントをstderrへ1行で出力する
-- `Backend.Stderr`で`IOException -> LoggingSinkFailure`を扱う
-- `Setup`で`Backend.Json`と`Backend.Stderr`を組み合わせ、production用`Sink`を構築する
-- JSON表現を重複実装する`encodeLogEvent`と旧`encode*`関数を削除する
-- `Backend.JsonStderr`を廃止し、Cabalとimportを新しい責務境界へ合わせる
-
-## 完了条件
-
-- JSON SchemaがADR-0003の`spec`構造を表現している
-- valid / invalid fixtureが新構造へ更新されている
-- production stderr出力が`Backend.Json`のJSON表現を使用している
-- `Backend.Json`と`Backend.Stderr`の間でJSON変換とstderr出力の責務が分離されている
-- `Backend.Stderr`がJSON / Aesonに依存せず、1行stderr出力とIO failure処理だけを担っている
-- `Backend.JsonStderr`と旧手書き`encode*`関数が残っていない
-- 1つの`LogEvent`がstderrへ1行のJSONとして出力される
+- `log-event.schema.json`とvalid / invalid fixtureをADR-0003の`spec`構造へ更新した
+- `Backend.Json`へproduction向けJSON encodingを集約した
+- JSON / Aesonに依存しない`Backend.Stderr`へ1行stderr出力と`IOException -> LoggingSinkFailure`を分離した
+- `Setup`で`Backend.Json`と`Backend.Stderr`を組み合わせるproduction用`Sink`へ切り替えた
+- `Backend.JsonStderr`と旧手書き`encode*`関数を削除し、Cabalとimportを新しい責務境界へ合わせた
+- `make check`でformat、build、39 examples / 0 failures、Haddock生成まで成功した
+- 親branch `feat/RS-0015-common-error-logging-completion`へSquash mergeした（`d03f10dc8f63fca777a27e0946f8a0697db6f212`）
