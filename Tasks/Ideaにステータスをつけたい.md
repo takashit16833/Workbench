@@ -1,9 +1,10 @@
 ---
-status: inbox
+status: doing
 priority: medium
 scheduled: 2026-08-16
 projects:
   - "[[Workbench]]"
+branch: idea-status
 dateCreated: 2026-08-16T15:01:53.993+09:00
 dateModified: 2026-08-16T15:01:53.993+09:00
 tags:
