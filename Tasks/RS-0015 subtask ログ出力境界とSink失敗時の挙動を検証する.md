@@ -3,7 +3,7 @@ status: todo
 priority: medium
 scheduled: 2026-08-14
 dateCreated: 2026-08-14T09:31:38.703+09:00
-dateModified: 2026-08-14T11:09:00+09:00
+dateModified: 2026-08-16T13:33:00+09:00
 tags:
   - task
 due: 2026-08-13
@@ -20,7 +20,7 @@ branch: RS-0015/output-boundaries
 
 - stdoutの正常結果とstderrの構造化ログが混在しないことを検証する
 - memory Sinkとfailure Sinkによる出力境界のテストを完成させる
-- `Backend.Stderr`がJSON / Aeson固有の変換責務を持たないことを確認する
+- `Backend.Json`と`Backend.JsonStderr`の責務境界にJSON構造の重複実装がないことを確認する
 - IO失敗だけを`LoggingSinkFailure`として扱うことを確認する
 - 記録対象外の文書本文、秘密情報、認証情報などを不用意にログへ出さないことを確認する
 
@@ -35,8 +35,9 @@ RS-0015で要求されているstdout / stderrの分離、差し替え可能なS
 - 正常結果がstdoutへ出力される境界を確認する
 - 構造化ログがstderrへ出力される境界を確認する
 - 正常結果とログが混在しないことをテストまたは代表実行で確認する
-- 機能処理が具体的なstderr実装へ直接依存していないことを確認する
-- `Backend.Stderr`がJSON / Aeson固有の変換を持たず、stderrへの出力とIO failure処理だけを担っていることを確認する
+- 機能処理が具体的な`Backend.JsonStderr`へ直接依存していないことを確認する
+- JSON構造の責務が`Backend.Json`にあり、`Backend.JsonStderr`に手書きJSON構造の重複実装がないことを確認する
+- `Backend.JsonStderr`が完成済み`LogEvent`のencoding、stderrへの1行出力、IO failure処理を担うことを確認する
 - memory Sinkを使用して`LogEvent`を自動テストから検査できることを確認する
 - failure Sinkを使用して`LoggingSinkFailure`の挙動を確認する
 - Sink失敗を元の機能処理の失敗と区別できることを確認する
@@ -49,7 +50,8 @@ RS-0015で要求されているstdout / stderrの分離、差し替え可能なS
 
 - stdoutとstderrの責務が分離されている
 - Sinkを差し替えられる
-- `Backend.Stderr`が出力形式から独立している
+- `Backend.Json`と`Backend.JsonStderr`の間にJSON構造の重複実装がない
+- `Backend.JsonStderr`が完成済みJSON表現のencoding、1行stderr出力、IO failure処理を担っている
 - memory Sinkによる検査ができる
 - failure Sinkの挙動が自動テストで固定されている
 - JSON変換に不要な回復可能failure modelが存在しない
