@@ -1,9 +1,9 @@
 ---
-status: doing
+status: done
 priority: medium
 scheduled: 2026-08-14
 dateCreated: 2026-08-14T09:28:30.406+09:00
-dateModified: 2026-08-17T07:19:27.154+09:00
+dateModified: 2026-08-17T07:31:12.976+09:00
 tags:
   - task
 due: 2026-08-13
@@ -24,6 +24,10 @@ timeEntries:
   - startTime: 2026-08-16T21:54:27.111Z
     description: Work session
     endTime: 2026-08-16T22:19:27.154Z
+  - startTime: 2026-08-16T22:26:29.059Z
+    description: Work session
+    endTime: 2026-08-16T22:31:12.976Z
+completedDate: 2026-08-17
 ---
 
 ## Squash merge commit body
