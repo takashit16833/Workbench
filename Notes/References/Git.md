@@ -78,3 +78,37 @@ git worktree add --track -b feat/foo ../feat-foo origin/feat/foo
 2. `w` — New worktree
 3. `b` — New local branch + worktree
 4. ブランチ名と作成先を確認
+
+## 別ブランチの特定ファイルだけ取り込む
+
+`feat/foo` の特定ファイルだけを `main` に取り込む。
+
+**CLI**
+
+```bash
+git switch main
+git checkout feat/foo -- path/to/file
+```
+
+変更はステージ済みになる。
+
+**Lazygit**
+
+1. `main` を checkout
+    
+2. `Local branches` で `main` を選択
+    
+3. `W` — Diff options
+    
+4. `Enter ref to diff` で `feat/foo` を指定
+    
+5. `Enter` — 差分ファイル一覧を表示
+    
+6. 対象ファイルを選択
+    
+7. `c` — Checkout file
+    
+8. 差分を確認して commit
+    
+
+対象ファイルはステージ済みになる。

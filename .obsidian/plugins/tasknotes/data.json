@@ -541,21 +541,9 @@
   "enableDebugLogging": false,
   "lastSeenVersion": "4.12.3",
   "pomodoroState": {
-    "isRunning": true,
+    "isRunning": false,
     "timeRemaining": 1500,
-    "currentSession": {
-      "id": "1786919189054",
-      "taskPath": "Tasks/RS-0015 subtask JSON Schema適合テストを追加する.md",
-      "startTime": "2026-08-17T07:26:29.054+09:00",
-      "plannedDuration": 25,
-      "type": "work",
-      "completed": false,
-      "activePeriods": [
-        {
-          "startTime": "2026-08-17T07:26:29.054+09:00"
-        }
-      ]
-    }
+    "nextSessionType": "work"
   },
   "lastPomodoroDate": "2026-08-16",
   "pomodoroHistory": [
@@ -1605,6 +1593,35 @@
         {
           "startTime": "2026-08-17T07:19:28.207+09:00",
           "endTime": "2026-08-17T07:24:28.207+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1786919189054",
+      "startTime": "2026-08-17T07:26:29.054+09:00",
+      "endTime": "2026-08-17T07:51:29.054+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "taskPath": "Tasks/RS-0015 subtask JSON Schema適合テストを追加する.md",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-17T07:26:29.054+09:00",
+          "endTime": "2026-08-17T07:51:29.054+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1786920690147",
+      "startTime": "2026-08-17T07:51:30.147+09:00",
+      "endTime": "2026-08-17T07:56:30.147+09:00",
+      "plannedDuration": 5,
+      "type": "short-break",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-17T07:51:30.147+09:00",
+          "endTime": "2026-08-17T07:56:30.147+09:00"
         }
       ]
     }
