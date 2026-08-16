@@ -1,14 +1,15 @@
 ---
-status: waiting
+status: done
 priority: medium
 scheduled: 2026-08-16
 projects:
   - "[[Workbench]]"
 branch: idea-status
 dateCreated: 2026-08-16T15:01:53.993+09:00
-dateModified: 2026-08-16T15:17:00+09:00
+dateModified: 2026-08-16T15:27:43.354+09:00
 tags:
   - task
+completedDate: 2026-08-16
 ---
 
 ## Decision
