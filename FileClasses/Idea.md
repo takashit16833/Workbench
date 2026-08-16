@@ -10,6 +10,15 @@ fields:
       baseFile: Dashboard.base
       viewName: Projects
     path: ""
+  - name: status
+    id: iStatus
+    type: Select
+    options:
+      sourceType: ValuesList
+      valuesList:
+        "1": accepted
+        "2": rejected
+    path: ""
   - name: review_gate
     id: iReviewGate
     type: Input

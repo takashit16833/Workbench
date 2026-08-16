@@ -51,9 +51,13 @@ Workbench optimizes for the **next correct action**, not for completeness.
 - 1 Idea = 1 Markdown file.
 - A reviewable decision unit.
 - `projects` may contain zero or more Project links.
+- `status` is optional and records only a completed review outcome: `accepted` or `rejected`. An Idea without `status` is active.
 - Active Ideas have a meaningful `review_gate`.
-- `review_gate` is a reconsideration condition, not necessarily a date.
-- After review: accepted -> create/organize Tasks; rejected -> Trash/Archive; deferred -> update `review_gate`.
+- `review_gate` is the condition for reviewing an active Idea, not necessarily a date.
+- Do not add separate statuses for initial review and re-review. If review is deferred, keep `status` unset and update `review_gate`.
+- When accepted, set `status: accepted` and create/organize Tasks as needed.
+- When rejected, set `status: rejected`.
+- Keep accepted and rejected Ideas as decision records until an explicit clear/archive operation removes them; do not Trash them merely because review is complete.
 
 ## Note
 

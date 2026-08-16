@@ -3,6 +3,8 @@ properties:
     displayName: Name
   note.projects:
     displayName: Projects
+  note.status:
+    displayName: Status
   note.review_gate:
     displayName: Review Gate
   note.created:
@@ -17,11 +19,13 @@ views:
     order:
       - file.name
       - projects
+      - status
       - review_gate
       - created
     columnSize:
       file.name: 320
       note.projects: 220
+      note.status: 120
       note.review_gate: 420
       note.created: 140
   - type: table
