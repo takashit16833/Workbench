@@ -1,9 +1,9 @@
 ---
-status: todo
+status: doing
 priority: medium
 scheduled: 2026-08-14
 dateCreated: 2026-08-14T09:28:30.406+09:00
-dateModified: 2026-08-16T17:50:00+09:00
+dateModified: 2026-08-16T17:58:41.793+09:00
 tags:
   - task
 due: 2026-08-13
