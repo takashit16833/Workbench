@@ -541,9 +541,21 @@
   "enableDebugLogging": false,
   "lastSeenVersion": "4.12.3",
   "pomodoroState": {
-    "isRunning": false,
+    "isRunning": true,
     "timeRemaining": 1500,
-    "nextSessionType": "work"
+    "currentSession": {
+      "id": "1786868367576",
+      "taskPath": "Tasks/RS-0015 subtask ADR-0003に合わせてJSON契約とstderr出力を切り替える.md",
+      "startTime": "2026-08-16T17:19:27.576+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "completed": false,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-16T17:19:27.576+09:00"
+        }
+      ]
+    }
   },
   "lastPomodoroDate": "2026-08-15",
   "pomodoroHistory": [
@@ -1419,6 +1431,64 @@
         {
           "startTime": "2026-08-16T14:47:19.368+09:00",
           "endTime": "2026-08-16T15:02:19.368+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1786864418631",
+      "startTime": "2026-08-16T16:13:38.631+09:00",
+      "endTime": "2026-08-16T16:38:38.631+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "taskPath": "Tasks/RS-0015 subtask ADR-0003に合わせてJSON契約とstderr出力を切り替える.md",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-16T16:13:38.631+09:00",
+          "endTime": "2026-08-16T16:38:38.631+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1786865919738",
+      "startTime": "2026-08-16T16:38:39.738+09:00",
+      "endTime": "2026-08-16T16:43:39.738+09:00",
+      "plannedDuration": 5,
+      "type": "short-break",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-16T16:38:39.738+09:00",
+          "endTime": "2026-08-16T16:43:39.738+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1786866391377",
+      "startTime": "2026-08-16T16:46:31.377+09:00",
+      "endTime": "2026-08-16T17:11:31.377+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "taskPath": "Tasks/RS-0015 subtask ADR-0003に合わせてJSON契約とstderr出力を切り替える.md",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-16T16:46:31.377+09:00",
+          "endTime": "2026-08-16T17:11:31.377+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1786867892499",
+      "startTime": "2026-08-16T17:11:32.499+09:00",
+      "endTime": "2026-08-16T17:16:32.499+09:00",
+      "plannedDuration": 5,
+      "type": "short-break",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-16T17:11:32.499+09:00",
+          "endTime": "2026-08-16T17:16:32.499+09:00"
         }
       ]
     }
