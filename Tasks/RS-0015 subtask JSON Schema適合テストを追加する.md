@@ -3,7 +3,7 @@ status: doing
 priority: medium
 scheduled: 2026-08-14
 dateCreated: 2026-08-14T09:28:30.406+09:00
-dateModified: 2026-08-16T17:58:41.793+09:00
+dateModified: 2026-08-16T18:26:15.429+09:00
 tags:
   - task
 due: 2026-08-13
@@ -14,6 +14,10 @@ blockedBy:
   - uid: "[[RS-0015 subtask ADR-0003に合わせてJSON契約とstderr出力を切り替える]]"
     reltype: FINISHTOSTART
 branch: RS-0015/schema-validation
+timeEntries:
+  - startTime: 2026-08-16T09:01:15.324Z
+    description: Work session
+    endTime: 2026-08-16T09:26:15.429Z
 ---
 
 ## Squash merge commit body

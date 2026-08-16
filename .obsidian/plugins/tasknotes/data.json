@@ -541,9 +541,20 @@
   "enableDebugLogging": false,
   "lastSeenVersion": "4.12.3",
   "pomodoroState": {
-    "isRunning": false,
-    "timeRemaining": 1500,
-    "nextSessionType": "work"
+    "isRunning": true,
+    "timeRemaining": 900,
+    "currentSession": {
+      "id": "1786872376473",
+      "startTime": "2026-08-16T18:26:16.473+09:00",
+      "plannedDuration": 15,
+      "type": "long-break",
+      "completed": false,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-16T18:26:16.473+09:00"
+        }
+      ]
+    }
   },
   "lastPomodoroDate": "2026-08-15",
   "pomodoroHistory": [
@@ -1508,7 +1519,22 @@
           "endTime": "2026-08-16T17:49:28.706+09:00"
         }
       ]
+    },
+    {
+      "id": "1786870875311",
+      "startTime": "2026-08-16T18:01:15.311+09:00",
+      "endTime": "2026-08-16T18:26:15.311+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "taskPath": "Tasks/RS-0015 subtask JSON Schema適合テストを追加する.md",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-16T18:01:15.311+09:00",
+          "endTime": "2026-08-16T18:26:15.311+09:00"
+        }
+      ]
     }
   ],
-  "lastSelectedTaskPath": "Tasks/RS-0015 subtask ADR-0003に合わせてJSON契約とstderr出力を切り替える.md"
+  "lastSelectedTaskPath": "Tasks/RS-0015 subtask JSON Schema適合テストを追加する.md"
 }
