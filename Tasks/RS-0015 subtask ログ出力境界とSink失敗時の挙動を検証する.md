@@ -30,6 +30,15 @@ RS-0015で要求されているstdout / stderrの分離、差し替え可能なS
 
 すでに実装済みの部分は再実装せず、不足する実装またはテストだけを追加する。
 
+## 引き継ぎ
+
+- 前提Subtask「JSON Schema適合テストを追加する」は親branch `feat/RS-0015-common-error-logging-completion`へSquash merge済み（`90a638807cac353daf24c6a7058a3219ef90059c`）。現在の親branch HEADも同commit
+- 直前Subtask branchでは最終`make check`がformat、build、56 examples / 0 failures、Haddock生成まで成功している
+- このSubtask用branch `RS-0015/output-boundaries`はまだ作成されていないため、作業開始時に最新の親branchから作成する
+- `RuntimeSpec`ではすでにmemory Sinkによる`LogEvent`捕捉、最低ログレベル未満の抑止、failure Sinkからの`Left LoggingSinkFailure`を検証している。これらを再実装せず、このSubtaskでは不足する境界だけを追加する
+- `Backend.Stderr.writeLine`はencoding済み`ByteString`の1行stderr出力と`IOException -> LoggingSinkFailure`だけを担当している。productionの`Setup.stderrSink`は`Backend.Json.encodeLogEvent`と`Backend.Stderr.writeLine`を組み合わせている
+- 現在の`app/Main.hs`は`Hello, Haskell!`をstdoutへ出すだけで、Loggerを含むstdout / stderr分離をまだ実行経路として検証していない。このSubtaskでは機能実装を広げず、必要最小限の境界テストまたは代表実行で確認する
+
 ## やること
 
 - 正常結果がstdoutへ出力される境界を確認する
