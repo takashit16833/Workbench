@@ -542,21 +542,21 @@
   "lastSeenVersion": "4.12.3",
   "pomodoroState": {
     "isRunning": true,
-    "timeRemaining": 900,
+    "timeRemaining": 300,
     "currentSession": {
-      "id": "1786872376473",
-      "startTime": "2026-08-16T18:26:16.473+09:00",
-      "plannedDuration": 15,
-      "type": "long-break",
+      "id": "1786918768207",
+      "startTime": "2026-08-17T07:19:28.207+09:00",
+      "plannedDuration": 5,
+      "type": "short-break",
       "completed": false,
       "activePeriods": [
         {
-          "startTime": "2026-08-16T18:26:16.473+09:00"
+          "startTime": "2026-08-17T07:19:28.207+09:00"
         }
       ]
     }
   },
-  "lastPomodoroDate": "2026-08-15",
+  "lastPomodoroDate": "2026-08-16",
   "pomodoroHistory": [
     {
       "id": "1786413262882",
@@ -1532,6 +1532,64 @@
         {
           "startTime": "2026-08-16T18:01:15.311+09:00",
           "endTime": "2026-08-16T18:26:15.311+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1786872376473",
+      "startTime": "2026-08-16T18:26:16.473+09:00",
+      "endTime": "2026-08-16T18:41:16.473+09:00",
+      "plannedDuration": 15,
+      "type": "long-break",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-16T18:26:16.473+09:00",
+          "endTime": "2026-08-16T18:41:16.473+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1786915438694",
+      "startTime": "2026-08-17T06:23:58.694+09:00",
+      "endTime": "2026-08-17T06:48:58.694+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "taskPath": "Tasks/RS-0015 subtask JSON Schema適合テストを追加する.md",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-17T06:23:58.694+09:00",
+          "endTime": "2026-08-17T06:48:58.694+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1786916939897",
+      "startTime": "2026-08-17T06:48:59.897+09:00",
+      "endTime": "2026-08-17T06:53:59.897+09:00",
+      "plannedDuration": 5,
+      "type": "short-break",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-17T06:48:59.897+09:00",
+          "endTime": "2026-08-17T06:53:59.897+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1786917267104",
+      "startTime": "2026-08-17T06:54:27.104+09:00",
+      "endTime": "2026-08-17T07:19:27.104+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "taskPath": "Tasks/RS-0015 subtask JSON Schema適合テストを追加する.md",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-17T06:54:27.104+09:00",
+          "endTime": "2026-08-17T07:19:27.104+09:00"
         }
       ]
     }
