@@ -3,6 +3,7 @@ fileClass: Idea
 type: idea
 projects:
   - "[[RAGScope]]"
+status: active
 review_gate: RS-0015 Step 15で共通エラー型と、正常結果と失敗結果を区別する境界を実装した後
 created: 2026-08-10
 ---
