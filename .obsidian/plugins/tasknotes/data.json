@@ -545,7 +545,7 @@
     "timeRemaining": 1500,
     "nextSessionType": "work"
   },
-  "lastPomodoroDate": "2026-08-14",
+  "lastPomodoroDate": "2026-08-15",
   "pomodoroHistory": [
     {
       "id": "1786413262882",
@@ -1185,7 +1185,214 @@
           "endTime": "2026-08-15T14:56:35.552+09:00"
         }
       ]
+    },
+    {
+      "id": "1786827593804",
+      "startTime": "2026-08-16T05:59:53.804+09:00",
+      "endTime": "2026-08-16T06:24:53.804+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "taskPath": "Tasks/RS-0015 subtask AesonによるLogEventのJSON serializationを完成させる.md",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-16T05:59:53.804+09:00",
+          "endTime": "2026-08-16T06:24:53.804+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1786829094904",
+      "startTime": "2026-08-16T06:24:54.904+09:00",
+      "endTime": "2026-08-16T06:29:54.904+09:00",
+      "plannedDuration": 5,
+      "type": "short-break",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-16T06:24:54.904+09:00",
+          "endTime": "2026-08-16T06:29:54.904+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1786829918219",
+      "startTime": "2026-08-16T06:38:38.219+09:00",
+      "endTime": "2026-08-16T07:07:41.365+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "taskPath": "Tasks/RS-0015 subtask AesonによるLogEventのJSON serializationを完成させる.md",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-16T06:38:38.219+09:00",
+          "endTime": "2026-08-16T06:41:56.067+09:00"
+        },
+        {
+          "startTime": "2026-08-16T06:45:59.213+09:00",
+          "endTime": "2026-08-16T07:07:41.365+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1786831664211",
+      "startTime": "2026-08-16T07:07:44.211+09:00",
+      "endTime": "2026-08-16T07:12:44.211+09:00",
+      "plannedDuration": 5,
+      "type": "short-break",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-16T07:07:44.211+09:00",
+          "endTime": "2026-08-16T07:12:44.211+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1786831996559",
+      "startTime": "2026-08-16T07:13:16.559+09:00",
+      "endTime": "2026-08-16T07:38:16.559+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "taskPath": "Tasks/RS-0015 subtask AesonによるLogEventのJSON serializationを完成させる.md",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-16T07:13:16.559+09:00",
+          "endTime": "2026-08-16T07:38:16.559+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1786833497652",
+      "startTime": "2026-08-16T07:38:17.652+09:00",
+      "endTime": "2026-08-16T07:43:17.652+09:00",
+      "plannedDuration": 5,
+      "type": "short-break",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-16T07:38:17.652+09:00",
+          "endTime": "2026-08-16T07:43:17.652+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1786841814070",
+      "startTime": "2026-08-16T09:56:54.070+09:00",
+      "endTime": "2026-08-16T10:21:54.070+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "taskPath": "Tasks/RS-0015 subtask AesonによるLogEventのJSON serializationを完成させる.md",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-16T09:56:54.070+09:00",
+          "endTime": "2026-08-16T10:21:54.070+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1786843315333",
+      "startTime": "2026-08-16T10:21:55.333+09:00",
+      "endTime": "2026-08-16T10:23:44.490+09:00",
+      "plannedDuration": 15,
+      "type": "long-break",
+      "completed": false,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-16T10:21:55.333+09:00",
+          "endTime": "2026-08-16T10:23:44.490+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1786843425479",
+      "startTime": "2026-08-16T10:23:45.479+09:00",
+      "endTime": "2026-08-16T10:48:45.479+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "taskPath": "Tasks/RS-0015 subtask AesonによるLogEventのJSON serializationを完成させる.md",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-16T10:23:45.479+09:00",
+          "endTime": "2026-08-16T10:48:45.479+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1786844926606",
+      "startTime": "2026-08-16T10:48:46.606+09:00",
+      "endTime": "2026-08-16T10:53:46.606+09:00",
+      "plannedDuration": 5,
+      "type": "short-break",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-16T10:48:46.606+09:00",
+          "endTime": "2026-08-16T10:53:46.606+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1786845329070",
+      "startTime": "2026-08-16T10:55:29.070+09:00",
+      "endTime": "2026-08-16T11:20:29.070+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "taskPath": "Tasks/RS-0015 subtask AesonによるLogEventのJSON serializationを完成させる.md",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-16T10:55:29.070+09:00",
+          "endTime": "2026-08-16T11:20:29.070+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1786846830197",
+      "startTime": "2026-08-16T11:20:30.197+09:00",
+      "endTime": "2026-08-16T11:25:30.197+09:00",
+      "plannedDuration": 5,
+      "type": "short-break",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-16T11:20:30.197+09:00",
+          "endTime": "2026-08-16T11:25:30.197+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1786847546818",
+      "startTime": "2026-08-16T11:32:26.818+09:00",
+      "endTime": "2026-08-16T11:57:26.818+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "taskPath": "Tasks/RS-0015 subtask AesonによるLogEventのJSON serializationを完成させる.md",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-16T11:32:26.818+09:00",
+          "endTime": "2026-08-16T11:57:26.818+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1786849047896",
+      "startTime": "2026-08-16T11:57:27.896+09:00",
+      "endTime": "2026-08-16T12:02:27.896+09:00",
+      "plannedDuration": 5,
+      "type": "short-break",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-16T11:57:27.896+09:00",
+          "endTime": "2026-08-16T12:02:27.896+09:00"
+        }
+      ]
     }
   ],
-  "lastSelectedTaskPath": "Tasks/SS-0001 APIに接続できない.md"
+  "lastSelectedTaskPath": "Tasks/RS-0015 subtask AesonによるLogEventのJSON serializationを完成させる.md"
 }

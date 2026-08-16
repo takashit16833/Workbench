@@ -1,9 +1,9 @@
 ---
-status: todo
+status: done
 priority: medium
 scheduled: 2026-08-14
 dateCreated: 2026-08-14T09:26:07.066+09:00
-dateModified: 2026-08-14T11:09:00+09:00
+dateModified: 2026-08-16T13:14:04.701+09:00
 tags:
   - task
 due: 2026-08-13
@@ -11,6 +11,32 @@ projects:
   - "[[RAGScope]]"
   - "[[RS-0015 RAGScopeアプリケーションの共通エラー・構造化ログ基盤を実装する]]"
 branch: RS-0015/aeson-serialization
+timeEntries:
+  - startTime: 2026-08-15T20:59:53.812Z
+    description: Work session
+    endTime: 2026-08-15T21:24:53.869Z
+  - startTime: 2026-08-15T21:38:38.226Z
+    description: Work session
+    endTime: 2026-08-15T21:41:56.067Z
+  - startTime: 2026-08-15T21:45:59.219Z
+    description: Work session
+    endTime: 2026-08-15T22:07:43.181Z
+  - startTime: 2026-08-15T22:13:16.564Z
+    description: Work session
+    endTime: 2026-08-15T22:38:16.575Z
+  - startTime: 2026-08-16T00:56:54.083Z
+    description: Work session
+    endTime: 2026-08-16T01:21:54.291Z
+  - startTime: 2026-08-16T01:23:45.486Z
+    description: Work session
+    endTime: 2026-08-16T01:48:45.575Z
+  - startTime: 2026-08-16T01:55:29.079Z
+    description: Work session
+    endTime: 2026-08-16T02:20:29.164Z
+  - startTime: 2026-08-16T02:32:26.828Z
+    description: Work session
+    endTime: 2026-08-16T02:57:26.856Z
+completedDate: 2026-08-16
 ---
 
 ## Squash merge commit body
