@@ -3,6 +3,7 @@ fileClass: Idea
 type: idea
 projects:
   - "[[RAGScope]]"
+status: active
 review_gate: RS-0015 Step 15で共通エラー型と ErrorContext の具体的な表現を実装した後
 created: 2026-08-10
 ---

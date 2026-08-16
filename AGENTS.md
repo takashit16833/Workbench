@@ -51,10 +51,11 @@ Workbench optimizes for the **next correct action**, not for completeness.
 - 1 Idea = 1 Markdown file.
 - A reviewable decision unit.
 - `projects` may contain zero or more Project links.
-- `status` is optional and records only a completed review outcome: `accepted` or `rejected`. An Idea without `status` is active.
+- `status` is required and uses `active`, `accepted`, or `rejected`.
+- New Ideas start with `status: active`.
 - Active Ideas have a meaningful `review_gate`.
 - `review_gate` is the condition for reviewing an active Idea, not necessarily a date.
-- Do not add separate statuses for initial review and re-review. If review is deferred, keep `status` unset and update `review_gate`.
+- Do not add separate statuses for initial review and re-review. If review is deferred, keep `status: active` and update `review_gate`.
 - When accepted, set `status: accepted` and create/organize Tasks as needed.
 - When rejected, set `status: rejected`.
 - Keep accepted and rejected Ideas as decision records until an explicit clear/archive operation removes them; do not Trash them merely because review is complete.
@@ -120,7 +121,7 @@ Workbench optimizes for the **next correct action**, not for completeness.
 ## Properties
 
 - Use TaskNotes' standard `projects` property for Project membership.
-- Workbench-owned properties use lower_snake_case, including `type`, `review_gate`, `created` and `source`.
+- Workbench-owned properties use lower_snake_case, including `type`, `status`, `review_gate`, `created` and `source`.
 - Add a property only when it solves a concrete workflow need.
 
 ## Safety

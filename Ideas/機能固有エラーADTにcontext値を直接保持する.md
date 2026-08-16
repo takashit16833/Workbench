@@ -3,6 +3,7 @@ fileClass: Idea
 type: idea
 projects:
   - "[[RAGScope]]"
+status: active
 review_gate: contextを必要とする最初の機能固有エラーを実装した後
 created: 2026-08-10
 ---

@@ -16,8 +16,9 @@ fields:
     options:
       sourceType: ValuesList
       valuesList:
-        "1": accepted
-        "2": rejected
+        "1": active
+        "2": accepted
+        "3": rejected
     path: ""
   - name: review_gate
     id: iReviewGate
