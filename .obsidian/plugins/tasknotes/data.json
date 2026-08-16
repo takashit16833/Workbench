@@ -541,21 +541,9 @@
   "enableDebugLogging": false,
   "lastSeenVersion": "4.12.3",
   "pomodoroState": {
-    "isRunning": true,
+    "isRunning": false,
     "timeRemaining": 1500,
-    "currentSession": {
-      "id": "1786868367576",
-      "taskPath": "Tasks/RS-0015 subtask ADR-0003に合わせてJSON契約とstderr出力を切り替える.md",
-      "startTime": "2026-08-16T17:19:27.576+09:00",
-      "plannedDuration": 25,
-      "type": "work",
-      "completed": false,
-      "activePeriods": [
-        {
-          "startTime": "2026-08-16T17:19:27.576+09:00"
-        }
-      ]
-    }
+    "nextSessionType": "work"
   },
   "lastPomodoroDate": "2026-08-15",
   "pomodoroHistory": [
@@ -1489,6 +1477,35 @@
         {
           "startTime": "2026-08-16T17:11:32.499+09:00",
           "endTime": "2026-08-16T17:16:32.499+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1786868367576",
+      "startTime": "2026-08-16T17:19:27.576+09:00",
+      "endTime": "2026-08-16T17:44:27.576+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "taskPath": "Tasks/RS-0015 subtask ADR-0003に合わせてJSON契約とstderr出力を切り替える.md",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-16T17:19:27.576+09:00",
+          "endTime": "2026-08-16T17:44:27.576+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1786869868706",
+      "startTime": "2026-08-16T17:44:28.706+09:00",
+      "endTime": "2026-08-16T17:49:28.706+09:00",
+      "plannedDuration": 5,
+      "type": "short-break",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-16T17:44:28.706+09:00",
+          "endTime": "2026-08-16T17:49:28.706+09:00"
         }
       ]
     }
