@@ -3,7 +3,7 @@ status: todo
 priority: medium
 scheduled: 2026-08-14
 dateCreated: 2026-08-14T09:32:42.162+09:00
-dateModified: 2026-08-16T13:34:00+09:00
+dateModified: 2026-08-16T15:37:00+09:00
 tags:
   - task
 due: 2026-08-13
@@ -19,7 +19,7 @@ branch: RS-0015/design-sync
 ## Squash merge commit body
 
 - ADR-0003の`spec`構造と現在のJSON契約を構造化ログ設計へ反映する
-- `Core`、Json Backend、JsonStderr Backend、Runtime、Setupの現在の責務境界を設計書へ同期する
+- `Core`、Json Backend、Stderr Backend、Runtime、Setupの現在の責務境界を設計書へ同期する
 - totalなJSON変換、optional field、省略規則、Sink failureの現在設計を反映する
 - コード、Schema、ADR、設計書の未解消差異をなくす
 
@@ -42,12 +42,12 @@ RS-0015で完成した実装、JSON Schema、ADR-0003の内容を、現在設計
 - 以下の現在の責務境界を実装と照合する
   - `Core`
   - `Backend.Json`
-  - `Backend.JsonStderr`
+  - `Backend.Stderr`
   - `Runtime`
   - `Setup`
-- `Backend.Json`によるtotalな純粋JSON変換を反映する
-- `Backend.JsonStderr`が完成済み`ToJSON LogEvent`をencodingし、stderrへの1行出力とIO failure処理を担うことを反映する
-- JSON構造の定義が`Backend.Json`へ集約され、`Backend.JsonStderr`に手書きJSON構造の重複実装がないことを反映する
+- `Backend.Json`によるtotalな純粋JSON変換とproduction向けencodingの責務を反映する
+- `Backend.Stderr`がJSON / Aesonに依存せず、encoding済みの1イベントをstderrへ1行出力し、IO failure処理だけを担うことを反映する
+- productionの出力経路で`Backend.Json`と`Backend.Stderr`を組み合わせるcomposition rootの責務を反映する
 - stderr Sinkで扱うfailureがIO由来のSink failureであることを反映する
 - stdout / stderrの責務分離を反映する
 - optional fieldの省略規則を反映する

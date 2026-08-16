@@ -4,7 +4,7 @@ type: idea
 projects:
   - "[[RAGScope]]"
 status: active
-review_gate: RS-0015 Step 15で共通エラー型と ErrorContext の具体的な表現を実装した後
+review_gate: 最初のAppErrorからLogErrorへの変換を実装し、ErrorValueとLogValueの重複コストを評価できるとき
 created: 2026-08-10
 ---
 
@@ -15,7 +15,7 @@ created: 2026-08-10
 
 ## 次のレビュー
 
-**条件:** RS-0015 Step 15で共通エラー型と ErrorContext の具体的な表現を実装した後
+**条件:** 最初のAppErrorからLogErrorへの変換を実装し、ErrorValueとLogValueの重複コストを評価できるとき
 
 **確認すること**
 
@@ -26,23 +26,25 @@ created: 2026-08-10
 
 ## 背景
 
-Error側にもlogging側の `LogValue` などに似た構造化値表現が必要になる可能性があるが、片方へ依存させると責務が崩れる。
+Error側の`ErrorValue`とlogging側の`LogValue`は、どちらも安全な構造化値として似た形を持つ。一方を他方へ依存させると責務が崩れるため、共通化する場合は中立な抽象が必要になる。
 
 ## 現在の仮結論
 
-`ErrorContext` とloggingの下位に、ErrorにもLoggingにも属さない中立な安全な構造化値抽象を置く案を有力視する。ただし `ErrorContext` と `Payload` 自体は別の意味を持つため統合しない。
+現時点では共通化しない。
 
-## この案を支持する理由
+`ErrorValue`と`LogValue`の構造は似ているが、まだ`AppError`から`LogError`への具体的な変換がなく、共有抽象を追加する利益を実測できない。まず別々の意味上の型を維持し、最初の変換実装で重複が実際の保守負担になるかを確認する。
 
-- ErrorとLoggingの責務分離を保てる
-- 本当に共通な低水準の値表現だけを再利用できる
-- 上位の意味上の型を残せる
+## 再検討を延期する理由
+
+- `ErrorContext`と`Payload`は上位の意味が異なるため、構造の類似だけでは統合理由にならない
+- 現時点で中立な共有層を追加すると、実利用のない抽象が1層増える
+- 純粋変換だけで十分なら、型の意味を分離したまま保てる
 
 ## 重要な代替案
 
 - ErrorとLoggingで別々の値型を持ち、純粋変換で接続する
+- ErrorとLoggingの下位に中立な安全な構造化値抽象を置く
 - Errorからloggingの型を直接利用する
-- 汎用Utilityへ移す
 
 ## 正本との関係
 
