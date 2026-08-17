@@ -1624,6 +1624,67 @@
           "endTime": "2026-08-17T07:56:30.147+09:00"
         }
       ]
+    },
+    {
+      "id": "1786934115334",
+      "startTime": "2026-08-17T11:35:15.333+09:00",
+      "endTime": "2026-08-17T12:03:34.372+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-17T11:35:15.333+09:00",
+          "endTime": "2026-08-17T11:45:06.782+09:00"
+        },
+        {
+          "startTime": "2026-08-17T11:48:25.821+09:00",
+          "endTime": "2026-08-17T12:03:34.372+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1786935815931",
+      "startTime": "2026-08-17T12:03:35.931+09:00",
+      "endTime": "2026-08-17T12:09:25.974+09:00",
+      "plannedDuration": 15,
+      "type": "long-break",
+      "completed": false,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-17T12:03:35.931+09:00",
+          "endTime": "2026-08-17T12:09:25.974+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1786936166874",
+      "startTime": "2026-08-17T12:09:26.874+09:00",
+      "endTime": "2026-08-17T12:34:26.874+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "taskPath": "Tasks/RS-0015 subtask JSON Schema適合テストを追加する.md",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-17T12:09:26.874+09:00",
+          "endTime": "2026-08-17T12:34:26.874+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1786937667995",
+      "startTime": "2026-08-17T12:34:27.995+09:00",
+      "endTime": "2026-08-17T12:39:27.995+09:00",
+      "plannedDuration": 5,
+      "type": "short-break",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-17T12:34:27.995+09:00",
+          "endTime": "2026-08-17T12:39:27.995+09:00"
+        }
+      ]
     }
   ],
   "lastSelectedTaskPath": "Tasks/RS-0015 subtask JSON Schema適合テストを追加する.md"
