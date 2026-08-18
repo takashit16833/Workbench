@@ -541,21 +541,9 @@
   "enableDebugLogging": false,
   "lastSeenVersion": "4.12.3",
   "pomodoroState": {
-    "isRunning": true,
+    "isRunning": false,
     "timeRemaining": 1500,
-    "currentSession": {
-      "id": "1787091590277",
-      "taskPath": "Tasks/RS-0018 subtask 共通エラーと例外変換境界を実装する.md",
-      "startTime": "2026-08-19T07:19:50.277+09:00",
-      "plannedDuration": 25,
-      "type": "work",
-      "completed": false,
-      "activePeriods": [
-        {
-          "startTime": "2026-08-19T07:19:50.277+09:00"
-        }
-      ]
-    }
+    "nextSessionType": "work"
   },
   "lastPomodoroDate": "2026-08-18",
   "pomodoroHistory": [
@@ -1753,6 +1741,35 @@
         {
           "startTime": "2026-08-19T07:14:10.025+09:00",
           "endTime": "2026-08-19T07:19:10.025+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1787091590277",
+      "startTime": "2026-08-19T07:19:50.277+09:00",
+      "endTime": "2026-08-19T07:44:50.277+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "taskPath": "Tasks/RS-0018 subtask 共通エラーと例外変換境界を実装する.md",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-19T07:19:50.277+09:00",
+          "endTime": "2026-08-19T07:44:50.277+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1787093091504",
+      "startTime": "2026-08-19T07:44:51.504+09:00",
+      "endTime": "2026-08-19T07:49:51.504+09:00",
+      "plannedDuration": 5,
+      "type": "short-break",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-19T07:44:51.504+09:00",
+          "endTime": "2026-08-19T07:49:51.504+09:00"
         }
       ]
     }
