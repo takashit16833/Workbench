@@ -542,17 +542,16 @@
   "lastSeenVersion": "4.12.3",
   "pomodoroState": {
     "isRunning": true,
-    "timeRemaining": 1500,
+    "timeRemaining": 300,
     "currentSession": {
-      "id": "1787089748818",
-      "taskPath": "Tasks/RS-0018 subtask 共通エラーと例外変換境界を実装する.md",
-      "startTime": "2026-08-19T06:49:08.818+09:00",
-      "plannedDuration": 25,
-      "type": "work",
+      "id": "1787091250025",
+      "startTime": "2026-08-19T07:14:10.025+09:00",
+      "plannedDuration": 5,
+      "type": "short-break",
       "completed": false,
       "activePeriods": [
         {
-          "startTime": "2026-08-19T06:49:08.818+09:00"
+          "startTime": "2026-08-19T07:14:10.025+09:00"
         }
       ]
     }
@@ -1724,6 +1723,21 @@
         {
           "startTime": "2026-08-19T06:40:45.351+09:00",
           "endTime": "2026-08-19T06:45:45.351+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1787089748818",
+      "startTime": "2026-08-19T06:49:08.818+09:00",
+      "endTime": "2026-08-19T07:14:08.818+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "taskPath": "Tasks/RS-0018 subtask 共通エラーと例外変換境界を実装する.md",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-19T06:49:08.818+09:00",
+          "endTime": "2026-08-19T07:14:08.818+09:00"
         }
       ]
     }
