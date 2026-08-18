@@ -15,7 +15,9 @@ Workbench optimizes for the **next correct action**, not for completeness.
 
 ## Repository workflow
 
-- Work on a feature branch unless the user explicitly requests direct work on `main`.
+- Low-risk operational updates may be committed directly to `main` when they are narrowly scoped and do not change code behavior, plugin behavior, repository structure, or shared workflow semantics. Examples include Task / Idea / Note / Project status or body updates, metadata or link corrections, and small documentation fixes.
+- Use a feature branch for code, plugin, or configuration changes, structural or bulk changes, changes to `AGENTS.md` or shared workflow rules, and any update with non-trivial review or validation risk.
+- If it is unclear whether an update is lightweight, use a feature branch.
 - Before every write, refresh the target branch head. Do not assume a previously observed commit is still current.
 - Preserve user commits that arrive while work is in progress. If the base branch advances, integrate it without force-pushing or rewriting unrelated history.
 - After changing a large or generated runtime file, inspect the resulting diff before considering the change complete. Stop and correct any unrelated line changes.
