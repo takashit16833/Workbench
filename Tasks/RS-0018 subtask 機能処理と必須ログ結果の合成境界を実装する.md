@@ -2,7 +2,7 @@
 status: todo
 priority: medium
 dateCreated: 2026-08-18T18:55:00+09:00
-dateModified: 2026-08-18T18:55:00+09:00
+dateModified: 2026-08-18T19:03:00+09:00
 tags:
   - task
 projects:
@@ -26,6 +26,11 @@ branch: RS-0018/execution-observation
 AI推論サービスの機能処理と、その結果を記録する必須ログ処理を独立して扱い、外側の実行結果へ現在設計どおり合成する。
 
 ログ失敗によって元の共通エラーを上書きせず、両方の失敗を区別して保持する。
+
+## 関連Subtask
+
+- 先行: [[RS-0018 subtask ログ出力境界とSink失敗を実装する]]
+- 後続: [[RS-0018 subtask 共通エラーと構造化ログの設計書を実装へ同期する]]
 
 ## 完了条件
 

@@ -2,7 +2,7 @@
 status: todo
 priority: medium
 dateCreated: 2026-08-18T18:55:00+09:00
-dateModified: 2026-08-18T18:55:00+09:00
+dateModified: 2026-08-18T19:03:00+09:00
 tags:
   - task
 projects:
@@ -26,6 +26,13 @@ branch: RS-0018/log-event-json
 現在の構造化ログ基本設計と共通JSON契約を、AI推論サービスのPython実装で扱える形にする。
 
 通常の機能処理から任意のログ構造を直接組み立てさせず、閉じたイベント表現から共通`LogEvent`へ変換できる境界を作る。
+
+## 関連Subtask
+
+- 先行: [[RS-0018 subtask 共通エラーと例外変換境界を実装する]]
+- 後続:
+  - [[RS-0018 subtask 共通JSON Schema適合テストを追加する]]
+  - [[RS-0018 subtask ログ出力境界とSink失敗を実装する]]
 
 ## 完了条件
 

@@ -2,7 +2,7 @@
 status: todo
 priority: medium
 dateCreated: 2026-08-18T18:55:00+09:00
-dateModified: 2026-08-18T18:55:00+09:00
+dateModified: 2026-08-18T19:03:00+09:00
 tags:
   - task
 projects:
@@ -26,6 +26,11 @@ branch: RS-0018/output-boundary
 AI推論サービスの構造化ログを、production向けstderr出力とテスト向け出力で同じ受付境界から扱えるようにする。
 
 ログ基盤自身の失敗を機能失敗と区別し、失敗した出力経路へフォールバック出力しない境界を作る。
+
+## 関連Subtask
+
+- 先行: [[RS-0018 subtask LogEvent生成とJSON変換を実装する]]
+- 後続: [[RS-0018 subtask 機能処理と必須ログ結果の合成境界を実装する]]
 
 ## 完了条件
 

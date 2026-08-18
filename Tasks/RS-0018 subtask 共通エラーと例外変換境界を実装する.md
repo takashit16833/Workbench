@@ -2,7 +2,7 @@
 status: todo
 priority: medium
 dateCreated: 2026-08-18T18:55:00+09:00
-dateModified: 2026-08-18T18:55:00+09:00
+dateModified: 2026-08-18T19:03:00+09:00
 tags:
   - task
 projects:
@@ -26,6 +26,11 @@ branch: RS-0018/common-error
 AI推論サービスで発生する失敗を、現在の共通エラー設計と同じ意味でPython側から扱えるようにする。
 
 Haskell側の実装構造は共有せず、共通契約の意味と公開境界だけを揃える。
+
+## 関連Subtask
+
+- 先行: [[RS-0018 subtask AI推論サービスのPython実装・テスト基盤を作る]]
+- 後続: [[RS-0018 subtask LogEvent生成とJSON変換を実装する]]
 
 ## 完了条件
 

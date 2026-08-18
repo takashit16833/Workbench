@@ -2,7 +2,7 @@
 status: todo
 priority: medium
 dateCreated: 2026-08-18T18:55:00+09:00
-dateModified: 2026-08-18T18:55:00+09:00
+dateModified: 2026-08-18T19:03:00+09:00
 tags:
   - task
 projects:
@@ -28,6 +28,13 @@ branch: RS-0018/design-sync
 RS-0018の実装結果と現在設計を最後に照合し、設計反映の更新漏れを防ぐ。
 
 設計変更が不要な場合も、実装・Schema・fixture・現在設計に未解消の差異がないことを確認して完了する。
+
+## 関連Subtask
+
+- 先行:
+  - [[RS-0018 subtask 共通JSON Schema適合テストを追加する]]
+  - [[RS-0018 subtask 機能処理と必須ログ結果の合成境界を実装する]]
+- 後続: なし
 
 ## 完了条件
 
