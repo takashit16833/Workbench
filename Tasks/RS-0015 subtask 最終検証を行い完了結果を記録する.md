@@ -1,9 +1,9 @@
 ---
-status: todo
+status: done
 priority: medium
 scheduled: 2026-08-14
 dateCreated: 2026-08-14T09:38:53.223+09:00
-dateModified: 2026-08-14T09:58:40.874+09:00
+dateModified: 2026-08-18T16:40:36.565+09:00
 tags:
   - task
 due: 2026-08-13
@@ -14,6 +14,7 @@ blockedBy:
   - uid: "[[RS-0015 subtask 共通エラーと構造化ログの設計書を実装へ同期する]]"
     reltype: FINISHTOSTART
 branch: RS-0015/finalize
+completedDate: 2026-08-18
 ---
 
 ## Squash merge commit body

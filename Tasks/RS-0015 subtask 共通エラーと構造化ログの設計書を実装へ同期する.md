@@ -1,9 +1,9 @@
 ---
-status: doing
+status: done
 priority: medium
 scheduled: 2026-08-14
 dateCreated: 2026-08-14T09:32:42.162+09:00
-dateModified: 2026-08-18T16:02:35.886+09:00
+dateModified: 2026-08-18T16:26:36.292+09:00
 tags:
   - task
 due: 2026-08-13
@@ -14,6 +14,7 @@ blockedBy:
   - uid: "[[RS-0015 subtask ログ出力境界とSink失敗時の挙動を検証する]]"
     reltype: FINISHTOSTART
 branch: RS-0015/design-sync
+completedDate: 2026-08-18
 ---
 
 ## Squash merge commit body
