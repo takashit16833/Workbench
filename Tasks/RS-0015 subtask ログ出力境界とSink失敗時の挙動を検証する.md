@@ -1,9 +1,9 @@
 ---
-status: doing
+status: done
 priority: medium
 scheduled: 2026-08-14
 dateCreated: 2026-08-14T09:31:38.703+09:00
-dateModified: 2026-08-17T18:54:00+09:00
+dateModified: 2026-08-18T16:02:20.146+09:00
 tags:
   - task
 due: 2026-08-13
@@ -14,6 +14,7 @@ blockedBy:
   - uid: "[[RS-0015 subtask JSON Schema適合テストを追加する]]"
     reltype: FINISHTOSTART
 branch: RS-0015/output-boundaries
+completedDate: 2026-08-18
 ---
 
 ## Squash merge commit body
