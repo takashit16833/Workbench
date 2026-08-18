@@ -541,11 +541,23 @@
   "enableDebugLogging": false,
   "lastSeenVersion": "4.12.3",
   "pomodoroState": {
-    "isRunning": false,
+    "isRunning": true,
     "timeRemaining": 1500,
-    "nextSessionType": "work"
+    "currentSession": {
+      "id": "1787089748818",
+      "taskPath": "Tasks/RS-0018 subtask 共通エラーと例外変換境界を実装する.md",
+      "startTime": "2026-08-19T06:49:08.818+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "completed": false,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-19T06:49:08.818+09:00"
+        }
+      ]
+    }
   },
-  "lastPomodoroDate": "2026-08-16",
+  "lastPomodoroDate": "2026-08-18",
   "pomodoroHistory": [
     {
       "id": "1786413262882",
@@ -1685,7 +1697,36 @@
           "endTime": "2026-08-17T12:39:27.995+09:00"
         }
       ]
+    },
+    {
+      "id": "1787087744186",
+      "startTime": "2026-08-19T06:15:44.186+09:00",
+      "endTime": "2026-08-19T06:40:44.186+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "taskPath": "Tasks/RS-0018 subtask 共通エラーと例外変換境界を実装する.md",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-19T06:15:44.186+09:00",
+          "endTime": "2026-08-19T06:40:44.186+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1787089245351",
+      "startTime": "2026-08-19T06:40:45.351+09:00",
+      "endTime": "2026-08-19T06:45:45.351+09:00",
+      "plannedDuration": 5,
+      "type": "short-break",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-19T06:40:45.351+09:00",
+          "endTime": "2026-08-19T06:45:45.351+09:00"
+        }
+      ]
     }
   ],
-  "lastSelectedTaskPath": "Tasks/RS-0015 subtask JSON Schema適合テストを追加する.md"
+  "lastSelectedTaskPath": "Tasks/RS-0018 subtask 共通エラーと例外変換境界を実装する.md"
 }

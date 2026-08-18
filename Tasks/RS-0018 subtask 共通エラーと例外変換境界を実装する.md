@@ -2,7 +2,7 @@
 status: doing
 priority: medium
 dateCreated: 2026-08-18T18:55:00+09:00
-dateModified: 2026-08-18T21:30:47.189+09:00
+dateModified: 2026-08-19T06:49:08.826+09:00
 tags:
   - task
 projects:
@@ -12,6 +12,12 @@ blockedBy:
   - uid: "[[RS-0018 subtask AI推論サービスのPython実装・テスト基盤を作る]]"
     reltype: FINISHTOSTART
 branch: RS-0018/common-error
+timeEntries:
+  - startTime: 2026-08-18T21:15:44.196Z
+    description: Work session
+    endTime: 2026-08-18T21:40:44.223Z
+  - startTime: 2026-08-18T21:49:08.826Z
+    description: Work session
 ---
 
 ## Squash merge commit body
