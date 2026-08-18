@@ -2,7 +2,7 @@
 status: todo
 priority: medium
 dateCreated: 2026-08-18T18:55:00+09:00
-dateModified: 2026-08-18T19:16:00+09:00
+dateModified: 2026-08-18T19:26:00+09:00
 tags:
   - task
 projects:
@@ -27,7 +27,10 @@ AI推論サービスが生成する構造化ログと共通fixtureを、`contrac
 
 Haskell側と同じSchemaを使い、実装言語に依存しない共通JSON契約を検証する。
 
-← [[RS-0018 subtask LogEvent生成とJSON変換を実装する]]　|　[[RS-0018 subtask 共通エラーと構造化ログの設計書を実装へ同期する]] →
+## 関連Subtask
+
+- 先行: [[RS-0018 subtask LogEvent生成とJSON変換を実装する|LogEvent生成とJSON変換を実装する]]
+- 後続: [[RS-0018 subtask 共通エラーと構造化ログの設計書を実装へ同期する|共通エラーと構造化ログの設計書を実装へ同期する]]
 
 ## 完了条件
 

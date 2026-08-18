@@ -83,7 +83,7 @@
   "pomodoroMobileSidebar": "tab",
   "showPomodoroInStatusBar": true,
   "enableTaskLinkOverlay": true,
-  "disableOverlayOnAlias": false,
+  "disableOverlayOnAlias": true,
   "enableInstantTaskConvert": true,
   "useDefaultsOnInstantConvert": true,
   "preserveCheckboxOnConvert": false,
