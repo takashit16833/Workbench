@@ -1,8 +1,8 @@
 ---
-status: todo
+status: done
 priority: medium
 dateCreated: 2026-08-18T18:55:00+09:00
-dateModified: 2026-08-18T21:07:00+09:00
+dateModified: 2026-08-18T21:18:00+09:00
 tags:
   - task
 projects:
@@ -26,11 +26,10 @@ RS-0018のPython実装を開始できる最小の実装・テスト基盤を正�
 
 ## 現在地
 
-- `RS-0018/python-test-foundation`の最新HEADは`2dc2eea`で、親branch `feat/RS-0018-ai-service-common-error-logging`へSquash mergeする準備ができている
-- `ai-service/uv.lock`とDev Containerのlockfileを正本リポジトリで管理している
+- `RS-0018/python-test-foundation`の成果を親branch `feat/RS-0018-ai-service-common-error-logging`へSquash mergeし、push済み
+- 親branchはSubtask着手前のcommitから1 commit進み、想定していたPython基盤・Dev Container・lockfile・コーディング規約の変更が反映されている
 - AI Service Dev ContainerをRebuildした状態で`make -C .. check-ai`が成功し、Ruff、Pyright、pytestの検査を通過している
-- 次の操作は、Squash commit subjectを`AI推論サービスのPython実装・テスト基盤を作る`として親branchへSquash mergeすること
-- Squash merge後に親branchへ意図したcommitと変更が反映されていることを確認してから、このSubtaskを完了扱いにする
+- このSubtaskは完了。後続は[[RS-0018 subtask 共通エラーと例外変換境界を実装する|共通エラーと例外変換境界を実装する]]
 
 ## 関連Subtask
 
