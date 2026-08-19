@@ -1,10 +1,10 @@
 {
 	"nodes":[
-		{"id":"g-error","type":"group","x":0,"y":0,"width":1500,"height":700,"color":"4","label":"ragscope_ai_service.error — 共通エラー"},
-		{"id":"result","type":"text","text":"# `error/result.py`\n\n**成功 / 失敗を明示**\n\n- `Success[T]`\n- `Failure`\n- `FeatureResult[T]`\n\n> これから実装","x":560,"y":100,"width":280,"height":260,"color":"4"},
-		{"id":"init","type":"text","text":"# `error/__init__.py`\n\npackage の公開入口。\n\n現在は空。","x":560,"y":470,"width":300,"height":150,"color":"4"},
-		{"id":"boundary","type":"text","text":"# `error/exception_boundary.py`\n\n**想定外例外の変換境界**\n\n`Exception` → `Failure(AppError)`\n\n- category: `internal`\n- 安全な code / message / context は機能側由来\n- 元例外は `cause` のみに保持\n\n> これから実装","x":1040,"y":140,"width":390,"height":330,"color":"4"},
-		{"id":"types","type":"text","text":"# `error/types.py`\n\n**共通エラーの値**\n\n- `ErrorCategory`\n- `ErrorValue` / `ErrorContext`\n- `AppError`\n\n`code` の意味は機能側が決める。`cause` は内部原因。","x":20,"y":190,"width":390,"height":280,"color":"4"}
+		{"id":"g-error","type":"group","x":0,"y":0,"width":1460,"height":700,"color":"4","label":"ragscope_ai_service.error — 共通エラー"},
+		{"id":"result","type":"text","text":"# `error/result.py`\n\n**成功 / 失敗を明示**\n\n- `Success[T]`\n- `Failure`\n- `FeatureResult[T]`","x":560,"y":100,"width":280,"height":205,"color":"4"},
+		{"id":"types","type":"text","text":"# `error/types.py`\n\n**共通エラーの値**\n\n- `ErrorCategory`\n- `ErrorValue` / `ErrorContext`\n- `AppError`\n\n`code` の意味は機能側が決める。`cause` は内部原因。","x":20,"y":190,"width":390,"height":280,"color":"4"},
+		{"id":"init","type":"text","text":"# `error/__init__.py`\n\npackage の公開入口。","x":550,"y":415,"width":300,"height":110,"color":"4"},
+		{"id":"boundary","type":"text","text":"# `error/boundary.py`\n\n**想定外例外の変換境界**\n\n`Exception` → `Failure(AppError)`\n\n- category: `internal`\n- 安全な code / message / context は機能側由来\n- 元例外は `cause` のみに保持","x":980,"y":230,"width":420,"height":240,"color":"4"}
 	],
 	"edges":[
 		{"id":"e-result-types","fromNode":"result","fromSide":"left","toNode":"types","toSide":"right","label":"AppError"},
