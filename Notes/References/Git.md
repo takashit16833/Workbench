@@ -93,29 +93,6 @@ git checkout feat/foo -- path/to/file
     
 
 対象ファイルはステージ済みになる。
-
-## Squash merge前にSubtask外の差分を外す
-
-Subtask branchに別責務の変更が混ざった場合、過去commitを書き換えず、最終treeから差分を消す。
-
-```bash
-git fetch origin
-git restore --source=origin/<parent-branch> -- path/to/file
-git diff -- path/to/file
-git add path/to/file
-git commit -m "Subtask外の差分を除外"
-git push
-```
-
-Squash mergeでは途中の追加・取消commitが1つにまとまるため、親branchとの差分から消えていればSquash commitには入らない。
-
-別branchで必要なhunkだけ再適用する場合:
-
-```bash
-git restore -p --source=<commit> -- path/to/file
-```
-
-表示されたhunkごとに取り込むものだけ `y` を選ぶ。
 # Worktree
 
 ## リモートブランチから worktree を作る
