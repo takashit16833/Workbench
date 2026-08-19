@@ -1,17 +1,25 @@
 ---
-status: doing
+status: done
 priority: medium
-dateCreated: 2026-08-19T13:57:00+09:00
-dateModified: 2026-08-19T13:57:00+09:00
+scheduled: 2026-08-19
+dateCreated: 2026-08-19T12:55:09.392+09:00
+dateModified: 2026-08-19T14:03:28.276+09:00
 tags:
   - task
+timeEntries:
+  - startTime: 2026-08-19T04:10:38.119Z
+    description: Work session
+    endTime: 2026-08-19T04:35:38.211Z
+  - startTime: 2026-08-19T04:41:17.487Z
+    description: Work session
+    endTime: 2026-08-19T05:03:28.276Z
 projects:
   - "[[RAGScope]]"
   - "[[RS-0018 AI推論サービスの共通エラー・構造化ログ基盤を実装する]]"
 blockedBy:
   - uid: "[[RS-0018 subtask AI推論サービスのPython実装・テスト基盤を作る]]"
     reltype: FINISHTOSTART
-branch: RS-0018/ai-ci
+completedDate: 2026-08-19
 ---
 
 ## Squash merge commit body
