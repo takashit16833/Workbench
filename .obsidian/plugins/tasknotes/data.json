@@ -2008,7 +2008,152 @@
           "endTime": "2026-08-19T14:11:18.936+09:00"
         }
       ]
+    },
+    {
+      "id": "1787116819879",
+      "startTime": "2026-08-19T14:20:19.879+09:00",
+      "endTime": "2026-08-19T14:45:19.879+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "taskPath": "Tasks/RS-0018 subtask LogEvent生成とJSON変換を実装する.md",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-19T14:20:19.879+09:00",
+          "endTime": "2026-08-19T14:45:19.879+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1787118320965",
+      "startTime": "2026-08-19T14:45:20.965+09:00",
+      "endTime": "2026-08-19T15:00:20.965+09:00",
+      "plannedDuration": 15,
+      "type": "long-break",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-19T14:45:20.965+09:00",
+          "endTime": "2026-08-19T15:00:20.965+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1787119358042",
+      "startTime": "2026-08-19T15:02:38.042+09:00",
+      "endTime": "2026-08-19T15:27:38.042+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "taskPath": "Tasks/RS-0018 subtask LogEvent生成とJSON変換を実装する.md",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-19T15:02:38.042+09:00",
+          "endTime": "2026-08-19T15:27:38.042+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1787120859154",
+      "startTime": "2026-08-19T15:27:39.154+09:00",
+      "endTime": "2026-08-19T15:32:39.154+09:00",
+      "plannedDuration": 5,
+      "type": "short-break",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-19T15:27:39.154+09:00",
+          "endTime": "2026-08-19T15:32:39.154+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1787121302937",
+      "startTime": "2026-08-19T15:35:02.937+09:00",
+      "endTime": "2026-08-19T16:00:02.937+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "taskPath": "Tasks/RS-0018 subtask LogEvent生成とJSON変換を実装する.md",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-19T15:35:02.937+09:00",
+          "endTime": "2026-08-19T16:00:02.937+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1787122804068",
+      "startTime": "2026-08-19T16:00:04.068+09:00",
+      "endTime": "2026-08-19T16:05:04.068+09:00",
+      "plannedDuration": 5,
+      "type": "short-break",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-19T16:00:04.068+09:00",
+          "endTime": "2026-08-19T16:05:04.068+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1787123142391",
+      "startTime": "2026-08-19T16:05:42.391+09:00",
+      "endTime": "2026-08-19T16:30:42.391+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "taskPath": "Tasks/RS-0018 subtask LogEvent生成とJSON変換を実装する.md",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-19T16:05:42.391+09:00",
+          "endTime": "2026-08-19T16:30:42.391+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1787124643486",
+      "startTime": "2026-08-19T16:30:43.486+09:00",
+      "endTime": "2026-08-19T16:35:43.486+09:00",
+      "plannedDuration": 5,
+      "type": "short-break",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-19T16:30:43.486+09:00",
+          "endTime": "2026-08-19T16:35:43.486+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1787125045483",
+      "startTime": "2026-08-19T16:37:25.482+09:00",
+      "endTime": "2026-08-19T17:02:25.482+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "taskPath": "Tasks/RS-0018 subtask LogEvent生成とJSON変換を実装する.md",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-19T16:37:25.482+09:00",
+          "endTime": "2026-08-19T17:02:25.482+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1787126546611",
+      "startTime": "2026-08-19T17:02:26.611+09:00",
+      "endTime": "2026-08-19T17:17:26.611+09:00",
+      "plannedDuration": 15,
+      "type": "long-break",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-19T17:02:26.611+09:00",
+          "endTime": "2026-08-19T17:17:26.611+09:00"
+        }
+      ]
     }
   ],
-  "lastSelectedTaskPath": "Tasks/RS-0018 subtask AI推論サービスの品質検査CIを追加する.md"
+  "lastSelectedTaskPath": "Tasks/RS-0018 subtask LogEvent生成とJSON変換を実装する.md"
 }

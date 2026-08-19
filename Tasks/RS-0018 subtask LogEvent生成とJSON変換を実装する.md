@@ -2,7 +2,7 @@
 status: doing
 priority: medium
 dateCreated: 2026-08-18T18:55:00+09:00
-dateModified: 2026-08-19T14:18:37.485+09:00
+dateModified: 2026-08-19T17:02:25.579+09:00
 tags:
   - task
 projects:
@@ -12,6 +12,22 @@ blockedBy:
   - uid: "[[RS-0018 subtask 共通エラーと例外変換境界を実装する]]"
     reltype: FINISHTOSTART
 branch: RS-0018/log-event-json
+timeEntries:
+  - startTime: 2026-08-19T05:20:19.887Z
+    description: Work session
+    endTime: 2026-08-19T05:45:19.908Z
+  - startTime: 2026-08-19T06:02:38.053Z
+    description: Work session
+    endTime: 2026-08-19T06:27:38.116Z
+  - startTime: 2026-08-19T06:35:02.947Z
+    description: Work session
+    endTime: 2026-08-19T07:00:03.041Z
+  - startTime: 2026-08-19T07:05:42.401Z
+    description: Work session
+    endTime: 2026-08-19T07:30:42.451Z
+  - startTime: 2026-08-19T07:37:25.497Z
+    description: Work session
+    endTime: 2026-08-19T08:02:25.580Z
 ---
 
 ## Squash merge commit body
