@@ -541,11 +541,23 @@
   "enableDebugLogging": false,
   "lastSeenVersion": "4.12.3",
   "pomodoroState": {
-    "isRunning": false,
+    "isRunning": true,
     "timeRemaining": 1500,
-    "nextSessionType": "work"
+    "currentSession": {
+      "id": "1787173574283",
+      "taskPath": "Tasks/RS-0018 subtask LogEvent生成とJSON変換を実装する.md",
+      "startTime": "2026-08-20T06:06:14.283+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "completed": false,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-20T06:06:14.283+09:00"
+        }
+      ]
+    }
   },
-  "lastPomodoroDate": "2026-08-18",
+  "lastPomodoroDate": "2026-08-19",
   "pomodoroHistory": [
     {
       "id": "1786413262882",
