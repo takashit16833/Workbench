@@ -1,11 +1,11 @@
 {
 	"nodes":[
-		{"id":"g-root","type":"group","x":0,"y":0,"width":1640,"height":760,"label":"ragscope_ai_service — AIサービス基盤"},
-		{"id":"g-error","type":"group","x":40,"y":70,"width":1030,"height":620,"color":"4","label":"ragscope_ai_service.error — 共通エラー"},
-		{"id":"types","type":"text","text":"# `error/types.py`\n\n**共通エラーの値**\n\n- `ErrorCategory`\n- `ErrorValue` / `ErrorContext`\n- `AppError`\n\n`code` の意味は機能側が決める。`cause` は内部原因。","x":90,"y":150,"width":390,"height":280,"color":"4"},
-		{"id":"boundary","type":"text","text":"# `error/boundary.py`\n\n**想定外例外の最外側境界**\n\n- `run_with_unexpected_exception_boundary`\n- `AppResult[T]` はそのまま通す\n- 漏れた `Exception` だけ `internal.unexpected` の `Failure(AppError)` へ変換\n- 元例外は `cause` のみに保持","x":580,"y":150,"width":420,"height":330,"color":"4"},
-		{"id":"init","type":"text","text":"# `error/__init__.py`\n\npackage の公開入口。\n\n現在は空。","x":335,"y":520,"width":360,"height":130,"color":"4"},
-		{"id":"result","type":"text","text":"# `result.py`\n\n**成功 / 共通エラー失敗を明示**\n\n- `Success[T]`\n- `Failure`\n- `AppResult[T]`\n\n`Failure` は `AppError` を保持する。","x":1160,"y":190,"width":390,"height":270,"color":"6"}
+		{"id":"g-root","type":"group","x":0,"y":0,"width":1640,"height":880,"label":"ragscope_ai_service — AIサービス基盤"},
+		{"id":"g-error","type":"group","x":40,"y":70,"width":1030,"height":750,"color":"4","label":"ragscope_ai_service.error — 共通エラー"},
+		{"id":"result","type":"text","text":"# `result.py`\n\n**成功 / 共通エラー失敗を明示**\n\n- `Success[T]`\n- `Failure`\n- `AppResult[T]`\n\n`Failure` は `AppError` を保持する。","x":1260,"y":130,"width":320,"height":270,"color":"6"},
+		{"id":"types","type":"text","text":"# `error/types.py`\n\n**共通エラーの値**\n\n- `ErrorCategory`\n- `ErrorValue` / `ErrorContext`\n- `AppError`\n\n`code` の意味は機能側が決める。`cause` は内部原因。","x":80,"y":125,"width":390,"height":280,"color":"4"},
+		{"id":"boundary","type":"text","text":"# `error/boundary.py`\n\n**想定外例外の最外側境界**\n\n- `run_with_unexpected_exception_boundary`\n- `AppResult[T]` はそのまま通す\n- 漏れた `Exception` だけ `internal.unexpected` の `Failure(AppError)` へ変換\n- 元例外は `cause` のみに保持","x":600,"y":505,"width":420,"height":280,"color":"4"},
+		{"id":"init","type":"text","text":"# `error/__init__.py`\n\npackage の公開入口。\n\n現在は空。","x":95,"y":580,"width":360,"height":130,"color":"4"}
 	],
 	"edges":[
 		{"id":"e-result-types","fromNode":"result","fromSide":"left","toNode":"types","toSide":"right","label":"AppError"},

@@ -541,9 +541,21 @@
   "enableDebugLogging": false,
   "lastSeenVersion": "4.12.3",
   "pomodoroState": {
-    "isRunning": false,
+    "isRunning": true,
     "timeRemaining": 1500,
-    "nextSessionType": "work"
+    "currentSession": {
+      "id": "1787114477482",
+      "taskPath": "Tasks/RS-0018 subtask AIサービスにCIを実装する.md",
+      "startTime": "2026-08-19T13:41:17.482+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "completed": false,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-19T13:41:17.482+09:00"
+        }
+      ]
+    }
   },
   "lastPomodoroDate": "2026-08-18",
   "pomodoroHistory": [
@@ -1950,7 +1962,36 @@
           "endTime": "2026-08-19T12:41:44.519+09:00"
         }
       ]
+    },
+    {
+      "id": "1787112638110",
+      "startTime": "2026-08-19T13:10:38.110+09:00",
+      "endTime": "2026-08-19T13:35:38.110+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "taskPath": "Tasks/RS-0018 subtask AIサービスにCIを実装する.md",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-19T13:10:38.110+09:00",
+          "endTime": "2026-08-19T13:35:38.110+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1787114139255",
+      "startTime": "2026-08-19T13:35:39.255+09:00",
+      "endTime": "2026-08-19T13:40:39.255+09:00",
+      "plannedDuration": 5,
+      "type": "short-break",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-19T13:35:39.255+09:00",
+          "endTime": "2026-08-19T13:40:39.255+09:00"
+        }
+      ]
     }
   ],
-  "lastSelectedTaskPath": "Tasks/RS-0018 subtask 共通エラーと例外変換境界を実装する.md"
+  "lastSelectedTaskPath": "Tasks/RS-0018 subtask AIサービスにCIを実装する.md"
 }
