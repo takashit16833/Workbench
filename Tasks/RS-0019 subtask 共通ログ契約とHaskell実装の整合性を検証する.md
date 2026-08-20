@@ -1,8 +1,8 @@
 ---
-status: doing
+status: done
 priority: medium
 dateCreated: 2026-08-19T18:48:00+09:00
-dateModified: 2026-08-20T14:23:58.899+09:00
+dateModified: 2026-08-20T14:42:07.602+09:00
 tags:
   - task
 projects:
@@ -14,6 +14,7 @@ blockedBy:
   - uid: "[[RS-0019 subtask HaskellのEventSpecを直和モデルへ変更する]]"
     reltype: FINISHTOSTART
 branch: RS-0019/final-validation
+completedDate: 2026-08-20
 ---
 
 ## Squash merge commit body
