@@ -1,8 +1,8 @@
 ---
-status: doing
+status: done
 priority: medium
 dateCreated: 2026-08-19T18:48:00+09:00
-dateModified: 2026-08-19T20:57:05.451+09:00
+dateModified: 2026-08-20T14:23:55.702+09:00
 tags:
   - task
 projects:
@@ -12,6 +12,7 @@ blockedBy:
   - uid: "[[RS-0019 subtask 構造化ログイベントモデルの設計判断を確定する]]"
     reltype: FINISHTOSTART
 branch: RS-0019/haskell-event-model
+completedDate: 2026-08-20
 ---
 
 ## Squash merge commit body
