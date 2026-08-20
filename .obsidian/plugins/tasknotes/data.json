@@ -541,11 +541,22 @@
   "enableDebugLogging": false,
   "lastSeenVersion": "4.12.3",
   "pomodoroState": {
-    "isRunning": false,
+    "isRunning": true,
     "timeRemaining": 1500,
-    "nextSessionType": "work"
+    "currentSession": {
+      "id": "1787260171727",
+      "startTime": "2026-08-21T06:09:31.727+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "completed": false,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-21T06:09:31.727+09:00"
+        }
+      ]
+    }
   },
-  "lastPomodoroDate": "2026-08-19",
+  "lastPomodoroDate": "2026-08-20",
   "pomodoroHistory": [
     {
       "id": "1786413262882",
@@ -2327,7 +2338,93 @@
           "endTime": "2026-08-20T09:52:24.089+09:00"
         }
       ]
+    },
+    {
+      "id": "1787210107147",
+      "startTime": "2026-08-20T16:15:07.147+09:00",
+      "endTime": "2026-08-20T16:40:07.147+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "taskPath": "Tasks/RS-0018 subtask LogEvent生成とJSON変換を実装する.md",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-20T16:15:07.147+09:00",
+          "endTime": "2026-08-20T16:40:07.147+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1787211608294",
+      "startTime": "2026-08-20T16:40:08.294+09:00",
+      "endTime": "2026-08-20T16:45:08.294+09:00",
+      "plannedDuration": 5,
+      "type": "short-break",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-20T16:40:08.294+09:00",
+          "endTime": "2026-08-20T16:45:08.294+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1787211937465",
+      "startTime": "2026-08-20T16:45:37.465+09:00",
+      "endTime": "2026-08-20T17:10:37.465+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "taskPath": "Tasks/RS-0018 subtask LogEvent生成とJSON変換を実装する.md",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-20T16:45:37.465+09:00",
+          "endTime": "2026-08-20T17:10:37.465+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1787213438550",
+      "startTime": "2026-08-20T17:10:38.550+09:00",
+      "endTime": "2026-08-20T17:25:38.550+09:00",
+      "plannedDuration": 15,
+      "type": "long-break",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-20T17:10:38.550+09:00",
+          "endTime": "2026-08-20T17:25:38.550+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1787215660391",
+      "startTime": "2026-08-20T17:47:40.391+09:00",
+      "endTime": "2026-08-20T18:12:40.391+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "taskPath": "Tasks/RS-0018 subtask LogEvent生成とJSON変換を実装する.md",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-20T17:47:40.391+09:00",
+          "endTime": "2026-08-20T18:12:40.391+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1787217161478",
+      "startTime": "2026-08-20T18:12:41.478+09:00",
+      "endTime": "2026-08-20T18:17:41.478+09:00",
+      "plannedDuration": 5,
+      "type": "short-break",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-20T18:12:41.478+09:00",
+          "endTime": "2026-08-20T18:17:41.478+09:00"
+        }
+      ]
     }
-  ],
-  "lastSelectedTaskPath": "Tasks/RS-0018 subtask LogEvent生成とJSON変換を実装する.md"
+  ]
 }
