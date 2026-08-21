@@ -1,14 +1,15 @@
 ---
-status: doing
+status: done
 priority: medium
 dateCreated: 2026-08-21T09:16:00+09:00
-dateModified: 2026-08-21T09:26:40.175+09:00
+dateModified: 2026-08-21T10:12:35.050+09:00
 tags:
   - task
 projects:
   - "[[RAGScope]]"
   - "[[RS-0020 共通エラー・構造化ログの論理契約を再設計する]]"
 branch: RS-0020/isolate-existing-design
+completedDate: 2026-08-21
 ---
 
 ## Squash merge commit body
