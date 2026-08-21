@@ -2,7 +2,7 @@
 status: doing
 priority: medium
 dateCreated: 2026-08-21T20:39:00+09:00
-dateModified: 2026-08-22T07:17:16.288+09:00
+dateModified: 2026-08-22T07:21:15.909+09:00
 tags:
   - task
 projects:
@@ -12,6 +12,9 @@ blockedBy:
   - uid: "[[RS-0020 subtask RAGScope用語集を作成する]]"
     reltype: FINISHTOSTART
 branch: RS-0020/overview
+timeEntries:
+  - startTime: 2026-08-21T22:21:15.909Z
+    description: Work session
 ---
 
 ## Squash merge commit body

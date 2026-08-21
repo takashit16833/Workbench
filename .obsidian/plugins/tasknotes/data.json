@@ -542,10 +542,10 @@
   "lastSeenVersion": "4.12.3",
   "pomodoroState": {
     "isRunning": true,
-    "timeRemaining": 1500,
+    "timeRemaining": 802,
     "currentSession": {
       "id": "1787350177569",
-      "taskPath": "Tasks/RS-0020 subtask RAGScope全体の概念と用語を洗い出す.md",
+      "taskPath": "Tasks/RS-0020 subtask RAGScope概要を用語集と整合させる.md",
       "startTime": "2026-08-22T07:09:37.569+09:00",
       "plannedDuration": 25,
       "type": "work",
@@ -2804,5 +2804,5 @@
       ]
     }
   ],
-  "lastSelectedTaskPath": "Tasks/RS-0020 subtask RAGScope全体の概念と用語を洗い出す.md"
+  "lastSelectedTaskPath": "Tasks/RS-0020 subtask RAGScope概要を用語集と整合させる.md"
 }
