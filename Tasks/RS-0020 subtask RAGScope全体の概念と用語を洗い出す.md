@@ -2,7 +2,7 @@
 status: doing
 priority: medium
 dateCreated: 2026-08-21T20:39:00+09:00
-dateModified: 2026-08-21T20:47:01.810+09:00
+dateModified: 2026-08-22T06:02:07.382+09:00
 tags:
   - task
 projects:
@@ -11,6 +11,9 @@ projects:
 blockedBy:
   - uid: "[[RS-0020 subtask 既存のエラー・ログ設計を再設計作業から隔離する]]"
     reltype: FINISHTOSTART
+timeEntries:
+  - startTime: 2026-08-21T21:02:07.382Z
+    description: Work session
 ---
 
 ## Squash merge commit body
