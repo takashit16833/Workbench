@@ -541,9 +541,21 @@
   "enableDebugLogging": false,
   "lastSeenVersion": "4.12.3",
   "pomodoroState": {
-    "isRunning": false,
+    "isRunning": true,
     "timeRemaining": 1500,
-    "nextSessionType": "work"
+    "currentSession": {
+      "id": "1787275132855",
+      "taskPath": "Tasks/RS-0020 subtask 要求と外部標準から論理契約を設計する.md",
+      "startTime": "2026-08-21T10:18:52.855+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "completed": false,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-21T10:18:52.855+09:00"
+        }
+      ]
+    }
   },
   "lastPomodoroDate": "2026-08-20",
   "pomodoroHistory": [
@@ -2530,5 +2542,6 @@
         }
       ]
     }
-  ]
+  ],
+  "lastSelectedTaskPath": "Tasks/RS-0020 subtask 要求と外部標準から論理契約を設計する.md"
 }
