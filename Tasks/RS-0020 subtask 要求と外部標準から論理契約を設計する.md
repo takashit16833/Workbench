@@ -2,14 +2,14 @@
 status: doing
 priority: medium
 dateCreated: 2026-08-21T09:16:00+09:00
-dateModified: 2026-08-21T10:18:52.866+09:00
+dateModified: 2026-08-21T20:39:00+09:00
 tags:
   - task
 projects:
   - "[[RAGScope]]"
   - "[[RS-0020 共通エラー・構造化ログの論理契約を再設計する]]"
 blockedBy:
-  - uid: "[[RS-0020 subtask 既存のエラー・ログ設計を再設計作業から隔離する]]"
+  - uid: "[[RS-0020 subtask システムアーキテクチャを概念モデルと整合させる]]"
     reltype: FINISHTOSTART
 branch: RS-0020/logical-contract
 timeEntries:
