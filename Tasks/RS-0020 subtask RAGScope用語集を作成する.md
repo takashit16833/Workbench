@@ -1,8 +1,8 @@
 ---
-status: todo
+status: done
 priority: medium
 dateCreated: 2026-08-21T20:39:00+09:00
-dateModified: 2026-08-21T20:39:00+09:00
+dateModified: 2026-08-22T07:16:14.649+09:00
 tags:
   - task
 projects:
@@ -12,6 +12,7 @@ blockedBy:
   - uid: "[[RS-0020 subtask RAGScope全体の概念と用語を洗い出す]]"
     reltype: FINISHTOSTART
 branch: RS-0020/glossary
+completedDate: 2026-08-22
 ---
 
 ## Squash merge commit body

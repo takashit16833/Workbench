@@ -544,15 +544,15 @@
     "isRunning": true,
     "timeRemaining": 1500,
     "currentSession": {
-      "id": "1787346127373",
+      "id": "1787350177569",
       "taskPath": "Tasks/RS-0020 subtask RAGScope全体の概念と用語を洗い出す.md",
-      "startTime": "2026-08-22T06:02:07.373+09:00",
+      "startTime": "2026-08-22T07:09:37.569+09:00",
       "plannedDuration": 25,
       "type": "work",
       "completed": false,
       "activePeriods": [
         {
-          "startTime": "2026-08-22T06:02:07.373+09:00"
+          "startTime": "2026-08-22T07:09:37.569+09:00"
         }
       ]
     }
@@ -2742,6 +2742,64 @@
         {
           "startTime": "2026-08-21T16:19:55.473+09:00",
           "endTime": "2026-08-21T16:24:55.473+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1787346127373",
+      "startTime": "2026-08-22T06:02:07.373+09:00",
+      "endTime": "2026-08-22T06:27:07.373+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "taskPath": "Tasks/RS-0020 subtask RAGScope全体の概念と用語を洗い出す.md",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-22T06:02:07.373+09:00",
+          "endTime": "2026-08-22T06:27:07.373+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1787347628456",
+      "startTime": "2026-08-22T06:27:08.456+09:00",
+      "endTime": "2026-08-22T06:32:08.456+09:00",
+      "plannedDuration": 5,
+      "type": "short-break",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-22T06:27:08.456+09:00",
+          "endTime": "2026-08-22T06:32:08.456+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1787348338706",
+      "startTime": "2026-08-22T06:38:58.706+09:00",
+      "endTime": "2026-08-22T07:03:58.706+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "taskPath": "Tasks/RS-0020 subtask RAGScope全体の概念と用語を洗い出す.md",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-22T06:38:58.706+09:00",
+          "endTime": "2026-08-22T07:03:58.706+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1787349839957",
+      "startTime": "2026-08-22T07:03:59.957+09:00",
+      "endTime": "2026-08-22T07:08:59.957+09:00",
+      "plannedDuration": 5,
+      "type": "short-break",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-22T07:03:59.957+09:00",
+          "endTime": "2026-08-22T07:08:59.957+09:00"
         }
       ]
     }
