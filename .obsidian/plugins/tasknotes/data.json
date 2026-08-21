@@ -541,20 +541,9 @@
   "enableDebugLogging": false,
   "lastSeenVersion": "4.12.3",
   "pomodoroState": {
-    "isRunning": true,
+    "isRunning": false,
     "timeRemaining": 1500,
-    "currentSession": {
-      "id": "1787260171727",
-      "startTime": "2026-08-21T06:09:31.727+09:00",
-      "plannedDuration": 25,
-      "type": "work",
-      "completed": false,
-      "activePeriods": [
-        {
-          "startTime": "2026-08-21T06:09:31.727+09:00"
-        }
-      ]
-    }
+    "nextSessionType": "work"
   },
   "lastPomodoroDate": "2026-08-20",
   "pomodoroHistory": [
@@ -2423,6 +2412,121 @@
         {
           "startTime": "2026-08-20T18:12:41.478+09:00",
           "endTime": "2026-08-20T18:17:41.478+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1787260171727",
+      "startTime": "2026-08-21T06:09:31.727+09:00",
+      "endTime": "2026-08-21T06:34:31.727+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-21T06:09:31.727+09:00",
+          "endTime": "2026-08-21T06:34:31.727+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1787261672872",
+      "startTime": "2026-08-21T06:34:32.872+09:00",
+      "endTime": "2026-08-21T06:39:32.872+09:00",
+      "plannedDuration": 5,
+      "type": "short-break",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-21T06:34:32.872+09:00",
+          "endTime": "2026-08-21T06:39:32.872+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1787263068333",
+      "startTime": "2026-08-21T06:57:48.333+09:00",
+      "endTime": "2026-08-21T07:22:48.333+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "taskPath": "Tasks/RS-0018 subtask LogEvent生成とJSON変換を実装する.md",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-21T06:57:48.333+09:00",
+          "endTime": "2026-08-21T07:22:48.333+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1787264569440",
+      "startTime": "2026-08-21T07:22:49.440+09:00",
+      "endTime": "2026-08-21T07:27:49.440+09:00",
+      "plannedDuration": 5,
+      "type": "short-break",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-21T07:22:49.440+09:00",
+          "endTime": "2026-08-21T07:27:49.440+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1787265040242",
+      "startTime": "2026-08-21T07:30:40.242+09:00",
+      "endTime": "2026-08-21T07:55:40.242+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "taskPath": "Tasks/RS-0018 subtask LogEvent生成とJSON変換を実装する.md",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-21T07:30:40.242+09:00",
+          "endTime": "2026-08-21T07:55:40.242+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1787266541285",
+      "startTime": "2026-08-21T07:55:41.285+09:00",
+      "endTime": "2026-08-21T08:00:41.285+09:00",
+      "plannedDuration": 5,
+      "type": "short-break",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-21T07:55:41.285+09:00",
+          "endTime": "2026-08-21T08:00:41.285+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1787266923720",
+      "startTime": "2026-08-21T08:02:03.720+09:00",
+      "endTime": "2026-08-21T08:27:03.720+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "taskPath": "Tasks/RS-0018 subtask LogEvent生成とJSON変換を実装する.md",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-21T08:02:03.720+09:00",
+          "endTime": "2026-08-21T08:27:03.720+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1787268424831",
+      "startTime": "2026-08-21T08:27:04.831+09:00",
+      "endTime": "2026-08-21T08:42:04.831+09:00",
+      "plannedDuration": 15,
+      "type": "long-break",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-21T08:27:04.831+09:00",
+          "endTime": "2026-08-21T08:42:04.831+09:00"
         }
       ]
     }
