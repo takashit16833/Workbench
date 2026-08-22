@@ -541,21 +541,9 @@
   "enableDebugLogging": false,
   "lastSeenVersion": "4.12.3",
   "pomodoroState": {
-    "isRunning": true,
+    "isRunning": false,
     "timeRemaining": 1500,
-    "currentSession": {
-      "id": "1787351984462",
-      "taskPath": "Tasks/RS-0020 subtask RAGScope概要を用語集と整合させる.md",
-      "startTime": "2026-08-22T07:39:44.462+09:00",
-      "plannedDuration": 25,
-      "type": "work",
-      "completed": false,
-      "activePeriods": [
-        {
-          "startTime": "2026-08-22T07:39:44.462+09:00"
-        }
-      ]
-    }
+    "nextSessionType": "work"
   },
   "lastPomodoroDate": "2026-08-21",
   "pomodoroHistory": [
@@ -2829,6 +2817,35 @@
         {
           "startTime": "2026-08-22T07:34:38.666+09:00",
           "endTime": "2026-08-22T07:39:38.666+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1787351984462",
+      "startTime": "2026-08-22T07:39:44.462+09:00",
+      "endTime": "2026-08-22T08:04:44.462+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "taskPath": "Tasks/RS-0020 subtask RAGScope概要を用語集と整合させる.md",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-22T07:39:44.462+09:00",
+          "endTime": "2026-08-22T08:04:44.462+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1787353485563",
+      "startTime": "2026-08-22T08:04:45.563+09:00",
+      "endTime": "2026-08-22T08:19:45.563+09:00",
+      "plannedDuration": 15,
+      "type": "long-break",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-22T08:04:45.563+09:00",
+          "endTime": "2026-08-22T08:19:45.563+09:00"
         }
       ]
     }
