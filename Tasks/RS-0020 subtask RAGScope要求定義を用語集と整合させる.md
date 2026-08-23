@@ -1,8 +1,8 @@
 ---
-status: doing
+status: done
 priority: medium
 dateCreated: 2026-08-21T20:39:00+09:00
-dateModified: 2026-08-22T07:52:58.939+09:00
+dateModified: 2026-08-24T07:02:36.729+09:00
 tags:
   - task
 projects:
@@ -12,6 +12,7 @@ blockedBy:
   - uid: "[[RS-0020 subtask RAGScope概要を用語集と整合させる]]"
     reltype: FINISHTOSTART
 branch: RS-0020/requirements
+completedDate: 2026-08-24
 ---
 
 ## Squash merge commit body
