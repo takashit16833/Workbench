@@ -1,15 +1,15 @@
 ---
-status: doing
+status: todo
 priority: medium
 dateCreated: 2026-08-21T09:16:00+09:00
-dateModified: 2026-08-24T17:29:38.448+09:00
+dateModified: 2026-08-25T08:40:00+09:00
 tags:
   - task
 projects:
   - "[[RAGScope]]"
   - "[[RS-0020 共通エラー・構造化ログの論理契約を再設計する]]"
 blockedBy:
-  - uid: "[[RS-0020 subtask システムアーキテクチャを概念モデルと整合させる]]"
+  - uid: "[[RS-0020 subtask ユースケース設計を作成する]]"
     reltype: FINISHTOSTART
 branch: RS-0020/error-logging-contract
 timeEntries:
@@ -39,17 +39,29 @@ timeEntries:
 ## Squash merge commit body
 
 - RAGScopeの要求とシステム境界から、ログ・エラー・処理の関連付けで確認する必要がある事実を整理する
-- 構造化ログ、相関、HTTPエラー表現に関する外部標準を比較し、RAGScope固有の論理契約を定義する
-- CLI・APIなどの入口、処理実行、HTTP request、ライフサイクル、重要度、出来事、失敗、エラー情報の責務を決定する
+- 構造化ログ、実行追跡、相関、HTTPエラー表現に関する外部標準を比較し、RAGScope固有の論理契約を定義する
+- Trace、Span、LogRecord、重要度、出来事、失敗、エラー情報、コンポーネント間のContext伝播の責務を決定する
 
 ## 目的
 
 既存のHaskell型、Python型、JSON Schema、旧ログ・エラー設計を設計制約にせず、RAGScopeが必要とする意味から共通の論理契約を作る。
 
+## 現在地
+
+- OpenTelemetryのモデルとRAGScopeの要求を照合し、処理構造はSpan、意味のある時点の出来事は構造化LogRecordとして扱う方向で整理した。
+- ログだけで処理の親子関係、開始・終了、所要時間、最終状態を表すとSpan相当を独自に再実装するため、Spanを採用する判断に至った。
+- Trace境界は下位機能が`Traceが存在するか`で動的に所有するのではなく、RAGScopeのトップレベルな利用操作の1回の実行を基準にする方向で整理した。
+- その境界の正本となるユースケース設計が現在存在しないため、`[[RS-0020 subtask ユースケース設計を作成する]]`を先に完了してから本Subtaskを再開する。
+- ローカル可視化はAspire Dashboardなどを候補として、Trace階層、Spanの時間関係、LogRecordとの相関を確認するための検証手段として使用する。可視化ツール自体をRAGScopeの論理契約や必須基盤にはしない。
+
 ## 完了条件
 
 - 要求から必要な観測事実と公開するエラー情報が整理されている
-- 外部表現や実装言語に依存しない論理契約が設計書として成立している
-- 入口・相関単位・通信単位・ライフサイクルの関係が明示されている
-- 重要度、出来事、失敗、エラー情報の関係が決定されている
+- ユースケース設計を正本として、1回のユースケース実行とTraceの対応を説明できる
+- 外部表現や実装言語に依存しないTrace / Span / LogRecordの論理契約が設計書として成立している
+- Spanの開始・終了・StatusとLogRecordのEventを重複したライフサイクル表現として扱っていない
+- TraceId / SpanIdとRAGScopeが永続管理するドメイン識別子の責務が分離されている
+- RAGScopeアプリケーションからAI推論サービスへTrace Contextを伝播する共通規則が定義されている
+- 重要度、途中の失敗、最終的なSpanの失敗、共通エラーの関係が決定されている
+- ローカル可視化で代表的なTrace / Span / LogRecordの関係を確認し、論理モデルの理解を妨げる不整合がない
 - 文書の分割と名称は確定した責務に基づいて決められている
