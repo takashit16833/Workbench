@@ -2,7 +2,7 @@
 status: doing
 priority: medium
 dateCreated: 2026-08-21T20:39:00+09:00
-dateModified: 2026-08-24T07:02:36.315+09:00
+dateModified: 2026-08-24T08:58:49.750+09:00
 tags:
   - task
 projects:
@@ -12,6 +12,10 @@ blockedBy:
   - uid: "[[RS-0020 subtask RAGScope要求定義を用語集と整合させる]]"
     reltype: FINISHTOSTART
 branch: RS-0020/system-architecture
+timeEntries:
+  - startTime: 2026-08-23T23:33:49.719Z
+    description: Work session
+    endTime: 2026-08-23T23:58:49.750Z
 ---
 
 ## Squash merge commit body

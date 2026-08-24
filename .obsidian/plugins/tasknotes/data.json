@@ -545,7 +545,7 @@
     "timeRemaining": 1500,
     "nextSessionType": "work"
   },
-  "lastPomodoroDate": "2026-08-21",
+  "lastPomodoroDate": "2026-08-23",
   "pomodoroHistory": [
     {
       "id": "1786413262882",
@@ -2848,7 +2848,36 @@
           "endTime": "2026-08-22T08:19:45.563+09:00"
         }
       ]
+    },
+    {
+      "id": "1787528029709",
+      "startTime": "2026-08-24T08:33:49.709+09:00",
+      "endTime": "2026-08-24T08:58:49.709+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "taskPath": "Tasks/RS-0020 subtask システムアーキテクチャを概念モデルと整合させる.md",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-24T08:33:49.709+09:00",
+          "endTime": "2026-08-24T08:58:49.709+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1787529530950",
+      "startTime": "2026-08-24T08:58:50.950+09:00",
+      "endTime": "2026-08-24T09:03:50.950+09:00",
+      "plannedDuration": 5,
+      "type": "short-break",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-24T08:58:50.950+09:00",
+          "endTime": "2026-08-24T09:03:50.950+09:00"
+        }
+      ]
     }
   ],
-  "lastSelectedTaskPath": "Tasks/RS-0020 subtask RAGScope概要を用語集と整合させる.md"
+  "lastSelectedTaskPath": "Tasks/RS-0020 subtask システムアーキテクチャを概念モデルと整合させる.md"
 }
