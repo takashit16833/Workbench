@@ -1,8 +1,8 @@
 ---
-status: waiting
+status: doing
 priority: medium
 dateCreated: 2026-08-21T09:16:00+09:00
-dateModified: 2026-08-21T20:46:47.547+09:00
+dateModified: 2026-08-24T17:29:38.448+09:00
 tags:
   - task
 projects:
@@ -11,7 +11,7 @@ projects:
 blockedBy:
   - uid: "[[RS-0020 subtask システムアーキテクチャを概念モデルと整合させる]]"
     reltype: FINISHTOSTART
-branch: RS-0020/logical-contract
+branch: RS-0020/error-logging-contract
 timeEntries:
   - startTime: 2026-08-21T01:18:52.866Z
     description: Work session
