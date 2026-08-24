@@ -1,5 +1,5 @@
 ---
-status: doing
+status: todo
 priority: medium
 dateCreated: 2026-08-25T08:40:00+09:00
 dateModified: 2026-08-25T08:40:00+09:00
