@@ -1,8 +1,8 @@
 ---
-status: doing
+status: done
 priority: medium
 dateCreated: 2026-08-25T08:40:00+09:00
-dateModified: 2026-08-25T09:04:52.415+09:00
+dateModified: 2026-08-25T11:02:43.158+09:00
 tags:
   - task
 projects:
@@ -12,6 +12,7 @@ blockedBy:
   - uid: "[[RS-0020 subtask システムアーキテクチャを概念モデルと整合させる]]"
     reltype: FINISHTOSTART
 branch: RS-0020/use-case-design
+completedDate: 2026-08-25
 ---
 
 ## Squash merge commit body
