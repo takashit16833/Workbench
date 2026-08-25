@@ -60,6 +60,35 @@ git branch --track feat/foo origin/feat/foo
 3. ブランチ名を確認して作成
 
 Lazygit では作成後、そのブランチへ checkout する。
+
+## ブランチ間の差分を見る
+
+`main` から `feat/foo` で何が変わったかを見る。
+
+**CLI**
+
+```bash
+# 修正したファイル一覧
+git diff --name-only main...feat/foo
+
+# 特定ファイルの修正内容
+git diff main...feat/foo -- path/to/file
+
+# 全ファイルの修正内容
+git diff main...feat/foo
+```
+
+`...` は、2ブランチの共通の分岐点から `feat/foo` までの差分を見る。
+
+**Lazygit**
+
+1. `Local branches` で比較元のブランチを選択
+2. `W` — Diff options
+3. `Enter ref to diff` で比較先のブランチを指定
+4. `Enter` — 修正したファイル一覧を表示
+5. ファイルを選択すると修正内容を表示
+6. `Esc` — 差分表示を終了
+
 ## 別ブランチの特定ファイルだけ取り込む
 
 `feat/foo` の特定ファイルだけを `main` に取り込む。
