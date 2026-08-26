@@ -97,5 +97,14 @@
       ],
       "key": "PageUp"
     }
+  ],
+  "file-explorer:open": [
+    {
+      "modifiers": [
+        "Mod",
+        "Shift"
+      ],
+      "key": "E"
+    }
   ]
 }
