@@ -1,8 +1,8 @@
 ---
-status: todo
+status: doing
 priority: medium
 dateCreated: 2026-08-26T15:14:06+09:00
-dateModified: 2026-08-26T15:16:00+09:00
+dateModified: 2026-08-26T15:47:24.027+09:00
 tags:
   - task
 projects:
@@ -11,6 +11,7 @@ projects:
 blockedBy:
   - uid: "[[RS-0020 subtask 要求と外部標準から論理契約を設計する]]"
     reltype: FINISHTOSTART
+branch: RS-0020/json-sqlite-projection
 ---
 
 ## Squash merge commit body
