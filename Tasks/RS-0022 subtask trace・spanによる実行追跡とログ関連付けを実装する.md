@@ -2,7 +2,7 @@
 status: waiting
 priority: medium
 dateCreated: 2026-08-27T08:12:00+09:00
-dateModified: 2026-08-27T08:12:00+09:00
+dateModified: 2026-08-27T08:33:40+09:00
 tags:
   - task
 projects:
@@ -11,6 +11,7 @@ projects:
 blockedBy:
   - uid: "[[RS-0022 subtask logging全体像を設計して公開APIと中核型を実装する]]"
     reltype: FINISHTOSTART
+branch: RS-0022/implement-tracing
 ---
 
 ## Squash merge commit body
