@@ -542,16 +542,17 @@
   "lastSeenVersion": "4.12.3",
   "pomodoroState": {
     "isRunning": true,
-    "timeRemaining": 300,
+    "timeRemaining": 1500,
     "currentSession": {
-      "id": "1787705265803",
-      "startTime": "2026-08-26T09:47:45.803+09:00",
-      "plannedDuration": 5,
-      "type": "short-break",
+      "id": "1787707578366",
+      "taskPath": "Tasks/RS-0020 subtask 要求と外部標準から論理契約を設計する.md",
+      "startTime": "2026-08-26T10:26:18.366+09:00",
+      "plannedDuration": 25,
+      "type": "work",
       "completed": false,
       "activePeriods": [
         {
-          "startTime": "2026-08-26T09:47:45.803+09:00"
+          "startTime": "2026-08-26T10:26:18.366+09:00"
         }
       ]
     }
@@ -3104,6 +3105,49 @@
         {
           "startTime": "2026-08-26T09:22:44.681+09:00",
           "endTime": "2026-08-26T09:47:44.681+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1787705265803",
+      "startTime": "2026-08-26T09:47:45.803+09:00",
+      "endTime": "2026-08-26T09:52:45.803+09:00",
+      "plannedDuration": 5,
+      "type": "short-break",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-26T09:47:45.803+09:00",
+          "endTime": "2026-08-26T09:52:45.803+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1787705755223",
+      "startTime": "2026-08-26T09:55:55.223+09:00",
+      "endTime": "2026-08-26T10:20:55.223+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "taskPath": "Tasks/RS-0020 subtask 要求と外部標準から論理契約を設計する.md",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-26T09:55:55.223+09:00",
+          "endTime": "2026-08-26T10:20:55.223+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1787707256348",
+      "startTime": "2026-08-26T10:20:56.348+09:00",
+      "endTime": "2026-08-26T10:25:56.348+09:00",
+      "plannedDuration": 5,
+      "type": "short-break",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-26T10:20:56.348+09:00",
+          "endTime": "2026-08-26T10:25:56.348+09:00"
         }
       ]
     }
