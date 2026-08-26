@@ -1,8 +1,8 @@
 ---
-status: waiting
+status: doing
 priority: medium
 dateCreated: 2026-08-26T21:00:57+09:00
-dateModified: 2026-08-26T21:00:57+09:00
+dateModified: 2026-08-27T08:12:00+09:00
 tags:
   - task
 projects:
@@ -11,4 +11,12 @@ source: obsidian://open?vault=project-docs&file=project-management/milestones/v0
 blockedBy:
   - uid: "[[RS-0021 構造化ログJSON Schemaとfixtureを現在契約へ更新する]]"
     reltype: FINISHTOSTART
+branch: feat/RS-0022-logging-redesign
 ---
+
+## 実行方針
+
+- 既存のlogging module構成を前提に局所修正せず、利用側から見たAPI、module責務、依存方向、データの流れを先に設計する。
+- 最初のSubtaskでは、`Notes/RAGScope/RAGScopeアプリケーション/RAGScope旧共通実行基盤.canvas`を表現方法の参考にし、新しい`RAGScope実行追跡・構造化ログ基盤.canvas`を作成する。Canvas上で全体像を完成させてからHaskell実装へ入る。
+- loggingの自然な境界を作るために必要であれば、`Observation`、`Result`、`AppError`を含む周辺moduleの変更・統合・削除も許容する。
+- OpenTelemetryへRAGScopeの設計を合わせるのではなく、RAGScopeが必要とする実行追跡を実現するためにOpenTelemetryの設計と実装を利用する。`OpenTelemetryがそうしているから`だけをRAGScope固有の設計理由にしない。
