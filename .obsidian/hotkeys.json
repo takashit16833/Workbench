@@ -126,59 +126,5 @@
       ],
       "key": "ArrowRight"
     }
-  ],
-  "obsidian-another-quick-switcher:search-command_recent-search": [
-    {
-      "modifiers": [
-        "Mod"
-      ],
-      "key": "O"
-    }
-  ],
-  "obsidian-another-quick-switcher:header-floating-search-in-file": [
-    {
-      "modifiers": [
-        "Mod",
-        "Shift"
-      ],
-      "key": "O"
-    }
-  ],
-  "switcher:open": [],
-  "editor:open-search": [],
-  "global-search:open": [],
-  "command-palette:open": [
-    {
-      "modifiers": [
-        "Mod",
-        "Shift"
-      ],
-      "key": "P"
-    }
-  ],
-  "obsidian-another-quick-switcher:in-file-search": [
-    {
-      "modifiers": [
-        "Mod"
-      ],
-      "key": "F"
-    }
-  ],
-  "obsidian-another-quick-switcher:grep": [
-    {
-      "modifiers": [
-        "Mod",
-        "Shift"
-      ],
-      "key": "F"
-    }
-  ],
-  "obsidian-another-quick-switcher:search-command_file-name-fuzzy-search": [
-    {
-      "modifiers": [
-        "Mod"
-      ],
-      "key": "P"
-    }
   ]
 }

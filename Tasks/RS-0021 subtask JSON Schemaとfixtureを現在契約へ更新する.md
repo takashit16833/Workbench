@@ -1,8 +1,8 @@
 ---
-status: doing
+status: done
 priority: medium
 dateCreated: 2026-08-27T06:05:30+09:00
-dateModified: 2026-08-27T06:16:44.331+09:00
+dateModified: 2026-08-27T07:32:17.490+09:00
 tags:
   - task
 projects:
@@ -13,6 +13,7 @@ blockedBy:
     reltype: FINISHTOSTART
 branch: RS-0021/update-json-contract
 tasknotes_manual_order: tnmzzzzzzzzy
+completedDate: 2026-08-27
 ---
 
 ## Squash merge commit body
