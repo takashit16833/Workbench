@@ -1,8 +1,8 @@
 ---
-status: todo
+status: doing
 priority: medium
 dateCreated: 2026-08-21T09:16:00+09:00
-dateModified: 2026-08-21T09:16:00+09:00
+dateModified: 2026-08-26T21:10:07.439+09:00
 tags:
   - task
 projects:

@@ -1,8 +1,8 @@
 ---
-status: doing
+status: done
 priority: medium
 dateCreated: 2026-08-21T09:16:00+09:00
-dateModified: 2026-08-26T21:01:00+09:00
+dateModified: 2026-08-26T21:10:10.019+09:00
 tags:
   - task
 projects:
@@ -12,6 +12,7 @@ blockedBy:
   - uid: "[[RS-0020 subtask 既存設計・ADR・契約との差分を整理する]]"
     reltype: FINISHTOSTART
 branch: RS-0020/apply-canonical-design
+completedDate: 2026-08-26
 ---
 
 ## Squash merge commit body
