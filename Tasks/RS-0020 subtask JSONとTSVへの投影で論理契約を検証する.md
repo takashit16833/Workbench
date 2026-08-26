@@ -1,8 +1,8 @@
 ---
-status: todo
+status: dropped
 priority: medium
 dateCreated: 2026-08-21T09:16:00+09:00
-dateModified: 2026-08-25T08:40:00+09:00
+dateModified: 2026-08-26T15:15:00+09:00
 tags:
   - task
 projects:
@@ -11,8 +11,11 @@ projects:
 blockedBy:
   - uid: "[[RS-0020 subtask 要求と外部標準から論理契約を設計する]]"
     reltype: FINISHTOSTART
-branch: RS-0020/json-tsv-projection
 ---
+
+## 結果
+
+正本Ticketの現在内容ではJSONとSQLiteへの投影検証が必要になったため、このSubtaskは実施しない。後継は`[[RS-0020 subtask JSONとSQLiteへの投影で論理契約を検証する]]`とする。
 
 ## Squash merge commit body
 
