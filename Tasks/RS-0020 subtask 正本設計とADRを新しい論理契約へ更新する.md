@@ -2,7 +2,7 @@
 status: doing
 priority: medium
 dateCreated: 2026-08-21T09:16:00+09:00
-dateModified: 2026-08-26T19:51:00+09:00
+dateModified: 2026-08-26T21:01:00+09:00
 tags:
   - task
 projects:
@@ -20,7 +20,7 @@ branch: RS-0020/apply-canonical-design
 - 構造化ログ外部表現共通設計、JSON表現設計、SQLite表現設計を、それぞれの責務が重複しない形で現在設計として成立させる
 - 各コンポーネント固有の正確な内部型、発生元の値、実行追跡情報の実装、ログ受付・出力の境界、ログ基盤自身の失敗処理はコード・設定・Schema・テストを正本とし、重複するコンポーネント別構造化ログ設計書を設けない
 - 置き換える既存ADRを`superseded`として整理し、必要な判断を現在のADRと関連設計へ反映する
-- システムアーキテクチャなど関連する現在設計を必要な範囲だけ更新し、実装変更が別作業なら正本Ticketを作成する
+- システムアーキテクチャなど関連する現在設計を必要な範囲だけ更新し、共有JSON Contract更新をRS-0021、RAGScopeアプリケーションのHaskell logging移行をRS-0022として後続Ticket化する
 
 ## 目的
 
