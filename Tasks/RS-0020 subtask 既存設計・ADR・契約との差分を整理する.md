@@ -1,8 +1,8 @@
 ---
-status: doing
+status: done
 priority: medium
 dateCreated: 2026-08-21T09:16:00+09:00
-dateModified: 2026-08-26T18:04:13.003+09:00
+dateModified: 2026-08-26T18:18:52.548+09:00
 tags:
   - task
 projects:
@@ -12,6 +12,7 @@ blockedBy:
   - uid: "[[RS-0020 subtask JSONとSQLiteへの投影で論理契約を検証する]]"
     reltype: FINISHTOSTART
 branch: RS-0020/compare-existing-design
+completedDate: 2026-08-26
 ---
 
 ## Squash merge commit body
