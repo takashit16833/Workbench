@@ -12,6 +12,7 @@ blockedBy:
   - uid: "[[RS-0021 subtask JSON Schemaとfixtureを現在契約へ更新する]]"
     reltype: FINISHTOSTART
 branch: RS-0021/finalize-json-contract
+tasknotes_manual_order: tntmzzzzzzzx
 ---
 
 ## Squash merge commit body

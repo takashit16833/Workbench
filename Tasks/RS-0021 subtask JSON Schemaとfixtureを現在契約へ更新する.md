@@ -1,8 +1,8 @@
 ---
-status: doing
+status: todo
 priority: medium
 dateCreated: 2026-08-27T06:05:30+09:00
-dateModified: 2026-08-27T06:06:54.596+09:00
+dateModified: 2026-08-27T06:11:45.149+09:00
 tags:
   - task
 projects:
@@ -12,6 +12,7 @@ blockedBy:
   - uid: "[[RS-0021 subtask 共通Schema検証とHaskell生成JSON検証を分離する]]"
     reltype: FINISHTOSTART
 branch: RS-0021/update-json-contract
+tasknotes_manual_order: tnmzzzzzzzzy
 ---
 
 ## Squash merge commit body
