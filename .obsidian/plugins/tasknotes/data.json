@@ -3283,8 +3283,36 @@
           "endTime": "2026-08-26T15:49:15.249+09:00"
         }
       ]
+    },
+    {
+      "id": "1787727437615",
+      "startTime": "2026-08-26T15:57:17.615+09:00",
+      "endTime": "2026-08-26T16:22:17.615+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-26T15:57:17.615+09:00",
+          "endTime": "2026-08-26T16:22:17.615+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1787728938671",
+      "startTime": "2026-08-26T16:22:18.671+09:00",
+      "endTime": "2026-08-26T16:37:18.671+09:00",
+      "plannedDuration": 15,
+      "type": "long-break",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-26T16:22:18.671+09:00",
+          "endTime": "2026-08-26T16:37:18.671+09:00"
+        }
+      ]
     }
   ],
-  "lastSelectedTaskPath": "Tasks/RS-0020 subtask 要求と外部標準から論理契約を設計する.md",
+  "lastSelectedTaskPath": "Tasks/RS-0020 subtask JSONとSQLiteへの投影で論理契約を検証する.md",
   "lastNotifiedReleaseVersion": "4.12.4"
 }
