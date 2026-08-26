@@ -2,7 +2,7 @@
 status: doing
 priority: medium
 dateCreated: 2026-08-26T21:00:57+09:00
-dateModified: 2026-08-26T21:58:24.101+09:00
+dateModified: 2026-08-27T06:04:00+09:00
 tags:
   - task
 projects:
@@ -11,4 +11,5 @@ source: obsidian://open?vault=project-docs&file=project-management/milestones/v0
 blockedBy:
   - uid: "[[RS-0020 共通エラー・構造化ログの論理契約を再設計する]]"
     reltype: FINISHTOSTART
+branch: feat/RS-0021-logging-json-contract
 ---
