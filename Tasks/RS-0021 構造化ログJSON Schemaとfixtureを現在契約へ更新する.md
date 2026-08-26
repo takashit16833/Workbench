@@ -1,8 +1,8 @@
 ---
-status: doing
+status: done
 priority: medium
 dateCreated: 2026-08-26T21:00:57+09:00
-dateModified: 2026-08-27T06:04:00+09:00
+dateModified: 2026-08-27T07:59:52.886+09:00
 tags:
   - task
 projects:
@@ -12,4 +12,5 @@ blockedBy:
   - uid: "[[RS-0020 共通エラー・構造化ログの論理契約を再設計する]]"
     reltype: FINISHTOSTART
 branch: feat/RS-0021-logging-json-contract
+completedDate: 2026-08-27
 ---
