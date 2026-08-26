@@ -2,14 +2,14 @@
 status: todo
 priority: medium
 dateCreated: 2026-08-21T09:16:00+09:00
-dateModified: 2026-08-21T09:16:00+09:00
+dateModified: 2026-08-26T15:15:30+09:00
 tags:
   - task
 projects:
   - "[[RAGScope]]"
   - "[[RS-0020 共通エラー・構造化ログの論理契約を再設計する]]"
 blockedBy:
-  - uid: "[[RS-0020 subtask JSONとTSVへの投影で論理契約を検証する]]"
+  - uid: "[[RS-0020 subtask JSONとSQLiteへの投影で論理契約を検証する]]"
     reltype: FINISHTOSTART
 branch: RS-0020/compare-existing-design
 ---
