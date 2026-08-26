@@ -1,8 +1,8 @@
 ---
-status: doing
+status: done
 priority: medium
 dateCreated: 2026-08-27T06:05:00+09:00
-dateModified: 2026-08-27T06:11:48.094+09:00
+dateModified: 2026-08-27T06:16:47.211+09:00
 tags:
   - task
 projects:
@@ -10,6 +10,7 @@ projects:
   - "[[RS-0021 構造化ログJSON Schemaとfixtureを現在契約へ更新する]]"
 branch: RS-0021/separate-schema-validation
 tasknotes_manual_order: tngmzzzzzzzz
+completedDate: 2026-08-27
 ---
 
 ## Squash merge commit body
