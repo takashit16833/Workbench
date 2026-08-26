@@ -541,21 +541,9 @@
   "enableDebugLogging": false,
   "lastSeenVersion": "4.12.3",
   "pomodoroState": {
-    "isRunning": true,
+    "isRunning": false,
     "timeRemaining": 1500,
-    "currentSession": {
-      "id": "1787707578366",
-      "taskPath": "Tasks/RS-0020 subtask 要求と外部標準から論理契約を設計する.md",
-      "startTime": "2026-08-26T10:26:18.366+09:00",
-      "plannedDuration": 25,
-      "type": "work",
-      "completed": false,
-      "activePeriods": [
-        {
-          "startTime": "2026-08-26T10:26:18.366+09:00"
-        }
-      ]
-    }
+    "nextSessionType": "work"
   },
   "lastPomodoroDate": "2026-08-25",
   "pomodoroHistory": [
@@ -3148,6 +3136,64 @@
         {
           "startTime": "2026-08-26T10:20:56.348+09:00",
           "endTime": "2026-08-26T10:25:56.348+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1787707578366",
+      "startTime": "2026-08-26T10:26:18.366+09:00",
+      "endTime": "2026-08-26T10:51:18.366+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "taskPath": "Tasks/RS-0020 subtask 要求と外部標準から論理契約を設計する.md",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-26T10:26:18.366+09:00",
+          "endTime": "2026-08-26T10:51:18.366+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1787709079468",
+      "startTime": "2026-08-26T10:51:19.468+09:00",
+      "endTime": "2026-08-26T10:56:19.468+09:00",
+      "plannedDuration": 5,
+      "type": "short-break",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-26T10:51:19.468+09:00",
+          "endTime": "2026-08-26T10:56:19.468+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1787709854174",
+      "startTime": "2026-08-26T11:04:14.173+09:00",
+      "endTime": "2026-08-26T11:29:14.173+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "taskPath": "Tasks/RS-0020 subtask 要求と外部標準から論理契約を設計する.md",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-26T11:04:14.173+09:00",
+          "endTime": "2026-08-26T11:29:14.173+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1787711355286",
+      "startTime": "2026-08-26T11:29:15.286+09:00",
+      "endTime": "2026-08-26T11:44:15.286+09:00",
+      "plannedDuration": 15,
+      "type": "long-break",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-08-26T11:29:15.286+09:00",
+          "endTime": "2026-08-26T11:44:15.286+09:00"
         }
       ]
     }
