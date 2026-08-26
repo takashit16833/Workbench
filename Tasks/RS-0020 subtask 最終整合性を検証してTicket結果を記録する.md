@@ -1,8 +1,8 @@
 ---
-status: doing
+status: done
 priority: medium
 dateCreated: 2026-08-21T09:16:00+09:00
-dateModified: 2026-08-26T21:10:07.439+09:00
+dateModified: 2026-08-26T21:54:47.615+09:00
 tags:
   - task
 projects:
@@ -12,6 +12,7 @@ blockedBy:
   - uid: "[[RS-0020 subtask 正本設計とADRを新しい論理契約へ更新する]]"
     reltype: FINISHTOSTART
 branch: RS-0020/final-validation
+completedDate: 2026-08-26
 ---
 
 ## Squash merge commit body
