@@ -206,7 +206,7 @@
       "id": "in-progress",
       "value": "doing",
       "label": "Doing",
-      "color": "A855F7",
+      "color": "#FF4DE1",
       "isCompleted": false,
       "excludeFromCycle": false,
       "order": 2,

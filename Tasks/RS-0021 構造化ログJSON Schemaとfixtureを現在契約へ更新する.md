@@ -1,8 +1,8 @@
 ---
-status: waiting
+status: doing
 priority: medium
 dateCreated: 2026-08-26T21:00:57+09:00
-dateModified: 2026-08-26T21:00:57+09:00
+dateModified: 2026-08-26T21:58:24.101+09:00
 tags:
   - task
 projects:
