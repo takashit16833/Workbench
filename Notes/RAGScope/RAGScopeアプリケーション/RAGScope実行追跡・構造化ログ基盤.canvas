@@ -1,1 +1,0 @@
-{"nodes":[{"id":"g-user","type":"group","x":-1800,"y":-700,"width":1200,"height":1400,"color":"4","label":"Logging module 利用者"},{"id":"g-logging","type":"group","x":-300,"y":-700,"width":1500,"height":1400,"color":"6","label":"Logging module"},{"id":"g-external","type":"group","x":1500,"y":-700,"width":1200,"height":1400,"color":"3","label":"外部依存 / 出力"}],"edges":[]}
