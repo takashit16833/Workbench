@@ -23,6 +23,7 @@ Canvas: [[RAGScope実行追跡・構造化ログ基盤.canvas]]
 - feature側がevent → logの変換詳細を持つ
 - logging側は変換方法だけ知り、個別eventを知らない
 - feature本体は生のevent名・attributesを組み立てない
+- OTel SDK依存はapplication setupへ寄せ、利用側/共通境界はOTel APIまたはRAGScope adapter越しに使う
 
 ## 未決定
 
