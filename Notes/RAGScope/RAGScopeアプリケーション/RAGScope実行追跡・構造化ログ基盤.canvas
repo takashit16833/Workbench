@@ -1,0 +1,53 @@
+{
+  "nodes": [
+    {"id":"g-fixed","type":"group","x":-3000,"y":-1200,"width":1120,"height":1820,"color":"3","label":"固定条件 — 正本から"},
+    {"id":"g-producer","type":"group","x":-1600,"y":-1200,"width":1320,"height":2220,"color":"4","label":"利用側 — Event producer"},
+    {"id":"g-boundary","type":"group","x":0,"y":-1200,"width":1320,"height":2220,"color":"5","label":"Logging boundary — 採用候補"},
+    {"id":"g-runtime","type":"group","x":1600,"y":-1200,"width":1640,"height":2220,"color":"6","label":"Logging runtime / output"},
+    {"id":"g-tracing","type":"group","x":-1200,"y":1320,"width":2360,"height":1420,"color":"2","label":"Execution tracking — RAGScope設計をOTelで実現"},
+    {"id":"g-open","type":"group","x":1500,"y":1320,"width":1740,"height":1420,"color":"1","label":"未決定 — ここから詰める"},
+
+    {"id":"fixed-log","type":"text","x":-2860,"y":-1040,"width":840,"height":500,"color":"3","text":"# 構造化ログ1件\n\n正本上の必須情報:\n- timestamp\n- component\n- event\n- level\n- trace_id\n- span_id\n\n任意:\n- message\n- attributes\n\nattributesは string / number / boolean / array / object を再帰的に扱い、論理上のnullを持たない。"},
+    {"id":"fixed-event","type":"text","x":-2860,"y":-460,"width":840,"height":430,"color":"3","text":"# 1ログ = 1イベントの記録\n\n構造化ログは、ある時点で起きた1つの論理イベントを記録する。\n\n- event名とlevelは独立\n- failure専用の共通event objectは持たない\n- error_typeは必要な場合だけ通常のattributeとして持つ"},
+    {"id":"fixed-trace","type":"text","x":-2860,"y":50,"width":840,"height":430,"color":"3","text":"# 実行追跡との関係\n\n- 1 use case execution = 1 trace\n- root spanが実行全体を表す\n- logはTraceId / SpanIdで発生時のspanへ関連付く\n- spanとlogの両方で同じ失敗を表す場合、同じerror_typeを使う\n\nOpenTelemetryはこのRAGScope設計を実現する手段。"},
+
+    {"id":"producer-event","type":"text","x":-1460,"y":-1040,"width":1040,"height":430,"color":"4","text":"# Feature-specific Event\n\n各利用側は、自分の意味領域にある**閉じたイベント型**を定義する。\n\n例の名前やconstructorはまだ決めない。\n\n重要なのは、通常の機能コードが任意のevent文字列・任意attributesを毎回組み立てる設計にしないこと。"},
+    {"id":"producer-mapping","type":"text","x":-1460,"y":-520,"width":1040,"height":620,"color":"4","text":"# Event → Log meaning の定義\n\nイベントをどうログとして表すかは、そのイベントを所有する利用側が定義する。\n\n現時点の採用候補:\n- event name\n- level\n- optional message\n- attributes\n- failureなら error_type もattributesの一部として決める\n\nLogging共通基盤は、個別イベント名・attributes・error_typeの意味を決めない。"},
+    {"id":"producer-call","type":"text","x":-1460,"y":220,"width":1040,"height":530,"color":"4","text":"# 利用コードから見た目標\n\n利用コードは「この型付きイベントを記録する」とだけ依頼できる形を目指す。\n\n利用コードが知らなくてよい候補:\n- JSON\n- stderr\n- clock\n- Sink\n- TraceId / SpanIdの外部表現\n\n※ current span/contextを利用コードが明示的に渡すかは未決定。"},
+
+    {"id":"boundary-contract","type":"text","x":140,"y":-1040,"width":1040,"height":520,"color":"5","text":"# Loggingが知る境界\n\nLoggingは**個別イベントの詳細を知らず**、受け取ったイベントを共通の論理ログへ変換する方法だけを知る。\n\nつまり:\n- Feature Eventそのものの意味は利用側\n- Event → Logの変換詳細も利用側\n- 変換を呼び出して共通Loggingへ接続する仕組みはLogging側\n\nこの分離を新設計でも成立させられるかを検証する。"},
+    {"id":"boundary-logical","type":"text","x":140,"y":-420,"width":1040,"height":590,"color":"5","text":"# Logical Log — 中間表現候補\n\nEvent固有の意味を共通Loggingが扱える形へした、IO非依存の論理値を置く候補。\n\nEvent mappingが決める候補:\n- event\n- level\n- message\n- attributes\n\nRuntime側が後から与える候補:\n- timestamp\n- TraceId\n- SpanId\n- component (?)\n\nこの分割自体もまだ設計仮説。"},
+    {"id":"boundary-api","type":"text","x":140,"y":280,"width":1040,"height":500,"color":"5","text":"# Public boundary を先に決める\n\nHaskell module名より先に、利用者が必要とする操作を決める。\n\n中心候補:\n**型付きeventをLoggingへ渡す1つの操作**\n\n検討事項:\n- typeclass / 明示converter / first-class mapping のどれか\n- runtimeを引数で渡すかReader系環境に置くか\n- logging failureを戻り値へ出すか\n\n具体型はCanvasで責務が固まってから決める。"},
+
+    {"id":"runtime-enrich","type":"text","x":1740,"y":-1040,"width":1360,"height":510,"color":"6","text":"# Runtime enrichment\n\nLogical Logを外部へ出せる1件のLog Recordへ完成させる責務候補。\n\n- timestamp取得\n- current spanからTraceId / SpanId取得\n- component付与\n- level filtering\n\nEvent固有の意味は変更しない。"},
+    {"id":"runtime-record","type":"text","x":1740,"y":-430,"width":1360,"height":500,"color":"6","text":"# Complete Log Record\n\n正本契約の情報がすべて揃った、serialization前の値。\n\nここではJSONのfield名やAeson表現を持ち込まない方向を候補とする。\n\nこの値がSinkへ渡るのか、serializationを経たbytesがSinkへ渡るのかは未決定。"},
+    {"id":"runtime-json","type":"text","x":1740,"y":170,"width":620,"height":610,"color":"6","text":"# JSON projection\n\nComplete Log Record\n→ JSON Contract\n\n- 共有JSON Schemaへ適合\n- optional absentはkey省略\n- empty string / array / objectは保持\n- 1 log = 1 JSON object\n\n論理モデルと外部表現を分離する。"},
+    {"id":"runtime-sink","type":"text","x":2460,"y":170,"width":640,"height":610,"color":"6","text":"# Sink boundary\n\nproduction stderr / test memory / intentional failure を差し替えられる境界を維持候補とする。\n\nLogging自身の失敗を、失敗した同じLogging経路へ再帰記録しない。\n\nSinkが受け取るものは未決定:\n- Complete Log Record ?\n- encoded bytes ?"},
+
+    {"id":"tracking-ragscope","type":"text","x":-1040,"y":1500,"width":970,"height":520,"color":"2","text":"# RAGScope execution tracking\n\nRAGScope側で先に決めること:\n- use case開始でroot span開始\n- 処理中のlogは発生時spanへ関連付け\n- 最終failureではroot spanとfailure logが同じerror_typeを使う\n- 子spanを作る境界は各機能設計が所有\n\nOTel API都合からRAGScopeの公開契約を作らない。"},
+    {"id":"tracking-otel","type":"text","x":70,"y":1500,"width":930,"height":520,"color":"2","text":"# OpenTelemetry adapter / implementation\n\nRAGScopeが決めたtrackingを実装するために利用する。\n\nLoggingが必要とするのは主に「現在のspanへ関連付ける情報」。\n\n具体的なHaskell OTel package/API、Contextの扱い、Span Status設定方法は、RAGScope側の境界を決めた後に調査する。"},
+
+    {"id":"open-component","type":"text","x":1640,"y":1500,"width":680,"height":420,"color":"1","text":"# ? componentの所有者\n\nEvent mappingが決める？\nLogger/Application runtimeが固定する？\n\n発生元の意味を誰が一番自然に知るかで決める。"},
+    {"id":"open-context","type":"text","x":2380,"y":1500,"width":700,"height":420,"color":"1","text":"# ? current spanの渡し方\n\n利用コードが明示的にcontextを渡す？\nRuntimeがambient/current contextから取得する？\n\nOTel APIではなく、利用側APIの自然さから先に決める。"},
+    {"id":"open-failure","type":"text","x":1640,"y":2010,"width":680,"height":500,"color":"1","text":"# ? Logging failure\n\nserialization / Sink失敗を誰が受け取るか。\n\n- Logging操作の戻り値？\n- application execution boundaryでまとめる？\n- success/failureへの影響は？\n\n旧Result/Observationを前提にせず白紙から決める。"},
+    {"id":"open-conversion","type":"text","x":2380,"y":2010,"width":700,"height":500,"color":"1","text":"# ? Event conversionのHaskell表現\n\nアイデアは確定候補、表現は未決定。\n\n候補:\n- typeclass\n- eventごとの純粋関数\n- mapping valueを明示的に渡す\n\n型安全性、依存方向、テスト容易性、利用コードの簡潔さで比較する。"}
+  ],
+  "edges": [
+    {"id":"e-fixed-event","fromNode":"fixed-event","fromSide":"right","toNode":"producer-event","toSide":"left","label":"1件の論理event"},
+    {"id":"e-event-mapping","fromNode":"producer-event","fromSide":"bottom","toNode":"producer-mapping","toSide":"top","label":"eventの意味を所有"},
+    {"id":"e-call-boundary","fromNode":"producer-call","fromSide":"right","toNode":"boundary-contract","toSide":"left","label":"型付きeventを記録"},
+    {"id":"e-mapping-boundary","fromNode":"producer-mapping","fromSide":"right","toNode":"boundary-contract","toSide":"left","label":"変換詳細を提供"},
+    {"id":"e-boundary-logical","fromNode":"boundary-contract","fromSide":"bottom","toNode":"boundary-logical","toSide":"top","label":"共通論理表現へ"},
+    {"id":"e-logical-runtime","fromNode":"boundary-logical","fromSide":"right","toNode":"runtime-enrich","toSide":"left","label":"event meaningは保持"},
+    {"id":"e-trace-runtime","fromNode":"tracking-otel","fromSide":"top","toNode":"runtime-enrich","toSide":"bottom","label":"current TraceId / SpanId"},
+    {"id":"e-enrich-record","fromNode":"runtime-enrich","fromSide":"bottom","toNode":"runtime-record","toSide":"top","label":"必要情報を付加"},
+    {"id":"e-record-json","fromNode":"runtime-record","fromSide":"bottom","toNode":"runtime-json","toSide":"top","label":"pure projection候補"},
+    {"id":"e-json-sink","fromNode":"runtime-json","fromSide":"right","toNode":"runtime-sink","toSide":"left","label":"1 JSON line"},
+    {"id":"e-ragscope-otel","fromNode":"tracking-ragscope","fromSide":"right","toNode":"tracking-otel","toSide":"left","label":"設計を実装"},
+    {"id":"e-fixed-trace","fromNode":"fixed-trace","fromSide":"bottom","toNode":"tracking-ragscope","toSide":"left","label":"固定契約"},
+    {"id":"e-open-component","fromNode":"open-component","fromSide":"top","toNode":"runtime-enrich","toSide":"bottom","label":"要決定"},
+    {"id":"e-open-context","fromNode":"open-context","fromSide":"top","toNode":"tracking-otel","toSide":"right","label":"要決定"},
+    {"id":"e-open-conversion","fromNode":"open-conversion","fromSide":"top","toNode":"boundary-api","toSide":"bottom","label":"Haskell表現"},
+    {"id":"e-open-failure","fromNode":"runtime-sink","fromSide":"bottom","toNode":"open-failure","toSide":"top","label":"失敗時"}
+  ]
+}
