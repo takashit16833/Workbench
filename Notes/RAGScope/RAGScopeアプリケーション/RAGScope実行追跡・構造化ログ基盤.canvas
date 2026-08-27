@@ -1,34 +1,8 @@
 {
   "nodes": [
-    {"id":"legend","type":"text","x":-1860,"y":-1180,"width":900,"height":250,"color":"3","text":"# このCanvasの役割\n\nmodule / 責務候補と依存方向だけを扱う。\n箱の名称・分割はまだ確定ではない。\n確定事項・議論・未決定事項は別Noteで管理する。"},
-
-    {"id":"g-app","type":"group","x":-1900,"y":-760,"width":980,"height":980,"color":"4","label":"Application / Feature"},
-    {"id":"feature-logging","type":"text","x":-1740,"y":-560,"width":660,"height":520,"color":"4","text":"# Feature-specific logging definition\n\n責務候補:\n- 機能固有の閉じたeventを定義\n- eventを共通logging表現へ写す詳細を所有\n\n具体module名・Haskell表現は未決定。"},
-
-    {"id":"g-logging","type":"group","x":-620,"y":-900,"width":2860,"height":1560,"color":"6","label":"Logging — module / 責務候補"},
-    {"id":"logging-api","type":"text","x":-420,"y":-650,"width":620,"height":420,"color":"5","text":"# Public boundary\n\n責務候補:\n- 利用側から型付きeventを受ける\n- 個別eventの詳細を知らず、共通loggingへ接続する"},
-    {"id":"logging-model","type":"text","x":430,"y":-650,"width":620,"height":420,"color":"6","text":"# Common log model ?\n\n責務候補:\n- event固有表現をlogging共通表現として保持\n\n独立module / 独立型が本当に必要かは未決定。"},
-    {"id":"logging-runtime","type":"text","x":1280,"y":-650,"width":700,"height":500,"color":"6","text":"# Logging runtime\n\n責務候補:\n- 1件のlogを出力可能な状態へ完成させる\n- 実行時依存を利用する\n- 出力境界を呼ぶ\n\n何をruntimeが所有するかは未決定。"},
-    {"id":"json-projection","type":"text","x":430,"y":40,"width":620,"height":390,"color":"6","text":"# JSON projection\n\n責務候補:\n- loggingの内部表現を共有JSON Contractへ投影\n\n論理モデルとの正確な境界は未決定。"},
-    {"id":"sink-boundary","type":"text","x":1280,"y":40,"width":700,"height":390,"color":"6","text":"# Sink boundary\n\n責務候補:\n- production / testの出力先を差し替える境界\n\nSinkが何を受け取るかは未決定。"},
-
-    {"id":"g-tracking","type":"group","x":-620,"y":940,"width":1760,"height":900,"color":"2","label":"Execution tracking — loggingとは別責務"},
-    {"id":"tracking","type":"text","x":-400,"y":1160,"width":620,"height":430,"color":"2","text":"# Execution tracking\n\n責務候補:\n- use case実行をtrace / spanで追跡\n- loggingがspanへ関連付くための情報を提供\n\n公開境界・module分割は未決定。"},
-    {"id":"otel","type":"text","x":420,"y":1160,"width":500,"height":430,"color":"2","text":"# OpenTelemetry adapter ?\n\nRAGScopeのexecution trackingをOpenTelemetryで実現する境界候補。\n\n具体APIは後で調査する。"},
-
-    {"id":"g-external","type":"group","x":2600,"y":-900,"width":940,"height":1830,"color":"3","label":"外部境界"},
-    {"id":"schema","type":"text","x":2780,"y":-620,"width":580,"height":360,"color":"3","text":"# JSON Schema\n\n共有JSON Contractの機械可読な正本。"},
-    {"id":"outputs","type":"text","x":2780,"y":-60,"width":580,"height":430,"color":"3","text":"# Output implementations\n\nstderr / memory / test failure 等。\n\n具体構造は未決定。"}
+    {"id":"g-user","type":"group","x":-1800,"y":-700,"width":1200,"height":1400,"color":"4","label":"Logging module 利用者"},
+    {"id":"g-logging","type":"group","x":-300,"y":-700,"width":1500,"height":1400,"color":"6","label":"Logging module"},
+    {"id":"g-external","type":"group","x":1500,"y":-700,"width":1200,"height":1400,"color":"3","label":"外部依存 / 出力"}
   ],
-  "edges": [
-    {"id":"e-feature-api","fromNode":"feature-logging","fromSide":"right","toNode":"logging-api","toSide":"left","label":"typed event / mapping"},
-    {"id":"e-api-model","fromNode":"logging-api","fromSide":"right","toNode":"logging-model","toSide":"left","label":"共通表現へ ?"},
-    {"id":"e-model-runtime","fromNode":"logging-model","fromSide":"right","toNode":"logging-runtime","toSide":"left","label":"log data ?"},
-    {"id":"e-tracking-runtime","fromNode":"tracking","fromSide":"top","toNode":"logging-runtime","toSide":"bottom","label":"span関連情報 ?"},
-    {"id":"e-tracking-otel","fromNode":"tracking","fromSide":"right","toNode":"otel","toSide":"left","label":"実装に利用"},
-    {"id":"e-runtime-json","fromNode":"logging-runtime","fromSide":"bottom","toNode":"json-projection","toSide":"right","label":"serialization対象 ?"},
-    {"id":"e-json-schema","fromNode":"json-projection","fromSide":"right","toNode":"schema","toSide":"left","label":"適合"},
-    {"id":"e-runtime-sink","fromNode":"logging-runtime","fromSide":"bottom","toNode":"sink-boundary","toSide":"top","label":"出力 ?"},
-    {"id":"e-sink-output","fromNode":"sink-boundary","fromSide":"right","toNode":"outputs","toSide":"left","label":"実装差し替え"}
-  ]
+  "edges": []
 }
