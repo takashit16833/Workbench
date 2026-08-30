@@ -5,8 +5,10 @@
 Vaultルートで実行します。
 
 ```bash
-bash Scripts/install-plugins.sh
+bash Scripts/install.sh
 ```
+
+このスクリプトは Config Layer のsubmoduleを初期化・ビルドしてVaultへ配置し、Workbenchで使うcommunity pluginもインストールします。
 
 Obsidianを再起動またはVaultをreloadします。
 
