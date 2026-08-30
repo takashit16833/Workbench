@@ -5,8 +5,10 @@ Task / Idea / Note / Project を扱う、自分 + AI 共用の作業台。
 ## Start
 
 ```bash
-bash Scripts/install-plugins.sh
+bash Scripts/install.sh
 ```
+
+`install.sh` は Config Layer のsubmoduleを初期化・ビルドしてVaultへ配置し、Workbenchで使うcommunity pluginもインストールします。
 
 Obsidianを再起動し、[[ONBOARDING]] の初回設定を行います。
 
