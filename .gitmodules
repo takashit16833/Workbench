@@ -1,0 +1,3 @@
+[submodule "Vendor/obsidian-config-layer"]
+	path = Vendor/obsidian-config-layer
+	url = https://github.com/takashit16833/obsidian-config-layer.git
