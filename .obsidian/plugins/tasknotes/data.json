@@ -542,17 +542,16 @@
   "lastSeenVersion": "4.12.3",
   "pomodoroState": {
     "isRunning": true,
-    "timeRemaining": 1500,
+    "timeRemaining": 300,
     "currentSession": {
-      "id": "1788216578169",
-      "taskPath": "Tasks/RS-0022 subtask logging全体像を設計して公開APIと中核型を実装する.md",
-      "startTime": "2026-09-01T07:49:38.169+09:00",
-      "plannedDuration": 25,
-      "type": "work",
+      "id": "1788220492739",
+      "startTime": "2026-09-01T08:54:52.739+09:00",
+      "plannedDuration": 5,
+      "type": "short-break",
       "completed": false,
       "activePeriods": [
         {
-          "startTime": "2026-09-01T07:49:38.169+09:00"
+          "startTime": "2026-09-01T08:54:52.739+09:00"
         }
       ]
     }
@@ -3350,6 +3349,50 @@
         {
           "startTime": "2026-09-01T07:36:01.671+09:00",
           "endTime": "2026-09-01T07:41:01.671+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1788216578169",
+      "startTime": "2026-09-01T07:49:38.169+09:00",
+      "endTime": "2026-09-01T08:14:38.169+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "taskPath": "Tasks/RS-0022 subtask logging全体像を設計して公開APIと中核型を実装する.md",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-09-01T07:49:38.169+09:00",
+          "endTime": "2026-09-01T08:14:38.169+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1788218079358",
+      "startTime": "2026-09-01T08:14:39.358+09:00",
+      "endTime": "2026-09-01T08:19:39.358+09:00",
+      "plannedDuration": 5,
+      "type": "short-break",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-09-01T08:14:39.358+09:00",
+          "endTime": "2026-09-01T08:19:39.358+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1788218991634",
+      "startTime": "2026-09-01T08:29:51.634+09:00",
+      "endTime": "2026-09-01T08:54:51.634+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "taskPath": "Tasks/RS-0022 subtask logging全体像を設計して公開APIと中核型を実装する.md",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-09-01T08:29:51.634+09:00",
+          "endTime": "2026-09-01T08:54:51.634+09:00"
         }
       ]
     }
