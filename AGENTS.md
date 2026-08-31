@@ -109,8 +109,8 @@ Workbench optimizes for the **next correct action**, not for completeness.
 - **Fileclass**: Idea / Note property editing
 - **Obsidian Bases**: queries/views
 - **Homepage**: open `Dashboard` at startup and provide quick return to it
-- **Obsidian Git**: Git commit / pull / push UI
 - **Workbench** (`workbench-commands`): Workbench-specific commands only
+- Cross-vault community plugin requirements belong in Config Layer's shared `plugins.json`, not `Plugins.lock`.
 
 ## Obsidian plugin implementation
 
