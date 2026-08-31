@@ -1,0 +1,37 @@
+{
+	"nodes":[
+		{"id":"pkg-obs","type":"group","x":0,"y":-600,"width":1450,"height":1160,"color":"#6B7280","label":"ragscope-observability"},
+		{"id":"lib-obs","type":"group","x":440,"y":-550,"width":570,"height":270,"color":"#00D9FF","label":"main"},
+		{"id":"lib-obs-runtime","type":"group","x":20,"y":90,"width":600,"height":340,"color":"#00D9FF","label":"runtime"},
+		{"id":"lib-obs-internal","type":"group","x":800,"y":90,"width":610,"height":340,"color":"#9B5DE5","label":"internal"},
+		{"id":"pkg-tracing","type":"group","x":1760,"y":80,"width":650,"height":1000,"color":"#6B7280","label":"ragscope-tracing"},
+		{"id":"lib-tracing","type":"group","x":1800,"y":130,"width":570,"height":270,"color":"#00D9FF","label":"main"},
+		{"id":"lib-otel","type":"group","x":1800,"y":450,"width":570,"height":250,"color":"#00D9FF","label":"otel"},
+		{"id":"lib-tracecore","type":"group","x":1800,"y":770,"width":570,"height":270,"color":"#00D9FF","label":"core"},
+		{"id":"title","type":"text","text":"# Observability / Tracing module依存\n\nObservability RuntimeからOpenTelemetry SDKまでの**module依存**を確認する図。\n矢印はすべて依存方向。Internal → Adapter の直接依存は作らない。\nこの図は Observability / Tracing系moduleを依存元とする矢印を担当する。","x":-560,"y":-1040,"width":1100,"height":210,"color":"2"},
+		{"id":"nav-overview","type":"file","file":"Notes/RAGScope/RAGScopeアプリケーション/実行追跡・構造化ログ静的依存.canvas","x":780,"y":-980,"width":480,"height":90},
+		{"id":"obs","type":"text","text":"`RAGScope.Observability`\nFeature向けEffect API","x":510,"y":-470,"width":430,"height":120,"color":"#00D9FF"},
+		{"id":"runner","type":"text","text":"`RAGScope.Observability.Runner`","x":70,"y":175,"width":500,"height":130,"color":"#00D9FF"},
+		{"id":"internal","type":"text","text":"`RAGScope.Observability.Internal.*`","x":850,"y":180,"width":520,"height":160,"color":"#9B5DE5"},
+		{"id":"tracing","type":"text","text":"`RAGScope.Tracing`\nTracing Port","x":1870,"y":200,"width":430,"height":120,"color":"#00D9FF"},
+		{"id":"otel","type":"text","text":"`RAGScope.Tracing.OpenTelemetry`","x":1870,"y":510,"width":430,"height":140,"color":"#00D9FF"},
+		{"id":"context","type":"text","text":"`RAGScope.Tracing.Context`\nTraceId / SpanId / TraceContext","x":1870,"y":850,"width":430,"height":140,"color":"#00D9FF"},
+		{"id":"error","type":"text","text":"別package\n`RAGScope.ErrorType`\nErrorType / ToErrorType","x":2650,"y":150,"width":500,"height":140,"color":"#6B7280"},
+		{"id":"sdk","type":"text","text":"external package\nOpenTelemetry SDK","x":2650,"y":520,"width":500,"height":120,"color":"#6B7280"}
+	],
+	"edges":[
+		{"id":"runner-internal","fromNode":"runner","fromSide":"right","toNode":"internal","toSide":"left","label":"lifecycle / context操作"},
+		{"id":"runner-obs","fromNode":"runner","fromSide":"top","toNode":"obs","toSide":"bottom","label":"公開型"},
+		{"id":"runner-error","fromNode":"runner","fromSide":"right","toNode":"error","toSide":"left","label":"ToErrorType"},
+		{"id":"runner-context","fromNode":"runner","fromSide":"right","toNode":"context","toSide":"left","label":"TraceContext"},
+		{"id":"internal-obs","fromNode":"internal","fromSide":"top","toNode":"obs","toSide":"bottom","label":"SpanName等"},
+		{"id":"internal-error","fromNode":"internal","fromSide":"right","toNode":"error","toSide":"left","label":"ErrorType"},
+		{"id":"internal-tracing","fromNode":"internal","fromSide":"right","toNode":"tracing","toSide":"left","label":"span操作を要求"},
+		{"id":"internal-context","fromNode":"internal","fromSide":"right","toNode":"context","toSide":"left","label":"current TraceContext"},
+		{"id":"tracing-error","fromNode":"tracing","fromSide":"right","toNode":"error","toSide":"left","label":"ErrorType"},
+		{"id":"tracing-context","fromNode":"tracing","fromSide":"bottom","toNode":"context","toSide":"top","label":"TraceContext / SpanId"},
+		{"id":"otel-tracing","fromNode":"otel","fromSide":"top","toNode":"tracing","toSide":"bottom","label":"Portを実装"},
+		{"id":"otel-context","fromNode":"otel","fromSide":"bottom","toNode":"context","toSide":"top","label":"TraceId / SpanId"},
+		{"id":"otel-sdk","fromNode":"otel","fromSide":"right","toNode":"sdk","toSide":"left","label":"SDKを使う"}
+	]
+}
