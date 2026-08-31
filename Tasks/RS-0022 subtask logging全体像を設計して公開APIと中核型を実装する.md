@@ -2,13 +2,16 @@
 status: doing
 priority: medium
 dateCreated: 2026-08-27T08:12:00+09:00
-dateModified: 2026-08-27T08:42:40.210+09:00
+dateModified: 2026-09-01T07:10:59.506+09:00
 tags:
   - task
 projects:
   - "[[RAGScope]]"
   - "[[RS-0022 RAGScopeアプリケーションの構造化ログ基盤を現在契約へ移行する]]"
 branch: RS-0022/design-logging-architecture
+timeEntries:
+  - startTime: 2026-08-31T22:10:59.506Z
+    description: Work session
 ---
 
 ## Squash merge commit body
