@@ -41,9 +41,6 @@ mkdir -p "$PLUGIN_DIR"
 install_plugin tasknotes callumalpass/tasknotes
 install_plugin fileclass mdelobelle/fileclass
 install_plugin homepage mirnovov/obsidian-homepage
-install_plugin obsidian-git Vinzent03/obsidian-git
-install_plugin file-explorer-plus kelszo/obsidian-file-explorer-plus
-install_plugin pane-relief pjeby/pane-relief
 
 python3 - "$COMMUNITY" <<'PY'
 import json
@@ -55,12 +52,13 @@ try:
     current = json.loads(path.read_text()) if path.exists() else []
 except Exception:
     current = []
-for plugin_id in ["tasknotes", "fileclass", "homepage", "obsidian-git", "file-explorer-plus", "pane-relief"]:
+for plugin_id in ["tasknotes", "fileclass", "homepage"]:
     if plugin_id not in current:
         current.append(plugin_id)
 path.write_text(json.dumps(current, ensure_ascii=False, indent=2) + "\n")
 PY
 
 echo
-echo "Installed TaskNotes, Fileclass, Homepage, Obsidian Git, File Explorer++ and Pane Relief."
+echo "Installed TaskNotes, Fileclass and Homepage."
+echo "Shared community plugins are managed by Config Layer."
 echo "Restart Obsidian or reload the vault, then follow ONBOARDING.md."
