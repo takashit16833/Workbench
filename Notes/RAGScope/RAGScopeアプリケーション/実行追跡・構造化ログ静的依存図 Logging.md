@@ -12,23 +12,25 @@ created: 2026-09-01
 
 `ragscope-logging` package内のmodule間依存を示す。矢印 `A → B` は、AがBを必要とすることを表す。JSONやSQLiteなど外部形式に依存する処理はcoreへ入れない。
 
+色は、シアンが公開library / module、紫が非公開library / module、グレーのnodeが別packageまたは外部package、グレーの外枠がCabal packageを表す。
+
 traceに属するログと、traceに属さないログは同じLogging基盤を使う。`TraceContext`は`LogRecord`に全体として付くか付かないかのどちらかとし、TraceId / SpanIdの片方だけを持つ状態は作らない。
 
 ```mermaid
 flowchart LR
     subgraph pkg_logging["ragscope-logging"]
-        subgraph main_lib["public: main"]
+        subgraph main_lib["main"]
             write["RAGScope.Logging.Write<br/>traceの有無にかかわらず受け付ける<br/>API分割は未確定"]
         end
 
-        subgraph internal_lib["private: internal"]
+        subgraph internal_lib["internal"]
             runtime["RAGScope.Logging.Runtime<br/>LogSpec + 実行時情報 → LogRecord"]
             sink["RAGScope.Logging.Sink"]
             json["RAGScope.Logging.JSON"]
             sqlite["RAGScope.Logging.SQLite"]
         end
 
-        subgraph core_lib["public: core"]
+        subgraph core_lib["core"]
             contract["RAGScope.Logging<br/>ToLogSpec / LogSpec / LogRecord / LogValue<br/>LogRecord: TraceContextは任意"]
         end
     end
@@ -51,4 +53,17 @@ flowchart LR
     sqlite -->|LogRecord| contract
     sqlite -->|SQLite入出力| sqlite_lib
     contract -->|LogRecordのTraceContext（任意）| context
+
+    classDef public fill:#00D9FF,stroke:#00A7C2,color:#111111,stroke-width:2px
+    classDef private fill:#9B5DE5,stroke:#713CB0,color:#FFFFFF,stroke-width:2px
+    classDef outside fill:#6B7280,stroke:#4B5563,color:#FFFFFF,stroke-width:2px
+
+    class write,contract public
+    class runtime,sink,json,sqlite private
+    class context,aeson,sqlite_lib outside
+
+    style pkg_logging fill:transparent,stroke:#6B7280,stroke-width:2px
+    style main_lib fill:transparent,stroke:#00D9FF,stroke-width:3px
+    style internal_lib fill:transparent,stroke:#9B5DE5,stroke-width:3px
+    style core_lib fill:transparent,stroke:#00D9FF,stroke-width:3px
 ```
