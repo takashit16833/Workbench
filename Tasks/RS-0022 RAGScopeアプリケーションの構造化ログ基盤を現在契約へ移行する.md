@@ -19,6 +19,7 @@ branch: RS-0022/design-logging-architecture
 - 正本Ticketの現在内容を作業範囲の正本とし、Workbench側へTicket本文を複製しない。
 - 既存のlogging module構成を前提に局所修正せず、利用側から見たAPI、module責務、依存方向、データの流れを先に設計する。
 - 最初のSubtaskでは、`Notes/RAGScope/RAGScopeアプリケーション/RAGScope旧共通実行基盤.canvas`を表現方法の参考にし、新しい`RAGScope実行追跡・構造化ログ基盤.canvas`を基準に全体像を整理してからHaskell実装へ入る。
-- 全体設計では、`1利用者操作 = 1 trace`、UseCase子span、trace外のlifecycle log、UseCase結果とOperation全体結果の分離を前提にする。
+- 全体設計では、`1利用者操作 = 1 trace`、UseCase子span、trace外のlifecycle log、`OperationResult`が必要な場合だけ`UseCaseResult`を内包する結果関係を前提にする。
+- UseCase実行結果は概念上`UseCaseResult = UseCaseSuccess | UseCaseFailure`、利用者操作全体は`OperationResult = OperationSuccess | OperationFailure`として区別する。UseCaseのHaskell境界は`Either failure result`を使い、具体failure型はそのUseCaseを所有するFeatureに置く。
 - loggingの自然な境界を作るために必要であれば、`Observation`、`Result`、`AppError`を含む周辺moduleの変更・統合・削除も許容する。
 - OpenTelemetryへRAGScopeの設計を合わせるのではなく、RAGScopeが必要とする実行追跡を実現するためにOpenTelemetryの設計と実装を利用する。`OpenTelemetryがそうしているから`だけをRAGScope固有の設計理由にしない。
