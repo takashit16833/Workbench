@@ -19,7 +19,6 @@ branch: RS-0022/design-logging-architecture
 - 正本Ticketを作業範囲・完了条件の正本とし、WorkbenchへTicket本文や設計全文を複製しない。
 - Workbenchでは現在地、次の行動、Subtask依存、実装候補、判断の経緯だけを管理する。
 - 全体構造は`Notes/RAGScope/RAGScopeアプリケーション/実行追跡・構造化ログ概要図.md`、実装検討は`実行追跡・構造化ログ設計ノート.md`、静的依存は`実行追跡・構造化ログ静的依存図.md`以下のMermaid図、判断履歴は`実行追跡・構造化ログ設計日誌.md`を使う。
-- Mermaid移行レビュー中は同内容のCanvasを比較用として一時保持するが、現在の参照先・更新先はMarkdown側とする。レビュー完了まではCanvasを削除しない。
 - Operation / UseCase / ErrorType / logging契約の決定済み内容はRAGScope正本の設計書を参照し、Workbench側へ別の現在仕様を作らない。
 - 現在実行中のSubtaskは`RS-0022 subtask logging全体像を設計して公開APIと中核型を実装する`。
 - logging / tracing / observabilityの責務、公開API、Cabal依存、データの流れを先に確定し、その構造を基準に既存実装を置き換える。
