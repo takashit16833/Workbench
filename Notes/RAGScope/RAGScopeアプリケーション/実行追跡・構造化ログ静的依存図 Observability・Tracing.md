@@ -15,13 +15,13 @@ created: 2026-09-01
 
 Observability RuntimeからOpenTelemetry SDKまでのmodule依存を示す。矢印はすべて依存方向。`Observability.Internal.* → OpenTelemetry Adapter`の直接依存は作らない。
 
-Operation root spanとUseCase / Feature子spanを表せることを前提とし、公開APIの利用主体別分割はまだ固定しない。
+Operation root spanとUseCase / Feature子spanを表せることを前提とし、公開APIのFeature / Application / Interfaceの利用主体別分割はまだ固定しない。
 
 ```mermaid
 flowchart LR
     subgraph pkg_obs["ragscope-observability"]
         subgraph obs_main_lib["public: main"]
-            obs["RAGScope.Observability<br/>Observability公開API"]
+            obs["RAGScope.Observability<br/>Observability公開API<br/>Feature / Application / Interfaceの分割は未確定"]
         end
         subgraph obs_runtime_lib["public: runtime"]
             runner["RAGScope.Observability.Runner<br/>Operation / child span境界"]
