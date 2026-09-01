@@ -12,12 +12,14 @@ created: 2026-09-01
 
 `ragscope` package内のmodule間依存を示す。矢印 `A → B` は、AがBをimportし、Bが公開する型・typeclass・APIを必要とすることを表す。右側のnodeは、別packageが公開しているmodule。
 
+色は、シアンが公開module、紫が非公開library / module、グレーのnodeが別packageの公開module、グレーの外枠がCabal packageを表す。
+
 `OperationFailure`はApplicationで共通に使う型として確定しているが、正確なmodule名は未確定。Observability公開APIをFeature / Application / Interfaceごとにどう分けるかも未確定。
 
 ```mermaid
 flowchart LR
     subgraph pkg_ragscope["ragscope"]
-        subgraph app["private library: ragscope-application"]
+        subgraph app["ragscope-application"]
             app_exec["RAGScope.Application.Execution<br/>Operationを実行<br/>Either OperationFailure result"]
             app_obs["RAGScope.Application.Observability<br/>本番構成でObservability / Logging / Tracingを接続<br/>Operation / Lifecycleを組み立てる境界"]
             app_instances["RAGScope.Application.LoggingInstances"]
@@ -26,7 +28,7 @@ flowchart LR
             operation_failure["Application共通のOperationFailure<br/>ToErrorType failure =&gt; failure を保持"]
         end
 
-        subgraph feature_lib["private library: ragscope-features"]
+        subgraph feature_lib["ragscope-features"]
             feature_usecase["RAGScope.&lt;Feature&gt;.UseCase"]
             feature_event["RAGScope.&lt;Feature&gt;.Event"]
             feature_failure["RAGScope.&lt;Feature&gt;.Failure<br/>&lt;Feature&gt;Failure / ToErrorType instance"]
@@ -66,4 +68,16 @@ flowchart LR
     app_obs -->|trace内のTraceContext| context
     app_obs -->|Tracing Portの値| tracing
     app_obs -->|本番用Adapterを作る| otel
+
+    classDef public fill:#00D9FF,stroke:#00A7C2,color:#111111,stroke-width:2px
+    classDef private fill:#9B5DE5,stroke:#713CB0,color:#FFFFFF,stroke-width:2px
+    classDef outside fill:#6B7280,stroke:#4B5563,color:#FFFFFF,stroke-width:2px
+
+    class app_exec,interface_op,operation_failure,feature_usecase,feature_event,feature_failure public
+    class app_obs,app_instances,feature_logging private
+    class obs,runner,logging,write,context,tracing,otel,error_type outside
+
+    style pkg_ragscope fill:transparent,stroke:#6B7280,stroke-width:2px
+    style app fill:transparent,stroke:#9B5DE5,stroke-width:3px
+    style feature_lib fill:transparent,stroke:#9B5DE5,stroke-width:3px
 ```
