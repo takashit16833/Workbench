@@ -12,7 +12,7 @@ created: 2026-09-01
 
 `ragscope` package内のmodule間依存を示す。矢印 `A → B` は、AがBをimportし、Bが公開する型・typeclass・APIを必要とすることを表す。右側のnodeは、別packageが公開しているmodule。
 
-色は、シアンが公開module、紫が非公開library / module、グレーのnodeが別packageの公開module、グレーの外枠がCabal packageを表す。
+色は、青系が公開module、紫系が非公開library / module、低彩度の濃色が別packageの公開module、青灰色の外枠がCabal packageを表す。
 
 `OperationFailure`はApplicationで共通に使う型として確定しているが、正確なmodule名は未確定。Observability公開APIをFeature / Application / Interfaceごとにどう分けるかも未確定。
 
@@ -69,15 +69,15 @@ flowchart LR
     app_obs -->|Tracing Portの値| tracing
     app_obs -->|本番用Adapterを作る| otel
 
-    classDef public fill:#00D9FF,stroke:#00A7C2,color:#111111,stroke-width:2px
-    classDef private fill:#9B5DE5,stroke:#713CB0,color:#FFFFFF,stroke-width:2px
-    classDef outside fill:#6B7280,stroke:#4B5563,color:#FFFFFF,stroke-width:2px
+    classDef public fill:#052A59,stroke:#5EAFFF,color:#DDF0FF,stroke-width:2px
+    classDef private fill:#211536,stroke:#8A5EC0,color:#DDF0FF,stroke-width:2px
+    classDef outside fill:#001947,stroke:#316CBD,color:#A6CAFF,stroke-width:2px
 
     class app_exec,interface_op,operation_failure,feature_usecase,feature_event,feature_failure public
     class app_obs,app_instances,feature_logging private
     class obs,runner,logging,write,context,tracing,otel,error_type outside
 
-    style pkg_ragscope fill:transparent,stroke:#6B7280,stroke-width:2px
-    style app fill:transparent,stroke:#9B5DE5,stroke-width:3px
-    style feature_lib fill:transparent,stroke:#9B5DE5,stroke-width:3px
+    style pkg_ragscope fill:transparent,stroke:#153A75,color:#4C9EEB,stroke-width:2px
+    style app fill:transparent,stroke:#8A5EC0,color:#B07CFF,stroke-width:2px
+    style feature_lib fill:transparent,stroke:#8A5EC0,color:#B07CFF,stroke-width:2px
 ```
