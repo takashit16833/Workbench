@@ -14,6 +14,8 @@ created: 2026-09-01
 
 色は、青系が公開module、紫系が非公開library / module、低彩度の濃色が別packageの公開module、青灰色の外枠がCabal packageを表す。
 
+`RAGScope.<Feature>.Logging`はprivate `ragscope-features` libraryからexposeするmoduleとし、Feature eventに対する`ToLogSpec` instanceを定義する。`RAGScope.<Feature>.UseCase`、`RAGScope.<Feature>.Event`、`RAGScope.<Feature>.Failure`はLogging moduleをimportしない。Applicationは`RAGScope.Application.LoggingInstances`からFeatureごとのinstance moduleを読み込む。
+
 `OperationFailure`はApplicationで共通に使う型として確定しているが、正確なmodule名は未確定。Observability公開APIをFeature / Application / Interfaceごとにどう分けるかも未確定。
 
 ```mermaid
@@ -23,7 +25,6 @@ flowchart LR
             app_exec["RAGScope.Application.Execution<br/>Operationを実行<br/>Either OperationFailure result"]
             app_obs["RAGScope.Application.Observability<br/>本番構成でObservability / Logging / Tracingを接続<br/>Operation / Lifecycleを組み立てる境界"]
             app_instances["RAGScope.Application.LoggingInstances"]
-            feature_logging["RAGScope.&lt;Feature&gt;.Logging<br/>ToLogSpec &lt;FeatureEvent&gt;"]
             interface_op["利用インターフェースのOperation<br/>例: DenseSearchOperation"]
             operation_failure["Application共通のOperationFailure<br/>ToErrorType failure =&gt; failure を保持"]
         end
@@ -32,6 +33,7 @@ flowchart LR
             feature_usecase["RAGScope.&lt;Feature&gt;.UseCase"]
             feature_event["RAGScope.&lt;Feature&gt;.Event"]
             feature_failure["RAGScope.&lt;Feature&gt;.Failure<br/>&lt;Feature&gt;Failure / ToErrorType instance"]
+            feature_logging["RAGScope.&lt;Feature&gt;.Logging<br/>ToLogSpec &lt;FeatureEvent&gt;"]
         end
     end
 
@@ -73,8 +75,8 @@ flowchart LR
     classDef private fill:#211536,stroke:#8A5EC0,color:#DDF0FF,stroke-width:2px
     classDef outside fill:#001947,stroke:#316CBD,color:#A6CAFF,stroke-width:2px
 
-    class app_exec,interface_op,operation_failure,feature_usecase,feature_event,feature_failure public
-    class app_obs,app_instances,feature_logging private
+    class app_exec,interface_op,operation_failure,feature_usecase,feature_event,feature_failure,feature_logging public
+    class app_obs,app_instances private
     class obs,runner,logging,write,context,tracing,otel,error_type outside
 
     style pkg_ragscope fill:transparent,stroke:#153A75,color:#4C9EEB,stroke-width:2px
