@@ -42,7 +42,7 @@
     {"id":"appobs-otel","fromNode":"app-obs","fromSide":"right","toNode":"b-otel","toSide":"left","label":"本番Adapterを作る"},
     {"id":"exec-interfaceop","fromNode":"app-exec","fromSide":"left","toNode":"interface-op","toSide":"right","label":"Operationを実行"},
     {"id":"interfaceop-failure","fromNode":"interface-op","fromSide":"bottom","toNode":"interface-failure","toSide":"top","label":"OperationFailure failureを構築"},
-    {"id":"interfaceop-featurefailure","fromNode":"interface-op","fromSide":"bottom","toNode":"feature-failure","toSide":"left","label":"UseCaseのLeft failure"},
+    {"id":"interfaceop-usecase","fromNode":"interface-op","fromSide":"bottom","toNode":"feature-usecase","toSide":"left","label":"UseCaseを呼ぶ"},
     {"id":"interfacefailure-error","fromNode":"interface-failure","fromSide":"right","toNode":"b-error","toSide":"left","label":"ToErrorType / toErrorType"}
   ]
 }
