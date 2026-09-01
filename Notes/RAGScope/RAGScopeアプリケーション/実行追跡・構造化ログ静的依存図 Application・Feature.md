@@ -10,20 +10,20 @@ created: 2026-09-01
 
 全体: [[実行追跡・構造化ログ静的依存図]]
 
-`ragscope` package内のmodule依存を示す。矢印 `A → B` は、AがBをimportまたは型制約として必要とする方向。右側は別packageの公開module。
+`ragscope` package内のmodule間依存を示す。矢印 `A → B` は、AがBをimportし、Bが公開する型・typeclass・APIを必要とすることを表す。右側のnodeは、別packageが公開しているmodule。
 
-`OperationFailure`はApplication共通型として確定しているが、正確なmodule名は未確定。Observability公開APIの利用主体別分割も未確定。
+`OperationFailure`はApplicationで共通に使う型として確定しているが、正確なmodule名は未確定。Observability公開APIをFeature / Application / Interfaceごとにどう分けるかも未確定。
 
 ```mermaid
 flowchart LR
     subgraph pkg_ragscope["ragscope"]
         subgraph app["private library: ragscope-application"]
-            app_exec["RAGScope.Application.Execution<br/>Operation実行<br/>Either OperationFailure result"]
-            app_obs["RAGScope.Application.Observability<br/>本番でObservability / Logging / Tracingを接続<br/>Operation / Lifecycle双方のcomposition境界"]
+            app_exec["RAGScope.Application.Execution<br/>Operationを実行<br/>Either OperationFailure result"]
+            app_obs["RAGScope.Application.Observability<br/>本番構成でObservability / Logging / Tracingを接続<br/>Operation / Lifecycleを組み立てる境界"]
             app_instances["RAGScope.Application.LoggingInstances"]
             feature_logging["RAGScope.&lt;Feature&gt;.Logging<br/>ToLogSpec &lt;FeatureEvent&gt;"]
-            interface_op["利用インターフェース Operation<br/>例: DenseSearchOperation"]
-            operation_failure["Application共通 OperationFailure<br/>ToErrorType failure =&gt; failure を保持"]
+            interface_op["利用インターフェースのOperation<br/>例: DenseSearchOperation"]
+            operation_failure["Application共通のOperationFailure<br/>ToErrorType failure =&gt; failure を保持"]
         end
 
         subgraph feature_lib["private library: ragscope-features"]
@@ -45,9 +45,9 @@ flowchart LR
     app_exec -->|本番用の実行を任せる| app_obs
     app_exec -->|Operationを実行| interface_op
 
-    app_obs -->|instanceを読み込む| app_instances
+    app_obs -->|instance moduleを読み込む| app_instances
     app_instances -- "import ... ()" --> feature_logging
-    feature_logging -->|Feature event型| feature_event
+    feature_logging -->|Featureのevent型| feature_event
     feature_logging -->|ToLogSpec / LogSpec| logging
 
     interface_op -->|UseCaseを呼ぶ| feature_usecase
@@ -60,10 +60,10 @@ flowchart LR
     feature_failure -->|ErrorType / ToErrorType| error_type
 
     app_obs -->|Observability API| obs
-    app_obs -->|Operation / child span境界| runner
+    app_obs -->|Operation / child spanの実行境界| runner
     app_obs -->|ToLogSpec| logging
-    app_obs -->|event + optional TraceContext| write
-    app_obs -->|trace内でTraceContext| context
-    app_obs -->|Tracing Port値| tracing
-    app_obs -->|本番Adapterを作る| otel
+    app_obs -->|event + 任意のTraceContext| write
+    app_obs -->|trace内のTraceContext| context
+    app_obs -->|Tracing Portの値| tracing
+    app_obs -->|本番用Adapterを作る| otel
 ```
