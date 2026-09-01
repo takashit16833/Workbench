@@ -11,6 +11,8 @@ created: 2026-09-01
 > [!note] Mermaid移行レビュー中
 > このMarkdownを現在の参照先・更新先とする。同内容の [[実行追跡・構造化ログ静的依存 Application・Feature.canvas]] は比較レビュー用として一時保持しており、設計の更新先にはしない。レビュー完了後にCanvasを削除する予定。
 
+全体: [[実行追跡・構造化ログ静的依存図]]
+
 `ragscope` package内のmodule依存を示す。矢印 `A → B` は、AがBをimportまたは型制約として必要とする方向。右側は別packageの公開module。
 
 `OperationFailure`はApplication共通型として確定しているが、正確なmodule名は未確定。Observability公開APIの利用主体別分割も未確定。
@@ -20,11 +22,11 @@ flowchart LR
     subgraph pkg_ragscope["ragscope"]
         subgraph app["private library: ragscope-application"]
             app_exec["RAGScope.Application.Execution<br/>Operation実行<br/>Either OperationFailure result"]
-            app_obs["RAGScope.Application.Observability<br/>production composition"]
+            app_obs["RAGScope.Application.Observability<br/>本番でObservability / Logging / Tracingを接続<br/>Operation / Lifecycle双方のcomposition境界"]
             app_instances["RAGScope.Application.LoggingInstances"]
             feature_logging["RAGScope.&lt;Feature&gt;.Logging<br/>ToLogSpec &lt;FeatureEvent&gt;"]
             interface_op["利用インターフェース Operation<br/>例: DenseSearchOperation"]
-            operation_failure["Application共通 OperationFailure<br/>ToErrorType failure制約"]
+            operation_failure["Application共通 OperationFailure<br/>ToErrorType failure =&gt; failure を保持"]
         end
 
         subgraph feature_lib["private library: ragscope-features"]

@@ -30,4 +30,4 @@ flowchart LR
     boundary -->|AppError / ErrorCategory| types
 ```
 
-`code`の意味は機能側が決め、`cause`は内部原因として保持する。最外側境界では`AppResult[T]`をそのまま通し、漏れた`Exception`だけを`internal.unexpected`の`Failure(AppError)`へ変換する。
+`code`の意味は機能側が決める。最外側境界では`AppResult[T]`をそのまま通し、漏れた`Exception`だけを`internal.unexpected`の`Failure(AppError)`へ変換し、元例外は`cause`のみに保持する。

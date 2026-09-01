@@ -11,6 +11,8 @@ created: 2026-09-01
 > [!note] Mermaid移行レビュー中
 > このMarkdownを現在の参照先・更新先とする。同内容の [[実行追跡・構造化ログ静的依存 Observability・Tracing.canvas]] は比較レビュー用として一時保持しており、設計の更新先にはしない。レビュー完了後にCanvasを削除する予定。
 
+全体: [[実行追跡・構造化ログ静的依存図]]
+
 Observability RuntimeからOpenTelemetry SDKまでのmodule依存を示す。矢印はすべて依存方向。`Observability.Internal.* → OpenTelemetry Adapter`の直接依存は作らない。
 
 Operation root spanとUseCase / Feature子spanを表せることを前提とし、公開APIの利用主体別分割はまだ固定しない。
