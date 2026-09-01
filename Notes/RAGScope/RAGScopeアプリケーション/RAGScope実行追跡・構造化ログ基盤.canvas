@@ -9,11 +9,11 @@
     {"id":"lifecycle-event","type":"text","text":"# Lifecycle event\n\n例: starting / started / stopping / failed\n\n具体event名・属性は実際のlifecycle実装時に決める。\n\nLoggingへは TraceContextなし で渡す。","x":-2350,"y":-100,"width":720,"height":330,"color":"4"},
 
     {"id":"operation-entry","type":"text","text":"# Operation entry / root span開始\n\n利用Interfaceが1件の操作について操作固有処理を開始する境界。\n\nrouting / command判定 / validation成功後では遅い。これらの失敗もroot span内で追う。","x":-1030,"y":-920,"width":760,"height":380,"color":"5"},
-    {"id":"interface-before","type":"text","text":"# Interface processing\n\n- routing / command判定\n- input decode / 変換 / validation\n\nここで通常失敗した場合:\n- UseCaseResultは発生しない\n- OperationResult = OperationFailure\n- root span = Error","x":-1020,"y":-390,"width":670,"height":410,"color":"5"},
+    {"id":"interface-before","type":"text","text":"# Interface processing\n\n- routing / command判定\n- input decode / 変換 / validation\n\nここで通常失敗した場合:\n- UseCaseResultは発生しない\n- Left (OperationFailure failure)\n- root span = Error","x":-1020,"y":-390,"width":670,"height":410,"color":"5"},
     {"id":"usecase-span","type":"text","text":"# UseCase span\n\nApplicationがUseCaseを呼んだ場合だけrootの子spanとして作る。\n\n概念:\nUseCaseResult = UseCaseSuccess | UseCaseFailure\n\nHaskell:\nEither failure result\nRight → UseCaseSuccess / span Unset\nLeft → UseCaseFailure / span Error + ErrorType","x":-100,"y":-390,"width":690,"height":470,"color":"5"},
-    {"id":"usecase-result","type":"text","text":"# UseCaseFailure と具体failure\n\nUseCaseFailure = 結果区分。\nDenseSearchFailure等 = 具体的な失敗理由の型。\n\n具体failure型はそのUseCaseを所有するFeatureが持つ。\n\nrouting / validation / post-processing failure、Exception、Logging failureをUseCase固有failureへ混ぜない。","x":-100,"y":180,"width":690,"height":430,"color":"5"},
-    {"id":"post-processing","type":"text","text":"# Post processing\n\nresponse / output構築など、UseCase終了後も同じ利用者操作に属する処理。\n\nUseCaseSuccess後にここで失敗した場合:\n- UseCase span = Unset\n- OperationResult = OperationFailure\n- root span = Error","x":-1010,"y":620,"width":680,"height":390,"color":"5"},
-    {"id":"operation-result","type":"text","text":"# OperationResult\n\n概念上:\nOperationResult\n= OperationSuccess | OperationFailure\n\n必要な場合だけ内側にUseCaseResultを持つ。\n\nUseCaseFailure → OperationFailure\nUseCaseSuccessだけではOperationSuccessは未確定。\n\n正確なHaskell type / constructorは後続で確定。","x":150,"y":650,"width":760,"height":450,"color":"5"},
+    {"id":"usecase-result","type":"text","text":"# UseCaseFailure と具体failure\n\nUseCaseFailure = 結果区分。\nDenseSearchFailure等 = 具体的な失敗理由の型。\n\n具体failure型はそのUseCaseを所有するFeatureが持つ。\n\nApplicationはLeft failureを具体型のまま処理した後、Operationも失敗ならOperationFailure failureで包む。","x":-100,"y":180,"width":690,"height":450,"color":"5"},
+    {"id":"post-processing","type":"text","text":"# Post processing\n\nresponse / output構築など、UseCase終了後も同じ利用者操作に属する処理。\n\nUseCaseSuccess後にここで失敗した場合:\n- UseCase span = Unset\n- Left (OperationFailure failure)\n- root span = Error","x":-1010,"y":620,"width":680,"height":390,"color":"5"},
+    {"id":"operation-result","type":"text","text":"# OperationResult\n\n概念:\nOperationSuccess | OperationFailure\n\nHaskell:\nEither OperationFailure result\n\nOperationFailure failure は ToErrorType instanceを持つ具体failure値を保持。\n\n利用者操作ごとのfailure ADTや Input / UseCase / Output constructorは作らない。\n\nrootは toErrorType operationFailure で ErrorType を得る。","x":150,"y":650,"width":760,"height":520,"color":"5"},
     {"id":"root-status","type":"text","text":"# root spanの最終結果\n\nOperationResultで決める。\n\nvalidation OperationFailure → root Error / UseCase spanなし\nUseCaseFailure → root Error / UseCase Error\nUseCaseSuccess + post OperationFailure → root Error / UseCase Unset\nOperationSuccess → root Unset","x":650,"y":-900,"width":480,"height":470,"color":"5"},
 
     {"id":"event-sources","type":"text","text":"# event sources\n\n- Lifecycle event\n- Interface event\n- Feature event\n\n具体的なevent名・属性・error_typeは、それぞれの所有者が決める。Logging共通基盤は決めない。","x":1700,"y":-780,"width":620,"height":330,"color":"6"},
@@ -22,7 +22,7 @@
     {"id":"logrecord","type":"text","text":"# LogRecord\n\nLogSpec + runtime information\n\n- timestamp\n- component\n- optional TraceContext\n\nTraceContextは\n- TraceId + SpanIdの組\n- または存在しない\nのどちらか。片方だけは不可。","x":2600,"y":-250,"width":620,"height":390,"color":"6"},
     {"id":"sink","type":"text","text":"# Sink / projection\n\n同じLogRecordから独立して:\n- stderr / memory Sink\n- JSON\n- SQLite\n\nLifecycle LoggingとOperation Loggingで別基盤を作らない。","x":2170,"y":380,"width":700,"height":330,"color":"6"},
 
-    {"id":"pending-result","type":"text","text":"# Application実行・失敗境界で確定\n\n- OperationResultの正確なHaskell表現\n- Operation failureの正確なADT\n- 概念名と実constructor名の対応\n- UseCase固有failureの包み方\n- Logging failureとの最終合成\n- 旧AppError / Result / Observationの扱い","x":-620,"y":1630,"width":700,"height":450,"color":"2"},
+    {"id":"pending-result","type":"text","text":"# Application実行・失敗境界で確定\n\nOperationFailureの基本形は確定済み。後続で決めるもの:\n\n- 正確なmodule名 / constructor構文\n- 同期 / 非同期Exception\n- Logging failureとの最終合成\n- 旧AppError / Result / Observationの扱い","x":-620,"y":1630,"width":700,"height":430,"color":"2"},
     {"id":"pending-exception","type":"text","text":"# Exception設計で確定\n\n- 同期Exceptionの捕捉・変換条件\n- 非同期Exceptionのcleanup / rethrow\n- Exception時のroot / child span終了\n\nOperationResult / UseCaseResultの意味上の境界を前提に検討する。","x":250,"y":1630,"width":570,"height":410,"color":"2"}
   ],
   "edges": [
@@ -31,8 +31,8 @@
     {"id":"e-entry-before","fromNode":"operation-entry","fromSide":"bottom","toNode":"interface-before","toSide":"top"},
     {"id":"e-before-usecase","fromNode":"interface-before","fromSide":"right","toNode":"usecase-span","toSide":"left","label":"検証成功時に呼ぶ"},
     {"id":"e-usecase-result","fromNode":"usecase-span","fromSide":"bottom","toNode":"usecase-result","toSide":"top","label":"UseCaseResult"},
-    {"id":"e-before-result","fromNode":"interface-before","fromSide":"bottom","toNode":"operation-result","toSide":"left","label":"OperationFailure"},
-    {"id":"e-left-result","fromNode":"usecase-result","fromSide":"bottom","toNode":"operation-result","toSide":"top","label":"UseCaseFailureを外側へ"},
+    {"id":"e-before-result","fromNode":"interface-before","fromSide":"bottom","toNode":"operation-result","toSide":"left","label":"OperationFailure failure"},
+    {"id":"e-left-result","fromNode":"usecase-result","fromSide":"bottom","toNode":"operation-result","toSide":"top","label":"OperationFailure failure"},
     {"id":"e-post-result","fromNode":"post-processing","fromSide":"right","toNode":"operation-result","toSide":"left","label":"Operation結果を確定"},
     {"id":"e-usecase-post","fromNode":"usecase-span","fromSide":"bottom","toNode":"post-processing","toSide":"top","label":"UseCaseSuccess時に継続"},
     {"id":"e-result-root","fromNode":"operation-result","fromSide":"top","toNode":"root-status","toSide":"bottom","label":"OperationResult"},
@@ -42,7 +42,7 @@
     {"id":"e-tolog-logspec","fromNode":"tologspec","fromSide":"bottom","toNode":"logspec","toSide":"top"},
     {"id":"e-logspec-record","fromNode":"logspec","fromSide":"right","toNode":"logrecord","toSide":"left","label":"runtime情報を付加"},
     {"id":"e-record-sink","fromNode":"logrecord","fromSide":"bottom","toNode":"sink","toSide":"top"},
-    {"id":"e-operation-pending","fromNode":"operation-result","fromSide":"bottom","toNode":"pending-result","toSide":"top","label":"Haskell表現を後続で確定"},
+    {"id":"e-operation-pending","fromNode":"operation-result","fromSide":"bottom","toNode":"pending-result","toSide":"top","label":"残る実装詳細"},
     {"id":"e-pending-exception","fromNode":"pending-result","fromSide":"right","toNode":"pending-exception","toSide":"left","label":"意味上の境界を前提"}
   ]
 }
