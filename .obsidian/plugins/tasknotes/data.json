@@ -541,21 +541,9 @@
   "enableDebugLogging": false,
   "lastSeenVersion": "4.12.3",
   "pomodoroState": {
-    "isRunning": true,
+    "isRunning": false,
     "timeRemaining": 1500,
-    "currentSession": {
-      "id": "1788296111112",
-      "taskPath": "Tasks/RS-0022 subtask logging全体像を設計して公開APIと中核型を実装する.md",
-      "startTime": "2026-09-02T05:55:11.112+09:00",
-      "plannedDuration": 25,
-      "type": "work",
-      "completed": false,
-      "activePeriods": [
-        {
-          "startTime": "2026-09-02T05:55:11.112+09:00"
-        }
-      ]
-    }
+    "nextSessionType": "work"
   },
   "lastPomodoroDate": "2026-09-01",
   "pomodoroHistory": [
@@ -3553,6 +3541,35 @@
         {
           "startTime": "2026-09-01T14:50:35.130+09:00",
           "endTime": "2026-09-01T15:05:35.130+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1788296111112",
+      "startTime": "2026-09-02T05:55:11.112+09:00",
+      "endTime": "2026-09-02T06:20:11.112+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "taskPath": "Tasks/RS-0022 subtask logging全体像を設計して公開APIと中核型を実装する.md",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-09-02T05:55:11.112+09:00",
+          "endTime": "2026-09-02T06:20:11.112+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1788297612254",
+      "startTime": "2026-09-02T06:20:12.254+09:00",
+      "endTime": "2026-09-02T06:25:12.254+09:00",
+      "plannedDuration": 5,
+      "type": "short-break",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-09-02T06:20:12.254+09:00",
+          "endTime": "2026-09-02T06:25:12.254+09:00"
         }
       ]
     }
