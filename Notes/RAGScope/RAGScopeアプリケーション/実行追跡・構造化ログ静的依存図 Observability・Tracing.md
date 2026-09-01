@@ -12,7 +12,7 @@ created: 2026-09-01
 
 Observability / Tracing系moduleからOpenTelemetry SDKまでの依存関係を示す。矢印はすべて依存方向。`RAGScope.Observability.Internal.*`から`RAGScope.Tracing.OpenTelemetry`へは直接依存させない。
 
-色は、シアンが公開library / module、紫が非公開library / module、グレーのnodeが別packageまたは外部package、グレーの外枠がCabal packageを表す。
+色は、青系が公開library / module、紫系が非公開library / module、低彩度の濃色が別packageまたは外部package、青灰色の外枠がCabal packageを表す。
 
 Operationのroot spanとUseCase / Featureの子spanを表せることを前提とする。公開APIをFeature / Application / Interfaceごとにどう分けるかは未確定。
 
@@ -62,20 +62,20 @@ flowchart LR
     otel -->|TraceId / SpanId| context
     otel -->|SDKを利用| sdk
 
-    classDef public fill:#00D9FF,stroke:#00A7C2,color:#111111,stroke-width:2px
-    classDef private fill:#9B5DE5,stroke:#713CB0,color:#FFFFFF,stroke-width:2px
-    classDef outside fill:#6B7280,stroke:#4B5563,color:#FFFFFF,stroke-width:2px
+    classDef public fill:#052A59,stroke:#5EAFFF,color:#DDF0FF,stroke-width:2px
+    classDef private fill:#211536,stroke:#8A5EC0,color:#DDF0FF,stroke-width:2px
+    classDef outside fill:#001947,stroke:#316CBD,color:#A6CAFF,stroke-width:2px
 
     class obs,runner,tracing,otel,context public
     class internal private
     class error_type,sdk outside
 
-    style pkg_obs fill:transparent,stroke:#6B7280,stroke-width:2px
-    style pkg_tracing fill:transparent,stroke:#6B7280,stroke-width:2px
-    style obs_main_lib fill:transparent,stroke:#00D9FF,stroke-width:3px
-    style obs_runtime_lib fill:transparent,stroke:#00D9FF,stroke-width:3px
-    style obs_internal_lib fill:transparent,stroke:#9B5DE5,stroke-width:3px
-    style tracing_main_lib fill:transparent,stroke:#00D9FF,stroke-width:3px
-    style tracing_otel_lib fill:transparent,stroke:#00D9FF,stroke-width:3px
-    style tracing_core_lib fill:transparent,stroke:#00D9FF,stroke-width:3px
+    style pkg_obs fill:transparent,stroke:#153A75,color:#4C9EEB,stroke-width:2px
+    style pkg_tracing fill:transparent,stroke:#153A75,color:#4C9EEB,stroke-width:2px
+    style obs_main_lib fill:transparent,stroke:#2759AA,color:#7CBEFF,stroke-width:2px
+    style obs_runtime_lib fill:transparent,stroke:#2759AA,color:#7CBEFF,stroke-width:2px
+    style obs_internal_lib fill:transparent,stroke:#8A5EC0,color:#B07CFF,stroke-width:2px
+    style tracing_main_lib fill:transparent,stroke:#2759AA,color:#7CBEFF,stroke-width:2px
+    style tracing_otel_lib fill:transparent,stroke:#2759AA,color:#7CBEFF,stroke-width:2px
+    style tracing_core_lib fill:transparent,stroke:#2759AA,color:#7CBEFF,stroke-width:2px
 ```
