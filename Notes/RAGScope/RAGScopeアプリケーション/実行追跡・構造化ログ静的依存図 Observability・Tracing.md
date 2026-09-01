@@ -15,7 +15,7 @@ created: 2026-09-01
 
 Observability RuntimeからOpenTelemetry SDKまでのmodule依存を示す。矢印はすべて依存方向。`Observability.Internal.* → OpenTelemetry Adapter`の直接依存は作らない。
 
-Operation root spanとUseCase / Feature子spanを表せることを前提とし、公開APIのFeature / Application / Interfaceの利用主体別分割はまだ固定しない。
+Operation root spanとUseCase / Feature子spanを表せることを前提とし、公開APIをFeature / Application / Interfaceの利用主体ごとにどう分割するかはまだ固定しない。
 
 ```mermaid
 flowchart LR
