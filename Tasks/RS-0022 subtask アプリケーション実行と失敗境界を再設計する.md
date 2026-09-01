@@ -26,6 +26,8 @@ branch: RS-0022/redesign-execution-failure
 
 旧logging基盤と一体化しているアプリケーション実行・失敗境界を、新しいLogging公開API、Operation root span / UseCase子spanの実行追跡境界、`UseCaseResult`を必要な場合だけ内包する`OperationResult`の結果関係に合わせて再構成する。
 
+利用者操作全体の実行境界・`OperationResult`・`OperationFailure`に関する現在設計は、RAGScope正本の`project-docs/design/利用者操作実行設計.md`を正本とする。このSubtaskではWorkbenchだけにOperation設計を確定せず、検討によって決まった現在設計を同設計書へ反映する。正確なHaskell型・constructor・関数はコードとテストを機械可読な正本とし、設計書にはその意味、境界、受け渡し規則を反映する。
+
 前段の設計では、UseCase実行結果を概念上`UseCaseResult = UseCaseSuccess | UseCaseFailure`とし、Haskell境界では`Either failure result`の`Right result`を`UseCaseSuccess`、`Left failure`を`UseCaseFailure`として扱うことまで確定している。`UseCaseFailure`は結果区分であり、`DenseSearchFailure`など具体的なUseCase固有failure型とは分ける。具体failure型はそのUseCaseを所有するFeatureが持つ。
 
 1回の利用者操作全体は概念上`OperationResult = OperationSuccess | OperationFailure`とし、必要な場合だけ内側に`UseCaseResult`を含む。`UseCaseFailure`は`OperationFailure`の原因の1つとなるが、`UseCaseSuccess`だけでは`OperationSuccess`は確定しない。このSubtaskでは、この意味上の境界を実際のHaskell型とApplication実行フローへ落とす。
@@ -34,6 +36,7 @@ Application / processの起動・終了など、利用者操作外のライフ�
 
 ## 完了条件
 
+- RAGScope正本の`project-docs/design/利用者操作実行設計.md`をOperation全体の実行・失敗境界の現在設計として更新している
 - 1回の利用者操作全体について、`OperationSuccess`または`OperationFailure`を表す正確なHaskellの結果型、failure型、constructor、module配置をコードとテストで確定している
 - UseCaseの`Either failure result`について、`Right result`を`UseCaseSuccess`、`Left failure`を`UseCaseFailure`として扱い、これをOperation全体の結果と同一視せず内側の結果として受け取れる
 - `UseCaseFailure`という結果区分と、`DenseSearchFailure`などUseCase固有の具体failure型を同一視せず、具体failure型をそのUseCaseを所有するFeatureへ配置できる

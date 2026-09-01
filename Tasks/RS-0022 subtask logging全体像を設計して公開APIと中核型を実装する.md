@@ -38,6 +38,8 @@ timeEntries:
 
 Haskellコードへ着手する前に、`Notes/RAGScope/RAGScopeアプリケーション/RAGScope実行追跡・構造化ログ基盤.canvas`で、実行追跡・構造化ログ基盤と周辺境界を一つの全体像として整理する。`RAGScope旧共通実行基盤.canvas`はCanvasの粒度・配置・表現方法の参考に使い、旧設計の構造を引き継ぐ根拠にはしない。
 
+利用者操作全体の実行境界・`OperationResult`・`OperationFailure`に関する現在設計は、RAGScope正本の`project-docs/design/利用者操作実行設計.md`を正本とする。WorkbenchのCanvasと設計ノートは、その正本を前提にlogging / tracing / observabilityの実装を検討する作業用ビューであり、Operation側の新しい設計判断を正本より先に確定しない。Operation側の設計判断が必要になった場合は、正本の`利用者操作実行設計.md`へ反映する。
+
 Canvasと設計ノートでは少なくとも次を確定してからHaskell実装へ進む。
 
 - `1 trace = 利用インターフェースが受け付けた1回のトップレベルな利用者操作`という実行追跡単位
@@ -58,7 +60,7 @@ Canvasと設計ノートでは少なくとも次を確定してからHaskell実�
 - logging自身の失敗処理を後続Application実行・失敗境界へ渡せる公開境界
 - `Observation`、`Result`、`AppError`を後続で再評価できる位置づけ
 
-`UseCaseResult = UseCaseSuccess | UseCaseFailure`と`OperationResult = OperationSuccess | OperationFailure`は意味上の結果区分としてこのSubtaskで固定する。UseCaseのHaskell境界は`Either failure result`とする。一方、`OperationResult`の正確なHaskell型名、constructor、外側のfailure ADT、同期・非同期Exceptionやlogging failureとの最終合成はこのSubtaskで先行固定しない。これらは後続の`RS-0022 subtask アプリケーション実行と失敗境界を再設計する`で、実装済みのLogging / Tracing / Observability境界を前提に確定する。
+`UseCaseResult = UseCaseSuccess | UseCaseFailure`と`OperationResult = OperationSuccess | OperationFailure`は現在の正本に従う。UseCaseのHaskell境界は`Either failure result`とする。一方、`OperationResult`の正確なHaskell型名、constructor、外側のfailure ADT、同期・非同期Exceptionやlogging failureとの最終合成はこのSubtaskで先行固定しない。これらは後続の`RS-0022 subtask アプリケーション実行と失敗境界を再設計する`で検討し、確定した現在設計をRAGScope正本の`利用者操作実行設計.md`へ反映する。
 
 ただし後続のException・失敗設計が破綻しないよう、現在Subtaskでは次を前提として残す。
 
@@ -76,6 +78,7 @@ OpenTelemetryはRAGScopeの要求を決める基準ではなく、Canvasで定�
 - 新しいCanvasと設計ノートで、Lifecycle、1回の利用者操作、UseCase、Loggingの境界を一つの全体像として説明できる
 - `OperationResult`が必要な場合だけ`UseCaseResult`を内包し、`UseCaseFailure`は`OperationFailure`へ反映される一方、`UseCaseSuccess`だけでは`OperationSuccess`が確定しない関係を説明できる
 - UseCaseの結果区分と具体failure型、Featureという所有単位を混在させず説明できる
+- Operation側の新しい設計判断をWorkbenchだけで確定せず、RAGScope正本の`project-docs/design/利用者操作実行設計.md`を現在設計の反映先として扱っている
 - trace内eventとtrace外eventが同じLogging基盤へ合流し、不正なTrace Contextの部分状態を作らない中核型・公開境界を実装できる設計になっている
 - Canvasの全体像を基準にLogging / Observability / Tracingの公開APIと中核型が実装されている
 - 既存module構成を残すこと自体を理由にした責務や型がない
