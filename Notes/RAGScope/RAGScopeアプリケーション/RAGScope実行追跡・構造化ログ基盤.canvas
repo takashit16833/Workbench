@@ -1,38 +1,34 @@
 {
-  "nodes": [
-    {"id":"g-lifecycle","type":"group","x":-1800,"y":-650,"width":900,"height":900,"color":"4","label":"Lifecycle — trace外"},
-    {"id":"g-operation","type":"group","x":-650,"y":-900,"width":1700,"height":1350,"color":"5","label":"1 User Operation = 1 trace"},
-    {"id":"g-logging","type":"group","x":1350,"y":-750,"width":1500,"height":1200,"color":"6","label":"共通 Structured Logging"},
-
-    {"id":"title","type":"text","text":"# RS-0022 実行追跡・構造化ログ 全体像\n\nこのCanvasは処理境界と値の流れだけを表す。\n正確な型・契約・未決定事項はRAGScope正本と作業ノートを参照する。","x":-1750,"y":-1300,"width":1150,"height":230,"color":"2"},
-    {"id":"work-note","type":"file","file":"Notes/RAGScope/RAGScopeアプリケーション/実行追跡・構造化ログ設計ノート.md","x":-400,"y":-1280,"width":520,"height":90},
-    {"id":"deps","type":"file","file":"Notes/RAGScope/RAGScopeアプリケーション/実行追跡・構造化ログ静的依存.canvas","x":180,"y":-1280,"width":520,"height":90},
-
-    {"id":"lifecycle","type":"text","text":"# Lifecycle\n\nApplication / service の起動・終了など。\n利用者操作には含めず、trace外eventとしてLoggingへ渡す。","x":-1650,"y":-430,"width":600,"height":300,"color":"4"},
-
-    {"id":"entry","type":"text","text":"# Operation entry\n\n利用Interfaceが操作固有処理を開始する。\nここでroot spanを開始する。","x":-500,"y":-680,"width":520,"height":260,"color":"5"},
-    {"id":"pre","type":"text","text":"# Interface processing\n\nrouting / command判定\ninput decode / 変換 / validation","x":-500,"y":-280,"width":520,"height":260,"color":"5"},
-    {"id":"usecase","type":"text","text":"# UseCase\n\n呼び出した場合だけrootの子spanとして追跡する。\nFeature内部spanはその配下に置く。","x":250,"y":-300,"width":580,"height":280,"color":"5"},
-    {"id":"post","type":"text","text":"# Post processing\n\nresponse / output構築など、UseCase後も同じOperationに属する処理。","x":-500,"y":120,"width":520,"height":260,"color":"5"},
-    {"id":"result","type":"text","text":"# Operation result / exit\n\nOperation全体の成功・失敗を確定し、root spanを終了して操作外へ戻る。","x":250,"y":100,"width":580,"height":280,"color":"5"},
-
-    {"id":"events","type":"text","text":"# Owned events\n\nLifecycle / Interface / Feature が、それぞれ自身のeventを定義する。","x":1510,"y":-520,"width":520,"height":260,"color":"6"},
-    {"id":"spec","type":"text","text":"# ToLogSpec → LogSpec\n\neventの意味を共通logging表現へ変換する。","x":2140,"y":-520,"width":520,"height":260,"color":"6"},
-    {"id":"record","type":"text","text":"# LogRecord\n\nLogSpecにtimestamp / component / optional TraceContextなど実行時情報を加える。","x":1510,"y":-80,"width":520,"height":300,"color":"6"},
-    {"id":"projection","type":"text","text":"# Sink / projection\n\n同じLogRecordからstderr / memory / JSON / SQLiteへ渡す。","x":2140,"y":-80,"width":520,"height":300,"color":"6"}
-  ],
-  "edges": [
-    {"id":"e-entry-pre","fromNode":"entry","fromSide":"bottom","toNode":"pre","toSide":"top"},
-    {"id":"e-pre-usecase","fromNode":"pre","fromSide":"right","toNode":"usecase","toSide":"left","label":"必要な場合"},
-    {"id":"e-pre-result","fromNode":"pre","fromSide":"bottom","toNode":"result","toSide":"left","label":"UseCase未呼び出しで終了"},
-    {"id":"e-usecase-post","fromNode":"usecase","fromSide":"bottom","toNode":"post","toSide":"right","label":"継続時"},
-    {"id":"e-usecase-result","fromNode":"usecase","fromSide":"bottom","toNode":"result","toSide":"top","label":"失敗時"},
-    {"id":"e-post-result","fromNode":"post","fromSide":"right","toNode":"result","toSide":"left"},
-    {"id":"e-life-events","fromNode":"lifecycle","fromSide":"right","toNode":"events","toSide":"left","label":"trace外event"},
-    {"id":"e-pre-events","fromNode":"pre","fromSide":"right","toNode":"events","toSide":"left","label":"Interface event"},
-    {"id":"e-usecase-events","fromNode":"usecase","fromSide":"right","toNode":"events","toSide":"left","label":"Feature event"},
-    {"id":"e-events-spec","fromNode":"events","fromSide":"right","toNode":"spec","toSide":"left"},
-    {"id":"e-spec-record","fromNode":"spec","fromSide":"bottom","toNode":"record","toSide":"right"},
-    {"id":"e-record-projection","fromNode":"record","fromSide":"right","toNode":"projection","toSide":"left"}
-  ]
+	"nodes":[
+		{"id":"g-operation","type":"group","x":-120,"y":-225,"width":1260,"height":1040,"color":"5","label":"1 User Operation = 1 trace"},
+		{"id":"g-logging","type":"group","x":1360,"y":-560,"width":1120,"height":520,"color":"6","label":"共通 Structured Logging"},
+		{"id":"g-lifecycle","type":"group","x":560,"y":-960,"width":580,"height":320,"color":"4","label":"Lifecycle — trace外"},
+		{"id":"work-note","type":"file","file":"Notes/RAGScope/RAGScopeアプリケーション/実行追跡・構造化ログ設計ノート.md","x":-400,"y":-1280,"width":520,"height":90},
+		{"id":"deps","type":"file","file":"Notes/RAGScope/RAGScopeアプリケーション/実行追跡・構造化ログ静的依存.canvas","x":180,"y":-1280,"width":520,"height":90},
+		{"id":"title","type":"text","text":"# RS-0022 実行追跡・構造化ログ 全体像\n\nこのCanvasは処理境界と値の流れだけを表す。\n正確な型・契約・未決定事項はRAGScope正本と作業ノートを参照する。","x":-40,"y":-550,"width":1150,"height":230,"color":"2"},
+		{"id":"entry","type":"text","text":"# Operation entry\n\n利用Interfaceが操作固有処理を開始する。\nここでroot spanを開始する。","x":-30,"y":-185,"width":370,"height":180,"color":"5"},
+		{"id":"pre","type":"text","text":"# Interface processing\n\nrouting / command判定\ninput decode / 変換 / validation","x":-10,"y":125,"width":330,"height":170,"color":"5"},
+		{"id":"result","type":"text","text":"# Operation result / exit\n\nOperation全体の成功・失敗を確定し、root spanを終了して操作外へ戻る。","x":-45,"y":500,"width":400,"height":190,"color":"5"},
+		{"id":"lifecycle","type":"text","text":"# Lifecycle\n\nApplication / service の起動・終了など。\n利用者操作には含めず、trace外eventとしてLoggingへ渡す。","x":605,"y":-920,"width":480,"height":210,"color":"4"},
+		{"id":"spec","type":"text","text":"# ToLogSpec → LogSpec\n\neventの意味を共通logging表現へ変換する。","x":2060,"y":-520,"width":380,"height":160,"color":"6"},
+		{"id":"events","type":"text","text":"# Owned events\n\nLifecycle / Interface / Feature が、それぞれ自身のeventを定義する。","x":1430,"y":-520,"width":410,"height":160,"color":"6"},
+		{"id":"record","type":"text","text":"# LogRecord\n\nLogSpecにtimestamp / component / optional TraceContextなど実行時情報を加える。","x":1430,"y":-230,"width":410,"height":150,"color":"6"},
+		{"id":"projection","type":"text","text":"# Sink / projection\n\n同じLogRecordからstderr / memory / JSON / SQLiteへ渡す。","x":2060,"y":-222,"width":380,"height":135,"color":"6"},
+		{"id":"usecase","type":"text","text":"# UseCase\n\n呼び出した場合だけrootの子spanとして追跡する。\nFeature内部spanはその配下に置く。","x":605,"y":115,"width":430,"height":180,"color":"5"},
+		{"id":"post","type":"text","text":"# Post processing\n\nresponse / output構築など、UseCase後も同じOperationに属する処理。","x":640,"y":505,"width":360,"height":180,"color":"5"}
+	],
+	"edges":[
+		{"id":"e-entry-pre","fromNode":"entry","fromSide":"bottom","toNode":"pre","toSide":"top"},
+		{"id":"e-pre-usecase","fromNode":"pre","fromSide":"right","toNode":"usecase","toSide":"left","label":"必要な場合"},
+		{"id":"e-pre-result","fromNode":"pre","fromSide":"bottom","toNode":"result","toSide":"top","label":"UseCase未呼び出しで終了"},
+		{"id":"e-usecase-post","fromNode":"usecase","fromSide":"bottom","toNode":"post","toSide":"top","label":"継続時"},
+		{"id":"e-usecase-result","fromNode":"usecase","fromSide":"bottom","toNode":"result","toSide":"top","label":"失敗時"},
+		{"id":"e-post-result","fromNode":"post","fromSide":"left","toNode":"result","toSide":"right"},
+		{"id":"e-life-events","fromNode":"lifecycle","fromSide":"right","toNode":"events","toSide":"left","label":"trace外event"},
+		{"id":"e-pre-events","fromNode":"pre","fromSide":"right","toNode":"events","toSide":"left","label":"Interface event"},
+		{"id":"e-usecase-events","fromNode":"usecase","fromSide":"right","toNode":"events","toSide":"left","label":"Feature event"},
+		{"id":"e-events-spec","fromNode":"events","fromSide":"right","toNode":"spec","toSide":"left"},
+		{"id":"e-spec-record","fromNode":"spec","fromSide":"bottom","toNode":"record","toSide":"top"},
+		{"id":"e-record-projection","fromNode":"record","fromSide":"right","toNode":"projection","toSide":"left"}
+	]
 }
