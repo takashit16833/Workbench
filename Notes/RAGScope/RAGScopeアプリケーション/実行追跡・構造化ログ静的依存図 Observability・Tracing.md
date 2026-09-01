@@ -10,13 +10,13 @@ created: 2026-09-01
 
 全体: [[実行追跡・構造化ログ静的依存図]]
 
-Observability / Tracingの公開契約、内部実装、ApplicationでOpenTelemetry Adapterを組み立てる境界からOpenTelemetry SDKまでの依存関係を示す。矢印はすべて依存方向。
+`ragscope-observability`と`ragscope-tracing`に属するmoduleを依存元とする静的依存を示す。矢印はすべて依存方向。OpenTelemetry Adapterは`ragscope` package側へ置くため、この図では依存元として扱わない。Adapter側の依存は [[実行追跡・構造化ログ静的依存図 Application・Feature]] を参照する。
 
-色は、青系がpackage外から利用する公開library / module、紫系がpackage外へ公開しないprivate library / module、低彩度の濃色が別packageまたは外部package、青灰色の外枠がCabal packageを表す。
+色は、青系がpackage外から利用する公開library / module、紫系がpackage外へ公開しないprivate library / module、低彩度の濃色が別package、青灰色の外枠がCabal packageを表す。
 
 Operationのroot spanとUseCase / Featureの子spanを表せることを前提とする。公開APIをFeature / Application / Interfaceごとにどう分けるかは未確定。
 
-`ragscope-tracing` packageは、`RAGScope.Tracing`のTracing Portと`RAGScope.Tracing.Context`のTrace Context契約だけを公開する。OpenTelemetryによる具体実装は`ragscope-tracing`へ置かず、`ragscope` package内のprivate `ragscope-tracing-otel` libraryに置く。`ragscope-tracing-otel`だけがOpenTelemetry SDKへ直接依存し、`ragscope-application`はこのprivate libraryを通して本番用の`RAGScope.Tracing`実装を組み立てる。
+`ragscope-tracing` packageは、`RAGScope.Tracing`のTracing Portと`RAGScope.Tracing.Context`のTrace Context契約だけを公開する。OpenTelemetry SDKへ直接依存するmoduleはこのpackageに置かない。
 
 ```mermaid
 flowchart LR
@@ -41,17 +41,7 @@ flowchart LR
         end
     end
 
-    subgraph pkg_ragscope["ragscope"]
-        subgraph app_lib["ragscope-application"]
-            app_obs["RAGScope.Application.Observability<br/>本番構成でObservability / Logging / Tracingを接続"]
-        end
-        subgraph otel_adapter_lib["ragscope-tracing-otel"]
-            otel_adapter["RAGScope.Application.Tracing.OpenTelemetry<br/>Tracing PortのOpenTelemetry実装"]
-        end
-    end
-
     error_type["RAGScope.ErrorType<br/>ErrorType / ToErrorType"]
-    sdk["OpenTelemetry SDK"]
 
     runner -->|span lifecycle / contextの操作| internal
     runner -->|公開型| obs
@@ -66,27 +56,19 @@ flowchart LR
     tracing -->|ErrorType| error_type
     tracing -->|TraceContext / SpanId| context
 
-    app_obs -->|本番用Tracing実装を組み立てる| otel_adapter
-    otel_adapter -->|Portを実装| tracing
-    otel_adapter -->|TraceId / SpanId| context
-    otel_adapter -->|SDKを利用| sdk
-
     classDef public fill:#052A59,stroke:#5EAFFF,color:#DDF0FF,stroke-width:2px
     classDef private fill:#211536,stroke:#8A5EC0,color:#DDF0FF,stroke-width:2px
     classDef outside fill:#001947,stroke:#316CBD,color:#A6CAFF,stroke-width:2px
 
     class obs,runner,tracing,context public
-    class internal,app_obs,otel_adapter private
-    class error_type,sdk outside
+    class internal private
+    class error_type outside
 
     style pkg_obs fill:transparent,stroke:#153A75,color:#4C9EEB,stroke-width:2px
     style pkg_tracing fill:transparent,stroke:#153A75,color:#4C9EEB,stroke-width:2px
-    style pkg_ragscope fill:transparent,stroke:#153A75,color:#4C9EEB,stroke-width:2px
     style obs_main_lib fill:transparent,stroke:#2759AA,color:#7CBEFF,stroke-width:2px
     style obs_runtime_lib fill:transparent,stroke:#2759AA,color:#7CBEFF,stroke-width:2px
     style obs_internal_lib fill:transparent,stroke:#8A5EC0,color:#B07CFF,stroke-width:2px
     style tracing_main_lib fill:transparent,stroke:#2759AA,color:#7CBEFF,stroke-width:2px
     style tracing_core_lib fill:transparent,stroke:#2759AA,color:#7CBEFF,stroke-width:2px
-    style app_lib fill:transparent,stroke:#8A5EC0,color:#B07CFF,stroke-width:2px
-    style otel_adapter_lib fill:transparent,stroke:#8A5EC0,color:#B07CFF,stroke-width:2px
 ```

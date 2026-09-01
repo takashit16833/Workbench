@@ -2,7 +2,7 @@
 status: doing
 priority: medium
 dateCreated: 2026-08-27T08:12:00+09:00
-dateModified: 2026-09-02T06:31:05.984+09:00
+dateModified: 2026-09-02T08:20:00+09:00
 tags:
   - task
 projects:
@@ -46,6 +46,7 @@ timeEntries:
 - RAGScopeアプリケーションから見たlogging・tracing・observabilityの公開API、module責務、依存方向を現在契約から組み直す
 - `1利用者操作 = 1 trace`、UseCase子span、trace外ログを扱える全体構造を実装へ落とす
 - 現在契約を直接表すlogging中核型と、所有者ごとのeventから共通loggingへ渡す境界を実装する
+- OpenTelemetry具体実装を`ragscope` package内のprivate `ragscope-tracing-otel`へ閉じ、`ragscope-tracing`はTracing PortとTrace Context契約だけを公開する
 - 旧`ExecutionId`・`EventId`・`EventContext`・`OperationName`・通常/失敗イベント直和などを、新設計で不要な前提として残さない
 
 ## 正本と作業用ビュー
@@ -60,9 +61,12 @@ timeEntries:
 
 Workbenchでは次を作業用ビューとして使う。
 
-- `Notes/RAGScope/RAGScopeアプリケーション/RAGScope実行追跡・構造化ログ基盤.canvas`
+- `Notes/RAGScope/RAGScopeアプリケーション/実行追跡・構造化ログ概要図.md`
 - `Notes/RAGScope/RAGScopeアプリケーション/実行追跡・構造化ログ設計ノート.md`
-- `Notes/RAGScope/RAGScopeアプリケーション/実行追跡・構造化ログ静的依存.canvas`
+- `Notes/RAGScope/RAGScopeアプリケーション/実行追跡・構造化ログ静的依存図.md`
+- `Notes/RAGScope/RAGScopeアプリケーション/実行追跡・構造化ログ静的依存図 Application・Feature.md`
+- `Notes/RAGScope/RAGScopeアプリケーション/実行追跡・構造化ログ静的依存図 Observability・Tracing.md`
+- `Notes/RAGScope/RAGScopeアプリケーション/実行追跡・構造化ログ静的依存図 Logging.md`
 
 ## このSubtaskで行うこと
 
@@ -74,15 +78,18 @@ Workbenchでは次を作業用ビューとして使う。
 - trace内eventとtrace外eventを同じLogging基盤へ渡せる`RAGScope.Logging.Write`のAPIを決める。
 - Sinkを差し替えられる境界を実装し、JSON / SQLiteが同じ`LogRecord`から独立して投影できる構造にする。
 - Operation root spanとUseCase子spanを後続Subtaskで実装できるObservability / Tracing公開境界を確定する。
+- `ragscope-tracing`は`RAGScope.Tracing`と`RAGScope.Tracing.Context`だけをpackage外へ公開し、OpenTelemetry具体実装とSDK依存を持たせない。
+- `ragscope` package内にprivate `ragscope-tracing-otel`を置き、`RAGScope.Application.Tracing.OpenTelemetry`だけがOpenTelemetry SDKへ直接依存してTracing Portを実装する。
 - Feature / UseCaseからLogging backend、Trace Context、OpenTelemetry SDK、外部表現を直接参照させない。
 
 Operation境界のHaskell表現と共通`OperationFailure`の基本契約は正本ですでに決定済みであり、このSubtaskでは再定義しない。`OperationFailure`の正確なmodule名、同期・非同期Exception、logging failureとの最終結果合成は`RS-0022 subtask アプリケーション実行と失敗境界を再設計する`でコードとテストへ落とす。
 
 ## 完了条件
 
-- 全体CanvasからLifecycle、Operation、UseCase、共通Loggingの処理境界を追える。
-- 静的依存Canvasからpackage / library / moduleの依存方向を追え、各矢印について実際に必要な型・関数・値を説明できる。
+- 概要図からLifecycle、Operation、UseCase、共通Loggingの処理境界を追える。
+- 静的依存図からpackage / library / moduleの依存方向を追え、各矢印について実際に必要な型・関数・値を説明できる。
 - Cabal設定へ反映できるpackage / library構成と`build-depends`が決まっている。
+- `ragscope-tracing`のpublic main / `core` libraryからOpenTelemetry SDK依存と具体Adapterを排除し、private `ragscope-tracing-otel`だけがSDKへ依存する構成をCabalで表現できる。
 - trace内eventとtrace外eventを同じLogging公開APIから同じRuntimeへ渡せる。
 - Trace Contextの有無を1つのまとまりとして表し、TraceId / SpanId片方だけの内部状態を作らない。
 - Feature / Interface / Lifecycle eventの所有者と、`ToLogSpec` instanceを置くcomponentが決まっている。
