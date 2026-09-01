@@ -2,7 +2,7 @@
 status: doing
 priority: medium
 dateCreated: 2026-08-26T21:00:57+09:00
-dateModified: 2026-09-01T09:48:00+09:00
+dateModified: 2026-09-01T19:30:00+09:00
 tags:
   - task
 projects:
@@ -16,10 +16,17 @@ branch: RS-0022/design-logging-architecture
 
 ## 実行方針
 
-- 正本Ticketの現在内容を作業範囲の正本とし、Workbench側へTicket本文を複製しない。
-- 既存のlogging module構成を前提に局所修正せず、利用側から見たAPI、module責務、依存方向、データの流れを先に設計する。
-- 最初のSubtaskでは、`Notes/RAGScope/RAGScopeアプリケーション/RAGScope旧共通実行基盤.canvas`を表現方法の参考にし、新しい`RAGScope実行追跡・構造化ログ基盤.canvas`を基準に全体像を整理してからHaskell実装へ入る。
-- 全体設計では、`1利用者操作 = 1 trace`、UseCase子span、trace外のlifecycle log、`OperationResult`が必要な場合だけ`UseCaseResult`を内包する結果関係を前提にする。
-- UseCase実行結果は概念上`UseCaseResult = UseCaseSuccess | UseCaseFailure`、利用者操作全体は`OperationResult = OperationSuccess | OperationFailure`として区別する。UseCaseのHaskell境界は`Either failure result`を使い、具体failure型はそのUseCaseを所有するFeatureに置く。
-- loggingの自然な境界を作るために必要であれば、`Observation`、`Result`、`AppError`を含む周辺moduleの変更・統合・削除も許容する。
-- OpenTelemetryへRAGScopeの設計を合わせるのではなく、RAGScopeが必要とする実行追跡を実現するためにOpenTelemetryの設計と実装を利用する。`OpenTelemetryがそうしているから`だけをRAGScope固有の設計理由にしない。
+- 正本Ticketを作業範囲・完了条件の正本とし、WorkbenchへTicket本文や設計全文を複製しない。
+- Workbenchでは現在地、次の行動、Subtask依存、実装候補、判断の経緯だけを管理する。
+- 全体構造は`Notes/RAGScope/RAGScopeアプリケーション/RAGScope実行追跡・構造化ログ基盤.canvas`、実装検討は`実行追跡・構造化ログ設計ノート.md`、静的依存は`実行追跡・構造化ログ静的依存.canvas`以下のCanvas、判断履歴は`実行追跡・構造化ログ設計日誌.md`を使う。
+- Operation / UseCase / ErrorType / logging契約の決定済み内容はRAGScope正本の設計書を参照し、Workbench側へ別の現在仕様を作らない。
+- 現在実行中のSubtaskは`RS-0022 subtask logging全体像を設計して公開APIと中核型を実装する`。
+- logging / tracing / observabilityの責務、公開API、Cabal依存、データの流れを先に確定し、その構造を基準に既存実装を置き換える。
+- `Observation`、`Result`、`AppError`など既存moduleは維持を前提にせず、後続のApplication実行・失敗境界Subtaskで必要性を判断する。
+- OpenTelemetryはRAGScopeが決めたtrace / span境界を実装するために使い、OpenTelemetry側の構造をRAGScopeの要求へそのまま持ち込まない。
+
+## 未割当の完了条件
+
+正本TicketはSQLite投影・migration・transaction・復元・往復テストを完了条件へ含めている。一方、現在のWorkbenchにはSQLite実装を担当する独立Subtaskがない。
+
+SQLite実装へ着手する前に、既存Subtaskへ含めるか独立Subtaskへ分けるかを決める。独立Subtaskへ分ける場合は、RAGScope正本リポジトリに対応する実branchを作成してから`branch`と`blockedBy`を設定する。
