@@ -12,14 +12,16 @@
 		{"id":"feature-logging","type":"text","text":"`RAGScope.<Feature>.Logging`\n\n`ToLogSpec <FeatureEvent>`","x":2270,"y":800,"width":500,"height":160,"color":"#9B5DE5"},
 		{"id":"b-tracing","type":"text","text":"別package\n`RAGScope.Tracing`","x":3280,"y":430,"width":500,"height":120,"color":"#6B7280"},
 		{"id":"b-otel","type":"text","text":"別package\n`RAGScope.Tracing.OpenTelemetry`","x":3280,"y":580,"width":500,"height":120,"color":"#6B7280"},
-		{"id":"app-exec","type":"text","text":"`RAGScope.Application.Execution`\nOperationResultの具体化は後続","x":2300,"y":640,"width":430,"height":120,"color":"#00D9FF"},
+		{"id":"app-exec","type":"text","text":"`RAGScope.Application.Execution`\nOperation境界: Either operationFailure result","x":2300,"y":640,"width":430,"height":140,"color":"#00D9FF"},
 		{"id":"app-instances","type":"text","text":"`RAGScope.Application.LoggingInstances`","x":2255,"y":50,"width":500,"height":120,"color":"#9B5DE5"},
 		{"id":"feature-usecase","type":"text","text":"`RAGScope.<Feature>.UseCase`","x":2285,"y":1880,"width":470,"height":120,"color":"#00D9FF"},
 		{"id":"feature-event","type":"text","text":"`RAGScope.<Feature>.Event`","x":2285,"y":1460,"width":470,"height":120,"color":"#00D9FF"},
 		{"id":"feature-failure","type":"text","text":"`RAGScope.<Feature>.Failure`\n<Feature>Failure / ToErrorType instance","x":2285,"y":1660,"width":470,"height":140,"color":"#00D9FF"},
 		{"id":"b-log","type":"text","text":"別package\n`RAGScope.Logging`","x":3280,"y":840,"width":500,"height":120,"color":"#6B7280"},
 		{"id":"b-obs","type":"text","text":"別package\n`RAGScope.Observability`\n利用主体別分割は未確定","x":3280,"y":1080,"width":500,"height":140,"color":"#6B7280"},
-		{"id":"b-error","type":"text","text":"別package\n`RAGScope.ErrorType`","x":3280,"y":1660,"width":500,"height":120,"color":"#6B7280"}
+		{"id":"b-error","type":"text","text":"別package\n`RAGScope.ErrorType`","x":3280,"y":1660,"width":500,"height":120,"color":"#6B7280"},
+		{"id":"interface-op","type":"text","text":"利用インターフェース Operation\n例: DenseSearchOperation","x":1500,"y":630,"width":500,"height":130,"color":"#00D9FF"},
+		{"id":"interface-failure","type":"text","text":"Operation固有failure\n具体failure直和 / ToErrorType委譲","x":1500,"y":840,"width":500,"height":150,"color":"#00D9FF"}
 	],
 	"edges":[
 		{"id":"exec-obs","fromNode":"app-exec","fromSide":"top","toNode":"app-obs","toSide":"bottom","label":"本番用の実行を任せる"},
@@ -37,6 +39,10 @@
 		{"id":"appobs-write","fromNode":"app-obs","fromSide":"right","toNode":"b-write","toSide":"left","label":"event + optional TraceContext"},
 		{"id":"appobs-context","fromNode":"app-obs","fromSide":"right","toNode":"b-context","toSide":"left","label":"trace内でTraceContext"},
 		{"id":"appobs-tracing","fromNode":"app-obs","fromSide":"right","toNode":"b-tracing","toSide":"left","label":"Tracing Port値"},
-		{"id":"appobs-otel","fromNode":"app-obs","fromSide":"right","toNode":"b-otel","toSide":"left","label":"本番Adapterを作る"}
+		{"id":"appobs-otel","fromNode":"app-obs","fromSide":"right","toNode":"b-otel","toSide":"left","label":"本番Adapterを作る"},
+		{"id":"exec-interfaceop","fromNode":"app-exec","fromSide":"left","toNode":"interface-op","toSide":"right","label":"Operationを実行"},
+		{"id":"interfaceop-failure","fromNode":"interface-op","fromSide":"bottom","toNode":"interface-failure","toSide":"top","label":"Either operationFailure result"},
+		{"id":"interfacefailure-feature","fromNode":"interface-failure","fromSide":"bottom","toNode":"feature-failure","toSide":"left","label":"UseCase failureをconstructorで保持"},
+		{"id":"interfacefailure-error","fromNode":"interface-failure","fromSide":"right","toNode":"b-error","toSide":"left","label":"ToErrorType委譲"}
 	]
 }
