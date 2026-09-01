@@ -1,0 +1,48 @@
+{
+  "nodes": [
+    {"id":"g-lifecycle","type":"group","x":-2500,"y":-900,"width":1050,"height":1450,"color":"4","label":"Lifecycle — trace外"},
+    {"id":"g-operation","type":"group","x":-1200,"y":-1150,"width":2450,"height":2350,"color":"5","label":"1 User Operation = 1 trace"},
+    {"id":"g-logging","type":"group","x":1550,"y":-1000,"width":1900,"height":2050,"color":"6","label":"共通 Structured Logging"},
+    {"id":"g-pending","type":"group","x":-800,"y":1450,"width":1750,"height":780,"color":"2","label":"後続で確定する実装詳細"},
+
+    {"id":"lifecycle-owner","type":"text","text":"# Lifecycle ownership\n\nApplication / AI service の起動・終了など。\n\n- 特定の利用者操作へ属さない\n- OperationResultへ含めない\n- process lifecycle全体を1 traceにしない\n- eventの意味は各componentが所有","x":-2350,"y":-680,"width":720,"height":400,"color":"4"},
+    {"id":"lifecycle-event","type":"text","text":"# Lifecycle event\n\n例: starting / started / stopping / failed\n\n具体event名・属性は実際のlifecycle実装時に決める。\n\nLoggingへは TraceContextなし で渡す。","x":-2350,"y":-100,"width":720,"height":330,"color":"4"},
+
+    {"id":"operation-entry","type":"text","text":"# Operation entry / root span開始\n\n利用Interfaceが1件の操作について操作固有処理を開始する境界。\n\nrouting / command判定 / validation成功後では遅い。これらの失敗もroot span内で追う。","x":-1030,"y":-920,"width":760,"height":380,"color":"5"},
+    {"id":"interface-before","type":"text","text":"# Interface processing\n\n- routing / command判定\n- input decode / 変換 / validation\n\nここで通常失敗した場合:\n- UseCase spanは作らない\n- OperationResult = Failure\n- root span = Error","x":-1020,"y":-390,"width":670,"height":390,"color":"5"},
+    {"id":"usecase-span","type":"text","text":"# UseCase span\n\nApplicationがUseCaseを呼んだ場合だけrootの子spanとして作る。\n\nUseCase境界:\nEither FeatureFailure FeatureResult\n\nRight → UseCase span Unset\nLeft → UseCase span Error + ErrorType","x":-100,"y":-390,"width":690,"height":410,"color":"5"},
+    {"id":"usecase-result","type":"text","text":"# Left failure の意味\n\nLeftはUseCase自身のFeature failureだけ。\n\nrouting / validation / post-processing failure、Exception、Logging failureをFeature failureへ混ぜない。\n\nLeftは外側のOperation Failureへ引き渡される原因の1つ。","x":-100,"y":150,"width":690,"height":390,"color":"5"},
+    {"id":"post-processing","type":"text","text":"# Post processing\n\nresponse / output構築など、UseCase終了後も同じ利用者操作に属する処理。\n\nUseCase Right後にここで失敗した場合:\n- UseCase span = Unset\n- OperationResult = Failure\n- root span = Error","x":-1010,"y":620,"width":680,"height":370,"color":"5"},
+    {"id":"operation-result","type":"text","text":"# OperationResult\n\n概念上:\nOperationResult = Success | Failure\n\nFailureの原因:\n- Interface前処理の通常失敗\n- UseCase Left failure\n- Post processingの通常失敗\n\n正確なHaskell type / constructorは後続で確定。","x":150,"y":650,"width":760,"height":410,"color":"5"},
+    {"id":"root-status","type":"text","text":"# root spanの最終結果\n\nOperation全体の最終結果で決める。\n\nvalidation Failure → root Error / UseCase spanなし\nUseCase Left → root Error / UseCase Error\nUseCase Right + post Failure → root Error / UseCase Unset\nOperation Success → root Unset","x":650,"y":-900,"width":480,"height":460,"color":"5"},
+
+    {"id":"event-sources","type":"text","text":"# event sources\n\n- Lifecycle event\n- Interface event\n- Feature event\n\n具体的なevent名・属性・error_typeは、それぞれの所有者が決める。Logging共通基盤は決めない。","x":1700,"y":-780,"width":620,"height":330,"color":"6"},
+    {"id":"tologspec","type":"text","text":"# ToLogSpec\n\nowned event → LogSpec\n\nFeature failure自身にToLogSpecを要求しない。失敗ログはfailureを表すFeature eventから作る。","x":2470,"y":-780,"width":700,"height":300,"color":"6"},
+    {"id":"logspec","type":"text","text":"# LogSpec\n\nイベントの意味:\n- event name\n- level\n- message\n- attributes\n\nTrace Contextやtimestampなど実行時情報はまだ持たない。","x":1850,"y":-280,"width":580,"height":320,"color":"6"},
+    {"id":"logrecord","type":"text","text":"# LogRecord\n\nLogSpec + runtime information\n\n- timestamp\n- component\n- optional TraceContext\n\nTraceContextは\n- TraceId + SpanIdの組\n- または存在しない\nのどちらか。片方だけは不可。","x":2600,"y":-250,"width":620,"height":390,"color":"6"},
+    {"id":"sink","type":"text","text":"# Sink / projection\n\n同じLogRecordから独立して:\n- stderr / memory Sink\n- JSON\n- SQLite\n\nLifecycle LoggingとOperation Loggingで別基盤を作らない。","x":2170,"y":380,"width":700,"height":330,"color":"6"},
+
+    {"id":"pending-result","type":"text","text":"# Application実行・失敗境界で確定\n\n- OperationResult / OperationFailureの正確なADT\n- Success / Failure等のconstructor名\n- UseCase failureの包み方\n- Logging failureとの最終合成\n- 旧AppError / Result / Observationの扱い","x":-620,"y":1630,"width":700,"height":430,"color":"2"},
+    {"id":"pending-exception","type":"text","text":"# Exception設計で確定\n\n- 同期Exceptionの捕捉・変換条件\n- 非同期Exceptionのcleanup / rethrow\n- Exception時のroot / child span終了\n\nOperationResultの意味上の境界を前提に検討する。","x":250,"y":1630,"width":570,"height":390,"color":"2"}
+  ],
+  "edges": [
+    {"id":"e-lifecycle-log","fromNode":"lifecycle-owner","fromSide":"bottom","toNode":"lifecycle-event","toSide":"top","label":"状態変化"},
+    {"id":"e-lifecycle-source","fromNode":"lifecycle-event","fromSide":"right","toNode":"event-sources","toSide":"left","label":"TraceContextなし"},
+    {"id":"e-entry-before","fromNode":"operation-entry","fromSide":"bottom","toNode":"interface-before","toSide":"top"},
+    {"id":"e-before-usecase","fromNode":"interface-before","fromSide":"right","toNode":"usecase-span","toSide":"left","label":"検証成功時に呼ぶ"},
+    {"id":"e-usecase-result","fromNode":"usecase-span","fromSide":"bottom","toNode":"usecase-result","toSide":"top","label":"Either"},
+    {"id":"e-before-result","fromNode":"interface-before","fromSide":"bottom","toNode":"operation-result","toSide":"left","label":"前処理Failure"},
+    {"id":"e-left-result","fromNode":"usecase-result","fromSide":"bottom","toNode":"operation-result","toSide":"top","label":"Leftを外側へ"},
+    {"id":"e-post-result","fromNode":"post-processing","fromSide":"right","toNode":"operation-result","toSide":"left","label":"後処理Failure / Success"},
+    {"id":"e-usecase-post","fromNode":"usecase-span","fromSide":"bottom","toNode":"post-processing","toSide":"top","label":"Right / Leftを受ける"},
+    {"id":"e-result-root","fromNode":"operation-result","fromSide":"top","toNode":"root-status","toSide":"bottom","label":"Operation最終結果"},
+    {"id":"e-interface-events","fromNode":"interface-before","fromSide":"right","toNode":"event-sources","toSide":"left","label":"Interface event"},
+    {"id":"e-feature-events","fromNode":"usecase-span","fromSide":"right","toNode":"event-sources","toSide":"left","label":"Feature event + TraceContext"},
+    {"id":"e-sources-tolog","fromNode":"event-sources","fromSide":"right","toNode":"tologspec","toSide":"left"},
+    {"id":"e-tolog-logspec","fromNode":"tologspec","fromSide":"bottom","toNode":"logspec","toSide":"top"},
+    {"id":"e-logspec-record","fromNode":"logspec","fromSide":"right","toNode":"logrecord","toSide":"left","label":"runtime情報を付加"},
+    {"id":"e-record-sink","fromNode":"logrecord","fromSide":"bottom","toNode":"sink","toSide":"top"},
+    {"id":"e-operation-pending","fromNode":"operation-result","fromSide":"bottom","toNode":"pending-result","toSide":"top","label":"型を後続で確定"},
+    {"id":"e-pending-exception","fromNode":"pending-result","fromSide":"right","toNode":"pending-exception","toSide":"left","label":"意味上の境界を前提"}
+  ]
+}
