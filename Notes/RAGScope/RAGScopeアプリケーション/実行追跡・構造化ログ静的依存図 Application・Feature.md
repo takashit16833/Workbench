@@ -8,9 +8,6 @@ created: 2026-09-01
 
 # 実行追跡・構造化ログ静的依存図 Application・Feature
 
-> [!note] Mermaid移行レビュー中
-> このMarkdownを現在の参照先・更新先とする。同内容の [[実行追跡・構造化ログ静的依存 Application・Feature.canvas]] は比較レビュー用として一時保持しており、設計の更新先にはしない。レビュー完了後にCanvasを削除する予定。
-
 全体: [[実行追跡・構造化ログ静的依存図]]
 
 `ragscope` package内のmodule依存を示す。矢印 `A → B` は、AがBをimportまたは型制約として必要とする方向。右側は別packageの公開module。
