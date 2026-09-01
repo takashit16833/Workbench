@@ -46,7 +46,7 @@ flowchart LR
     app_exec -->|Operationを実行| interface_op
 
     app_obs -->|instanceを読み込む| app_instances
-    app_instances -->|import ... ()| feature_logging
+    app_instances -- "import ... ()" --> feature_logging
     feature_logging -->|Feature event型| feature_event
     feature_logging -->|ToLogSpec / LogSpec| logging
 
