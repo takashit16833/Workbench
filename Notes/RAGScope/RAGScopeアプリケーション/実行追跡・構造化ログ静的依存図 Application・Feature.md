@@ -54,7 +54,7 @@ flowchart LR
     feature_logging -->|ToLogSpec / LogSpec| logging
 
     interface_op -->|UseCaseを呼ぶ| feature_usecase
-    interface_op -->|OperationFailureを構築| operation_failure
+    interface_op -->|OperationFailure failureを構築| operation_failure
     operation_failure -->|ToErrorType / toErrorType| error_type
 
     feature_usecase -->|event型| feature_event
