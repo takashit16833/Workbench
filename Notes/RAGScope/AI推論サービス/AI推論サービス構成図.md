@@ -8,9 +8,6 @@ created: 2026-09-01
 
 # AI推論サービス構成図
 
-> [!note] Mermaid移行レビュー中
-> このMarkdownを現在の参照先・更新先とする。同内容の [[マップ.canvas]] は比較レビュー用として一時保持しており、設計の更新先にはしない。レビュー完了後にCanvasを削除する予定。
-
 `ragscope_ai_service`の共通エラー周辺のmodule依存を示す。
 
 ```mermaid
