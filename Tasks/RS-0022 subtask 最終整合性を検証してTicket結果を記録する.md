@@ -2,7 +2,7 @@
 status: waiting
 priority: medium
 dateCreated: 2026-08-27T08:12:00+09:00
-dateModified: 2026-08-27T08:33:40+09:00
+dateModified: 2026-09-01T09:48:00+09:00
 tags:
   - task
 projects:
@@ -18,7 +18,8 @@ branch: RS-0022/finalize-logging-redesign
 
 ## Squash merge commit body
 
-- Haskell実装・実行追跡・共有JSON Contract・現在設計の最終整合性を検証する
+- Haskell実装・利用者操作単位の実行追跡・共有JSON Contract・現在設計の最終整合性を検証する
+- UseCase結果、OperationResult、lifecycle、trace内外ログの境界が実装と正本で一致していることを確認する
 - 関係するHaskellテスト、Schema適合テスト、品質検査の結果を確認する
 - RS-0022の完了条件と結果を実装事実へ合わせて確定する
 
@@ -28,8 +29,11 @@ branch: RS-0022/finalize-logging-redesign
 
 ## 完了条件
 
-- Canvasで設計した全体像と最終Haskell実装の責務・依存方向に未解消な差異がない
+- Canvasで設計したLifecycle、1 User Operation = 1 trace、UseCase子span、共通Loggingの全体像と最終Haskell実装に未解消な差異がない
+- UseCaseの`Either FeatureFailure FeatureResult`と、利用者操作全体の結果型が別の境界として実装され、UseCase前後の通常失敗をFeature failureへ混在させていない
+- Application / process lifecycleの結果をOperationResultへ混在させていない
+- trace内ログが`TraceId`・`SpanId`を組で持ち、trace外ログが両方を持たないという現在契約がHaskell中核型・JSON Schema・fixture・serializationで一致している
 - 現在の実行追跡・構造化ログ設計、共有JSON Contract、Haskell実装が整合している
 - 関係するHaskellテスト、Schema適合テスト、品質検査が成功する
-- 旧logging構造の残存を確認し、残すものは現在の責務から説明できる
+- 旧logging / execution構造の残存を確認し、残すものは現在の責務から説明できる
 - 正本Ticketの完了条件と`結果`を実測結果に基づいて更新できる
