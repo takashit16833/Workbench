@@ -2,7 +2,7 @@
 status: doing
 priority: medium
 dateCreated: 2026-08-27T08:12:00+09:00
-dateModified: 2026-09-02T17:08:20.259+09:00
+dateModified: 2026-09-02T21:21:21+09:00
 tags:
   - task
 projects:
@@ -83,6 +83,7 @@ timeEntries:
 - `project-docs/design/ユースケース詳細設計.md`
 - `project-docs/design/ErrorType変換詳細設計.md`
 - `project-docs/design/logging/実行追跡・構造化ログ契約設計.md`
+- `project-docs/design/logging/RAGScopeアプリケーション実行追跡構成設計.md`
 
 Workbenchでは次を作業用ビューとして使う。
 
@@ -92,6 +93,14 @@ Workbenchでは次を作業用ビューとして使う。
 - `Notes/RAGScope/RAGScopeアプリケーション/実行追跡・構造化ログ静的依存図 Application・Feature.md`
 - `Notes/RAGScope/RAGScopeアプリケーション/実行追跡・構造化ログ静的依存図 Observability・Tracing.md`
 - `Notes/RAGScope/RAGScopeアプリケーション/実行追跡・構造化ログ静的依存図 Logging.md`
+
+## 現在地
+
+- Tracing Portの最小能力を`withTrace`、`withSpan`、`observeResult`、`currentTraceContext`の4つとして正本へ反映済み。
+- Application / Featureは`Tracing`を直接利用せず、`Observability`と`Logging`を利用する。Observability RuntimeはTracingを内部依存として持ち、Logging Runtimeには`currentTraceContext`取得能力だけを渡す構成を正本へ反映済み。
+- current Trace Contextは`AppEnv`の固定値ではなく、Tracing具体実装が`withTrace` / `withSpan`の実行scopeごとに管理する。並行するトップレベル操作間でcurrent Trace Contextを混在させない。
+- `makeOpenTelemetryTracing`はTracing実装の初期化だけを行い、実際のtraceは各トップレベル操作の境界で`withTrace`によって開始する。
+- 次は、この責務分担を維持したまま`withTrace` / `withSpan`等の正確なHaskell型、Observability公開API、module分割・Cabal依存をコードとテストへ落とせる粒度まで具体化する。
 
 ## このSubtaskで行うこと
 
