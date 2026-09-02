@@ -1,5 +1,5 @@
 ---
-status: todo
+status: dropped
 projects:
   - "[[案件管理]]"
 agent: ギークス
@@ -12,7 +12,7 @@ hours: 140-180
 interview_count: 1
 priority: medium
 dateCreated: 2026-09-02T09:57:00+09:00
-dateModified: 2026-09-02T10:10:00+09:00
+dateModified: 2026-09-02T10:43:00+09:00
 tags:
   - task
   - job
@@ -54,6 +54,9 @@ AIネイティブ企業でFDE（Forward Deployed Engineer）として、顧客�
 - 単金: スキル見合い
 - 時間幅: 140H〜180H
 - 商談回数: 1回
+
+## 選考メモ
+- 2026-09-02: 見送りをギークスへ連絡。重要要件のLangChain / LangGraph等を利用したAIプロダクト開発経験がないため。
 
 ## 会社情報
 https://www.ever-rise.co.jp/
