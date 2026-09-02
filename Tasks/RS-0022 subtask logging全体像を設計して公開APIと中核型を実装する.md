@@ -113,9 +113,12 @@ Workbenchでは次を作業用ビューとして使う。
 - Application / Featureは`Tracing`を直接利用せず、`Observability`と`Logging`を利用する。Observability RuntimeはTracingを内部依存として持ち、Logging Runtimeには`currentTraceContext`取得能力だけを渡す構成を正本へ反映済み。
 - `RAGScope.Observability`の公開APIを確定し、`Observability m`は`withTrace :: forall failure result. ToErrorType failure => SpanName -> m (Either failure result) -> m (Either failure result)`と`withSpan :: forall failure result. ToErrorType failure => SpanName -> m (Either failure result) -> m (Either failure result)`の2能力だけを公開する。`SpanName`はTracing所有の型をObservabilityから再exportする。
 - Observability RuntimeはTracingの`withTrace` / `withSpan` scope内でactionを実行し、scope終了前にその`Either`を`observeResult`へ渡してから同じ結果を返す。`observeResult`はApplication / Featureへ独立公開しない。成功しか返さない任意の`m a`用APIは現時点では追加しない。
+- `ragscope-observability`を独立local packageとし、main libraryの`RAGScope.Observability`と`runtime` libraryの`RAGScope.Observability.Runtime`だけを持つ構成を確定した。`internal` libraryと`RAGScope.Observability.Runner`は導入しない。
+- `RAGScope.Observability.Runtime`は`makeObservability :: Monad m => Tracing m -> Observability m`を公開する。Observability mainは`ragscope-error` main / `ragscope-tracing` main、`runtime`はObservability main / `ragscope-tracing` mainへ直接依存する。
+- Feature側はObservability mainと`ragscope-error`だけへ依存し、Observability `runtime`と`ragscope-tracing`を`build-depends`へ追加しない。`ragscope-application`はcomposition rootのためObservability main / `runtime`、`ragscope-tracing` main、`ragscope-error`へ直接依存する。
 - current Trace Contextは`AppEnv`の固定値ではなく、Tracing具体実装が`withTrace` / `withSpan`の実行scopeごとに管理する。並行するトップレベル操作間でcurrent Trace Contextを混在させない。
 - `makeOpenTelemetryTracing`はTracing実装の初期化だけを行い、実際のtraceは各トップレベル操作の境界で`withTrace`によって開始する。
-- 次は、確定したTracing / Observability APIを前提に、ObservabilityのCabal package・library・module配置と`build-depends`を確定し、公開APIとRuntimeを実装へ落とす。
+- 次は、確定したObservability package / library / module境界を実際の`cabal.project`・Cabal設定とHaskell moduleへ実装し、`makeObservability`の動作をテストで固定する。
 
 ## このSubtaskで行うこと
 
@@ -138,6 +141,8 @@ Operation境界のHaskell表現と共通`OperationFailure`の基本契約は正�
 - 概要図からLifecycle、Operation、UseCase、共通Loggingの処理境界を追える。
 - 静的依存図からpackage / library / moduleの依存方向を追え、各矢印について実際に必要な型・関数・値を説明できる。
 - Cabal設定へ反映できるpackage / library構成と`build-depends`が決まっている。
+- `ragscope-observability`がmain / `runtime`の2 libraryだけを持ち、Feature側にObservability mainだけを許可し、`runtime`とTracingへの直接依存を禁止できる。
+- `RAGScope.Observability.Runtime.makeObservability`がTracing scope内で`observeResult`を実行してから元の`Either`を返すことをコードとテストで確認できる。
 - `ragscope-tracing`のpublic main / `core` libraryからOpenTelemetry SDK依存と具体Adapterを排除し、private `ragscope-tracing-otel`だけがSDKへ依存する構成をCabalで表現できる。
 - trace内eventとtrace外eventを同じLogging公開APIから同じRuntimeへ渡せる。
 - Trace Contextの有無を1つのまとまりとして表し、TraceId / SpanId片方だけの内部状態を作らない。
