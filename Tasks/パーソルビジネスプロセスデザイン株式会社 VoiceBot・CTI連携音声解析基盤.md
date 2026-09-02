@@ -4,7 +4,6 @@ projects:
   - "[[案件管理]]"
 agent: ギークス
 company: パーソルビジネスプロセスデザイン株式会社
-start_note: 即日参画可能
 work_style: 基本フルリモート
 location: 赤坂見附・豊洲
 rate: スキル見合い
@@ -12,7 +11,7 @@ hours: 140-180
 interview_count: 1
 priority: medium
 dateCreated: 2026-09-02T09:57:00+09:00
-dateModified: 2026-09-02T10:10:00+09:00
+dateModified: 2026-09-02T10:17:00+09:00
 tags:
   - task
   - job
