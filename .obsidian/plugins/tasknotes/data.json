@@ -541,9 +541,21 @@
   "enableDebugLogging": false,
   "lastSeenVersion": "4.12.3",
   "pomodoroState": {
-    "isRunning": false,
+    "isRunning": true,
     "timeRemaining": 1500,
-    "nextSessionType": "work"
+    "currentSession": {
+      "id": "1788386322909",
+      "taskPath": "Tasks/RS-0022 subtask logging全体像を設計して公開APIと中核型を実装する.md",
+      "startTime": "2026-09-03T06:58:42.909+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "completed": false,
+      "activePeriods": [
+        {
+          "startTime": "2026-09-03T06:58:42.909+09:00"
+        }
+      ]
+    }
   },
   "lastPomodoroDate": "2026-09-02",
   "pomodoroHistory": [
