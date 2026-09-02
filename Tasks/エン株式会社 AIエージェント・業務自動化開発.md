@@ -1,5 +1,5 @@
 ---
-status: todo
+status: doing
 projects:
   - "[[案件管理]]"
 agent: ギークス
@@ -12,7 +12,7 @@ hours: 140-180
 interview_count: 1
 priority: medium
 dateCreated: 2026-09-02T09:57:00+09:00
-dateModified: 2026-09-02T10:10:00+09:00
+dateModified: 2026-09-02T10:43:00+09:00
 tags:
   - task
   - job
@@ -58,6 +58,9 @@ tags:
 - 商談回数: 1回
 - 目安作業時間: 10:00〜19:00
 - 服装: 私服
+
+## 選考メモ
+- 2026-09-02: エントリー希望をギークスへ連絡。Python実務経験は約1年9か月で、必須の3年以上に満たないことを明示し、先方確認を依頼。
 
 ## 会社情報
 https://corp.en-japan.com/index.html
