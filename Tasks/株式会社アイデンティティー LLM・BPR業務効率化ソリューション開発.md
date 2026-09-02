@@ -1,5 +1,5 @@
 ---
-status: todo
+status: doing
 projects:
   - "[[案件管理]]"
 agent: ギークス
@@ -12,7 +12,7 @@ hours: 140-180
 interview_count: 1
 priority: medium
 dateCreated: 2026-09-02T09:57:00+09:00
-dateModified: 2026-09-02T10:10:00+09:00
+dateModified: 2026-09-02T10:43:00+09:00
 tags:
   - task
   - job
