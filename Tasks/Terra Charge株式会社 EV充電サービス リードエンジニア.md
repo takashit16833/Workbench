@@ -4,15 +4,15 @@ projects:
   - "[[案件管理]]"
 agent: ギークス
 company: Terra Charge株式会社
-startDate: 2026-10-01
-workStyle: 週3日出社推奨・リモート相談可
+start_date: 2026-10-01
+work_style: 週3日出社推奨・リモート相談可
 location: 高輪ゲートウェイ
 rate: スキル見合い
 hours: 140-180
-interviewCount: 1
+interview_count: 1
 priority: medium
 dateCreated: 2026-09-02T09:57:00+09:00
-dateModified: 2026-09-02T09:57:00+09:00
+dateModified: 2026-09-02T10:10:00+09:00
 tags:
   - task
   - job
