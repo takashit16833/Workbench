@@ -4,15 +4,15 @@ projects:
   - "[[案件管理]]"
 agent: ギークス
 company: 株式会社アイデンティティー
-startDate: 2026-09-01
-workStyle: フルリモート
+start_date: 2026-09-01
+work_style: フルリモート
 location: 渋谷
 rate: スキル見合い
 hours: 140-180
-interviewCount: 1
+interview_count: 1
 priority: medium
 dateCreated: 2026-09-02T09:57:00+09:00
-dateModified: 2026-09-02T09:57:00+09:00
+dateModified: 2026-09-02T10:10:00+09:00
 tags:
   - task
   - job
