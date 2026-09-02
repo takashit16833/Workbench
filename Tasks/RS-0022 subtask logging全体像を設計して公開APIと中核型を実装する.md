@@ -2,7 +2,7 @@
 status: doing
 priority: medium
 dateCreated: 2026-08-27T08:12:00+09:00
-dateModified: 2026-09-03T06:12:08.940+09:00
+dateModified: 2026-09-03T06:58:00+09:00
 tags:
   - task
 projects:
@@ -109,9 +109,11 @@ Workbenchでは次を作業用ビューとして使う。
 - `withTrace`と`withSpan`は同じ`SpanName`を使う。`withTrace`へ渡す名称もroot spanの名称なので、別の`TraceName`型は導入しない。
 - trace外で`withSpan spanName action`が呼ばれた場合はspanを作らず`action`だけを実行して結果をそのまま返す。trace外の`observeResult`も反映対象がないため何も行わない。Tracing側の都合でApplication / Feature本来の結果型を変更しない。
 - Application / Featureは`Tracing`を直接利用せず、`Observability`と`Logging`を利用する。Observability RuntimeはTracingを内部依存として持ち、Logging Runtimeには`currentTraceContext`取得能力だけを渡す構成を正本へ反映済み。
+- `RAGScope.Observability`の公開APIを確定し、`Observability m`は`withTrace :: forall failure result. ToErrorType failure => SpanName -> m (Either failure result) -> m (Either failure result)`と`withSpan :: forall failure result. ToErrorType failure => SpanName -> m (Either failure result) -> m (Either failure result)`の2能力だけを公開する。`SpanName`はTracing所有の型をObservabilityから再exportする。
+- Observability RuntimeはTracingの`withTrace` / `withSpan` scope内でactionを実行し、scope終了前にその`Either`を`observeResult`へ渡してから同じ結果を返す。`observeResult`はApplication / Featureへ独立公開しない。成功しか返さない任意の`m a`用APIは現時点では追加しない。
 - current Trace Contextは`AppEnv`の固定値ではなく、Tracing具体実装が`withTrace` / `withSpan`の実行scopeごとに管理する。並行するトップレベル操作間でcurrent Trace Contextを混在させない。
 - `makeOpenTelemetryTracing`はTracing実装の初期化だけを行い、実際のtraceは各トップレベル操作の境界で`withTrace`によって開始する。
-- 次は、確定したTracing Portを前提に`RAGScope.Observability`の正確な公開Haskell APIと、Tracingの`withTrace` / `withSpan` / `observeResult`をObservability Runtimeがどの境界で組み合わせるかを決める。
+- 次は、確定したTracing / Observability APIを前提に、ObservabilityのCabal package・library・module配置と`build-depends`を確定し、公開APIとRuntimeを実装へ落とす。
 
 ## このSubtaskで行うこと
 
