@@ -1,5 +1,5 @@
 ---
-status: todo
+status: doing
 projects:
   - "[[案件管理]]"
 agent: ギークス
@@ -12,7 +12,7 @@ hours: 140-180
 interview_count: 1
 priority: medium
 dateCreated: 2026-09-02T09:57:00+09:00
-dateModified: 2026-09-02T10:10:00+09:00
+dateModified: 2026-09-02T10:43:00+09:00
 tags:
   - task
   - job
@@ -61,6 +61,9 @@ EV充電インフラサービス「Terra Charge」のシニア／リードバッ
 - 商談回数: 1回（CTO面談）
 - 目安作業時間: 9:00〜18:00
 - 服装: 私服
+
+## 選考メモ
+- 2026-09-02: 必須条件との差を明示したうえでエントリー希望をギークスへ連絡。Python・AWSの実務年数と英語力は未達だが、要件整理、API設計、バックエンド開発、GCPサーバーレス構成、Terraform、設計・アーキテクチャ面の経験を評価いただけるかチャレンジする方針。
 
 ## 会社情報
 https://terra-charge.co.jp/
