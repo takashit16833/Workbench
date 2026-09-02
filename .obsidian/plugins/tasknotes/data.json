@@ -3750,6 +3750,64 @@
           "endTime": "2026-09-02T11:43:50.223+09:00"
         }
       ]
+    },
+    {
+      "id": "1788317341684",
+      "startTime": "2026-09-02T11:49:01.684+09:00",
+      "endTime": "2026-09-02T12:14:01.684+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "taskPath": "Tasks/RS-0022 subtask logging全体像を設計して公開APIと中核型を実装する.md",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-09-02T11:49:01.684+09:00",
+          "endTime": "2026-09-02T12:14:01.684+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1788318842773",
+      "startTime": "2026-09-02T12:14:02.773+09:00",
+      "endTime": "2026-09-02T12:29:02.773+09:00",
+      "plannedDuration": 15,
+      "type": "long-break",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-09-02T12:14:02.773+09:00",
+          "endTime": "2026-09-02T12:29:02.773+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1788335000217",
+      "startTime": "2026-09-02T16:43:20.217+09:00",
+      "endTime": "2026-09-02T17:08:20.217+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "taskPath": "Tasks/RS-0022 subtask logging全体像を設計して公開APIと中核型を実装する.md",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-09-02T16:43:20.217+09:00",
+          "endTime": "2026-09-02T17:08:20.217+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1788336501281",
+      "startTime": "2026-09-02T17:08:21.281+09:00",
+      "endTime": "2026-09-02T17:13:21.281+09:00",
+      "plannedDuration": 5,
+      "type": "short-break",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-09-02T17:08:21.281+09:00",
+          "endTime": "2026-09-02T17:13:21.281+09:00"
+        }
+      ]
     }
   ],
   "lastSelectedTaskPath": "Tasks/RS-0022 subtask logging全体像を設計して公開APIと中核型を実装する.md",
