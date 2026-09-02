@@ -2,7 +2,7 @@
 status: doing
 priority: medium
 dateCreated: 2026-08-27T08:12:00+09:00
-dateModified: 2026-09-03T05:47:08.859+09:00
+dateModified: 2026-09-03T06:53:12+09:00
 tags:
   - task
 projects:
@@ -81,14 +81,15 @@ timeEntries:
 
 ## 正本と作業用ビュー
 
-作業範囲・完了条件はRAGScope正本のRS-0022 Ticketを基準にする。Operation / UseCase / ErrorTypeの現在設計は次を参照する。
+作業範囲・完了条件はRAGScope正本のRS-0022 Ticketを基準にする。Operation / UseCase / ErrorTypeと、実行追跡・構造化ログの現在設計は次を参照する。
 
 - `project-docs/design/利用者操作基本設計.md`
 - `project-docs/design/利用者操作詳細設計.md`
 - `project-docs/design/ユースケース詳細設計.md`
 - `project-docs/design/ErrorType変換詳細設計.md`
-- `project-docs/design/logging/実行追跡・構造化ログ契約設計.md`
-- `project-docs/design/logging/RAGScopeアプリケーション実行追跡構成設計.md`
+- `project-docs/design/実行追跡・構造化ログ契約設計.md`
+- `project-docs/design/tracing/RAGScopeアプリケーション実行追跡詳細設計.md`
+- `project-docs/design/logging/RAGScopeアプリケーション構造化ログイベント変換詳細設計.md`
 
 Workbenchでは次を作業用ビューとして使う。
 
@@ -101,6 +102,8 @@ Workbenchでは次を作業用ビューとして使う。
 
 ## 現在地
 
+- 実行追跡・構造化ログの文書構成を整理し、システム共通契約を`project-docs/design/実行追跡・構造化ログ契約設計.md`、RAGScopeアプリケーション固有の実行追跡詳細を`design/tracing/`、構造化ログ固有の詳細を`design/logging/`へ分離した。旧配置の重複設計書は削除済み。
+- AI推論サービス側のplanned RS-0018を現在契約へ更新し、文書・質問Embeddingに関係するplanned Ticketも旧`execution_id`前提からTrace Contextによる同一trace継続へ同期した。
 - Tracing Portの公開Haskell APIを確定し、正本へ反映済み。`RAGScope.Tracing`は`SpanName`と`Tracing m`を公開し、`Tracing m`は`withTrace :: forall a. SpanName -> m a -> m a`、`withSpan :: forall a. SpanName -> m a -> m a`、`observeResult :: forall failure result. ToErrorType failure => Either failure result -> m ()`、`currentTraceContext :: m (Maybe TraceContext)`の4能力を持つ。
 - `withTrace`と`withSpan`は同じ`SpanName`を使う。`withTrace`へ渡す名称もroot spanの名称なので、別の`TraceName`型は導入しない。
 - trace外で`withSpan spanName action`が呼ばれた場合はspanを作らず`action`だけを実行して結果をそのまま返す。trace外の`observeResult`も反映対象がないため何も行わない。Tracing側の都合でApplication / Feature本来の結果型を変更しない。
