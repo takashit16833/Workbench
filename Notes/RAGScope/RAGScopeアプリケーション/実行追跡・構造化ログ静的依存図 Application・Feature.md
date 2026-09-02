@@ -18,7 +18,7 @@ created: 2026-09-01
 
 OpenTelemetryによるTracing Portの具体実装は、`ragscope` package内のprivate `ragscope-tracing-otel` libraryにある`RAGScope.Application.Tracing.OpenTelemetry`へ置く。このmoduleだけがOpenTelemetry SDKへ直接依存する。
 
-`OperationFailure`はApplicationで共通に使う型として確定しているが、正確なmodule名は未確定。Observability公開APIをFeature / Application / Interfaceごとにどう分けるかも未確定。
+`OperationFailure`はApplicationで共通に使う型として確定しているが、正確なmodule名は未確定。Observabilityは`RAGScope.Observability`を利用API、`RAGScope.Observability.Runtime.makeObservability`をcomposition用APIとする。Feature側にはObservability mainだけを許可し、Observability `runtime`とTracingへの直接依存を持たせない。
 
 ```mermaid
 flowchart LR
@@ -43,8 +43,8 @@ flowchart LR
         end
     end
 
-    obs["RAGScope.Observability"]
-    runner["RAGScope.Observability.Runner"]
+    obs["RAGScope.Observability<br/>withTrace / withSpan"]
+    obs_runtime["RAGScope.Observability.Runtime<br/>makeObservability"]
     logging["RAGScope.Logging"]
     write["RAGScope.Logging.Write"]
     context["RAGScope.Tracing.Context"]
@@ -66,11 +66,11 @@ flowchart LR
 
     feature_usecase -->|event型| feature_event
     feature_usecase -->|failure型| feature_failure
-    feature_usecase -->|emit / withSpan| obs
+    feature_usecase -->|withSpan| obs
     feature_failure -->|ErrorType / ToErrorType| error_type
 
     app_obs -->|Observability API| obs
-    app_obs -->|Operation / child spanの実行境界| runner
+    app_obs -->|makeObservability| obs_runtime
     app_obs -->|ToLogSpec| logging
     app_obs -->|event + 任意のTraceContext| write
     app_obs -->|trace内のTraceContext| context
@@ -87,7 +87,7 @@ flowchart LR
 
     class app_exec,interface_op,operation_failure,feature_usecase,feature_event,feature_failure,feature_logging public
     class app_obs,app_instances,otel_adapter private
-    class obs,runner,logging,write,context,tracing,error_type,sdk outside
+    class obs,obs_runtime,logging,write,context,tracing,error_type,sdk outside
 
     style pkg_ragscope fill:transparent,stroke:#153A75,color:#4C9EEB,stroke-width:2px
     style app fill:transparent,stroke:#8A5EC0,color:#B07CFF,stroke-width:2px
