@@ -2,7 +2,7 @@
 status: doing
 priority: medium
 dateCreated: 2026-08-27T08:12:00+09:00
-dateModified: 2026-09-03T10:12:00+09:00
+dateModified: 2026-09-03T10:46:20+09:00
 tags:
   - task
 projects:
@@ -80,6 +80,7 @@ timeEntries:
 - RAGScopeアプリケーションから見たlogging・tracing・observabilityの責務、公開API、module境界、依存方向を現在契約から確定する
 - `1利用者操作 = 1 trace`、UseCase子span、trace内外ログを扱う全体構造を、後続実装Subtaskが追加設計なしで着手できる粒度まで正本へ反映する
 - `Logger m event`・`Contravariant`・`event -> LogSpec`純粋変換、Runtime、Sink、JSON / SQLite外部表現の責務境界を確定する
+- Feature / UseCaseはApplication全体の`AppEnv`を受け取らず、Feature所有の依存recordから自身に必要な能力だけを受け取る境界を確定する
 - logging failureを`OperationResult`から分離し、`record`からOperation / Featureへtyped resultとして返さない境界と、Logging内部でのfailure通知・保持境界を確定する
 - Tracing / Observabilityの公開APIとCabal package・library・moduleの責務、許可する直接依存を確定する
 - 旧`ExecutionId`・`EventId`・`EventContext`・`OperationName`・通常/失敗イベント直和などを現在設計の前提として残さない
@@ -117,6 +118,7 @@ Workbenchでは次を作業用ビューとして使う。
 - 公開Haskell APIとして必要な型・関数シグネチャと、それぞれの所有module。
 - Cabal package・library・moduleの境界、`exposed-modules` / `other-modules`へ落とせる公開範囲、許可する直接`build-depends`の方向。
 - Feature / Interface / Lifecycle eventの所有者と、各eventから共通logging表現へ変換する境界。
+- Feature / UseCaseへ渡す依存能力をFeature所有の依存recordへ閉じ、Application全体の環境をFeatureへ漏らさない境界。
 - `Logger m event`、`event -> LogSpec`、`Logger m LogSpec`、`LogRecord`の責務と、timestamp / component / optional Trace Contextを付加するRuntime境界。
 - trace内eventとtrace外eventを同じLogging基盤へ渡す公開APIと、Sink差し替え境界。
 - logging failureと`OperationResult`の関係、およびSink / Logging RuntimeのfailureをLogging内部で通知・保持する境界。
@@ -127,7 +129,7 @@ Workbenchでは次を作業用ビューとして使う。
 ## このSubtaskでは実装しない
 
 - `ragscope-error`、`ragscope-logging`、`ragscope-tracing`、`ragscope-observability`などのHaskellソースとCabal stanzaの実装。
-- `Logger m event`、`Contravariant` instance、event変換関数、`LogSpec`、`LogRecord`、Logging Runtime / Sinkのコード実装とテスト。
+- `Logger m event`、`Contravariant` instance、event変換関数、Feature所有の依存record、`LogSpec`、`LogRecord`、Logging Runtime / Sinkのコード実装とテスト。
 - `RAGScope.Tracing`、`RAGScope.Observability.Runtime`、OpenTelemetry Adapter、root span / UseCase spanのコード実装とテスト。
 - JSON serialization、stderr / memory Sink、Schema適合、SQLite migration・投影・復元の実装とテスト。
 - `OperationFailure`の正確なmodule / constructor、同期・非同期Exception、logging failureの内部通知・保持処理のコード実装とテスト。
@@ -140,8 +142,9 @@ Workbenchでは次を作業用ビューとして使う。
 - `ragscope-observability`はmain + `runtime`の2 libraryとし、`internal` libraryや`Runner` moduleを置かない設計で確定済み。
 - Operation / FeatureはObservabilityを利用しTracingへ直接依存しない。Application composition rootだけがTracing実装を直接扱い、Observability Runtime / Logging Runtimeを組み立てる。
 - Logging公開APIは`RAGScope.Logging`の`Logger m event`と`record`とし、`Contravariant`で`event -> LogSpec`と`Logger m LogSpec`からFeature別Loggerを組み立てる設計を正本へ反映済み。`ToLogSpec`、orphan instance、`LoggingInstances`、Logging用`RankNTypes`、`RAGScope.Logging.Write`は採用しない。
+- Feature / UseCaseが必要とする能力はFeature所有の依存recordへまとめ、Application全体の`AppEnv`をFeatureへ渡さない設計を正本へ反映済み。Feature別Loggerもこの依存recordを通して渡す。依存recordはFeature実行だけを表し、Operation全体やApplication全体の依存を表さない。
 - logging failureは`OperationResult`から分離し、`record`からOperation / Featureへtyped resultとして返さない設計を正本へ反映済み。利用者操作本体が成功していればlogging failureが発生しても`OperationSuccess`を維持し、利用者操作本体が失敗していればloggingの成否にかかわらず操作本体の`OperationFailure`を返す。
-- 次はFeature別Loggerを`AppEnv`へ直接持たせるかFeature単位の依存recordへまとめるかを決め、`LogSpec` / `LogRecord`の正確な型、Logging Runtime / Sink境界を具体化する。logging failureの内部通知・保持先は順序を前後させてもよいが、このSubtaskの完了前に必ず確定する。
+- 次はOperation側の依存をどの型でまとめるかを決め、その後`LogSpec` / `LogRecord`の正確な型、Logging Runtime / Sink境界を具体化する。Application全体の長寿命環境として`AppEnv`を導入するかどうかも、Operation依存と実際のApplication実行構造を確認して判断する。logging failureの内部通知・保持先は順序を前後させてもよいが、このSubtaskの完了前に必ず確定する。
 
 ## 後続Subtask
 
@@ -159,6 +162,7 @@ Workbenchでは次を作業用ビューとして使う。
 - package / library / moduleの責務と直接依存方向を、実際に必要な型・関数・値まで説明できる。
 - 後続Subtaskが新しい全体設計判断を行わず、確定済み設計をコード・Cabal設定・テストへ落とせる。
 - Logging公開API、中核型、Runtime、Sink、JSON / SQLite外部表現の責務境界が決まっている。
+- Feature / UseCaseがApplication全体の`AppEnv`を直接受けず、Feature所有の依存recordから自身に必要な能力だけを受け取る依存境界が正本から一意に追える。
 - logging failureが`OperationResult`を変更しないことと、Sink / Logging RuntimeのfailureをどのLogging内部境界へ通知・保持するかが正本から一意に追える。
 - Tracing / Observabilityの公開API、current Trace Context管理、OpenTelemetry Adapterの配置、Feature / Application composition rootの依存境界が決まっている。
 - Workbenchの概要図・静的依存図が正本の現在設計と矛盾していない。
