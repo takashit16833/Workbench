@@ -14,39 +14,34 @@ created: 2026-09-01
 
 色は、青系が公開library / module、紫系が非公開library / module、低彩度の濃色が別packageまたは外部package、青灰色の外枠がCabal packageを表す。
 
-traceに属するログと、traceに属さないログは同じLogging基盤を使う。`TraceContext`は`LogRecord`に全体として付くか付かないかのどちらかとし、TraceId / SpanIdの片方だけを持つ状態は作らない。
+traceに属するログと、traceに属さないログは同じ`record`を使う。Logging Runtimeは記録時にcurrent Trace Contextを取得し、`TraceContext`を`LogRecord`へ全体として付けるか、付けないかのどちらかにする。
 
 ```mermaid
 flowchart LR
     subgraph pkg_logging["ragscope-logging"]
         subgraph main_lib["main"]
-            write["RAGScope.Logging.Write<br/>traceの有無にかかわらず受け付ける<br/>API分割は未確定"]
+            logger["RAGScope.Logging<br/>Logger m event / record<br/>Contravariant instance"]
         end
-
         subgraph internal_lib["internal"]
-            runtime["RAGScope.Logging.Runtime<br/>LogSpec + 実行時情報 → LogRecord"]
+            runtime["RAGScope.Logging.Runtime<br/>Logger m LogSpecを生成<br/>LogSpec + 実行時情報 → LogRecord"]
             sink["RAGScope.Logging.Sink"]
             json["RAGScope.Logging.JSON"]
             sqlite["RAGScope.Logging.SQLite"]
         end
-
         subgraph core_lib["core"]
-            contract["RAGScope.Logging<br/>ToLogSpec / LogSpec / LogRecord / LogValue<br/>LogRecord: TraceContextは任意"]
+            contract["Logging core<br/>LogSpec / LogRecord / LogValue<br/>LogRecord: TraceContextは任意"]
         end
     end
-
     context["RAGScope.Tracing.Context<br/>TraceContext（任意）"]
+    contravariant["contravariant"]
     aeson["aeson"]
     sqlite_lib["SQLite library（未選定）"]
 
-    write -->|event / LogSpec + 任意のTraceContext| runtime
-    write -->|ToLogSpec / LogSpec| contract
-    write -->|任意のTraceContext| context
-
-    runtime -->|LogRecord| sink
+    logger -->|Contravariant instance| contravariant
+    runtime -->|Logger / record| logger
     runtime -->|LogSpec / LogRecord| contract
-    runtime -->|任意のTraceContext| context
-
+    runtime -->|current TraceContext| context
+    runtime -->|LogRecord| sink
     sink -->|LogRecord| contract
     json -->|LogRecord| contract
     json -->|JSONへ変換| aeson
@@ -57,11 +52,9 @@ flowchart LR
     classDef public fill:#052A59,stroke:#5EAFFF,color:#DDF0FF,stroke-width:2px
     classDef private fill:#211536,stroke:#8A5EC0,color:#DDF0FF,stroke-width:2px
     classDef outside fill:#001947,stroke:#316CBD,color:#A6CAFF,stroke-width:2px
-
-    class write,contract public
+    class logger,contract public
     class runtime,sink,json,sqlite private
-    class context,aeson,sqlite_lib outside
-
+    class context,contravariant,aeson,sqlite_lib outside
     style pkg_logging fill:transparent,stroke:#153A75,color:#4C9EEB,stroke-width:2px
     style main_lib fill:transparent,stroke:#2759AA,color:#7CBEFF,stroke-width:2px
     style internal_lib fill:transparent,stroke:#8A5EC0,color:#B07CFF,stroke-width:2px
