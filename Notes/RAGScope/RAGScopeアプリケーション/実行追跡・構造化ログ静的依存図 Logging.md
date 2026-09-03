@@ -12,11 +12,11 @@ created: 2026-09-01
 
 `ragscope-logging` package内のmodule間依存候補を示す。矢印 `A → B` は、AがBを必要とすることを表す。JSONやSQLiteなど外部形式に依存する処理はcoreへ入れない。
 
-正本で確定済みなのは、`RAGScope.Logging`が`Logger m event` / `record` / `Contravariant` instanceを公開すること、Logging coreが`EventName`、5値の`LogLevel`、`AttributeName`、再帰的`AttributeValue`、`Attributes`、`Timestamp`、`Component`、`LogSpec`、`LogRecord`を持つこと、Logging Runtimeが`Logger m LogSpec`を組み立ててcurrent Trace Contextを記録時に取得することである。Runtime / Sink / JSON / SQLiteの正確なmodule名とlibrary内配置はまだ固定していないため、図中では実装候補として示す。
+正本で確定済みなのは、`RAGScope.Logging`が`Logger m event` / `record` / `Contravariant` instanceを公開すること、Logging coreが`EventName`、5値の`LogLevel`、`AttributeName`、再帰的`AttributeValue`、`Attributes`、`Timestamp`、`Component`、`LogSpec`、`LogRecord`を持つこと、Logging Runtimeがminimum level filterを適用して`Logger m LogSpec`から`LogRecord`を完成すること、Sinkが完成済み`LogRecord`だけを受け取ることである。Runtime / Sink / JSON / SQLiteの正確なmodule名とlibrary内配置、Sink failureのAPIはまだ固定していないため、図中では実装候補として示す。
 
 色は、青系が公開library / module、紫系が非公開library / module、低彩度の濃色が別packageまたは外部package、青灰色の外枠がCabal packageを表す。
 
-traceに属するログと、traceに属さないログは同じ`record`を使う。Logging Runtimeは記録時にcurrent Trace Contextを取得し、`TraceContext`を`LogRecord`へ全体として付けるか、付けないかのどちらかにする。
+traceに属するログと、traceに属さないログは同じ`record`を使う。Logging Runtimeは`LogLevel`の`Ord`でminimum levelを先に判定し、通過した場合だけ時刻とcurrent Trace Contextを取得する。Application composition rootは`Tracing m`全体ではなく`currentTraceContext` actionだけをRuntimeへ渡し、Runtimeは`TraceContext`を`LogRecord`へ全体として付けるか、付けないかのどちらかにする。
 
 ```mermaid
 flowchart LR
@@ -25,8 +25,8 @@ flowchart LR
             logger["RAGScope.Logging<br/>Logger m event / record<br/>Contravariant instance"]
         end
         subgraph internal_lib["Runtime / Sink / 外部表現境界（候補）"]
-            runtime["Logging Runtime境界<br/>Logger m LogSpecを生成<br/>LogSpec + 実行時情報 → LogRecord<br/>module名未確定"]
-            sink["Sink境界<br/>module名未確定"]
+            runtime["Logging Runtime境界<br/>minimumLevel filter<br/>LogSpec + timestamp / component / current TraceContext → LogRecord<br/>module名未確定"]
+            sink["Sink境界<br/>完成済みLogRecordを出力・保存へ渡す<br/>failure API / module名未確定"]
             json["JSON投影<br/>module配置未確定"]
             sqlite["SQLite投影<br/>module配置未確定"]
         end
@@ -46,7 +46,7 @@ flowchart LR
     logger -->|Contravariant instance| contravariant
     runtime -->|Logger / record| logger
     runtime -->|LogSpec / LogRecord| contract
-    runtime -->|current TraceContext| context
+    runtime -->|m (Maybe TraceContext)| context
     runtime -->|LogRecord| sink
     sink -->|LogRecord| contract
     json -->|LogRecord| contract
