@@ -70,7 +70,7 @@ flowchart LR
     operation_failure -->|ErrorClassifier型| error_type
     operation_classifier -->|OperationFailureを分類| operation_failure
     operation_classifier -->|ErrorClassifier / classifyError| error_type
-    composition -->|Operation用Observabilityを構築| operation_classifier
+    composition -->|Operation用Classifierを利用| operation_classifier
 
     usecase_body -->|依存recordを受け取る| usecase_deps
     usecase_deps -->|UseCaseEvent型を参照| usecase_event
