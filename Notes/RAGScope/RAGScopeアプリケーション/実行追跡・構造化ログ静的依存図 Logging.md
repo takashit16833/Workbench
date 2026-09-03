@@ -10,7 +10,9 @@ created: 2026-09-01
 
 全体: [[実行追跡・構造化ログ静的依存図]]
 
-`ragscope-logging` package内のmodule間依存を示す。矢印 `A → B` は、AがBを必要とすることを表す。JSONやSQLiteなど外部形式に依存する処理はcoreへ入れない。
+`ragscope-logging` package内のmodule間依存候補を示す。矢印 `A → B` は、AがBを必要とすることを表す。JSONやSQLiteなど外部形式に依存する処理はcoreへ入れない。
+
+正本で確定済みなのは、`RAGScope.Logging`が`Logger m event` / `record` / `Contravariant` instanceを公開すること、Feature側の純粋変換が参照する共通`LogSpec`をLogging側が提供すること、Logging Runtimeが`Logger m LogSpec`を組み立ててcurrent Trace Contextを記録時に取得することである。Runtime / Sink / JSON / SQLiteの正確なmodule名とlibrary内配置はまだ固定していないため、図中では実装候補として示す。
 
 色は、青系が公開library / module、紫系が非公開library / module、低彩度の濃色が別packageまたは外部package、青灰色の外枠がCabal packageを表す。
 
@@ -22,11 +24,11 @@ flowchart LR
         subgraph main_lib["main"]
             logger["RAGScope.Logging<br/>Logger m event / record<br/>Contravariant instance"]
         end
-        subgraph internal_lib["internal"]
-            runtime["RAGScope.Logging.Runtime<br/>Logger m LogSpecを生成<br/>LogSpec + 実行時情報 → LogRecord"]
-            sink["RAGScope.Logging.Sink"]
-            json["RAGScope.Logging.JSON"]
-            sqlite["RAGScope.Logging.SQLite"]
+        subgraph internal_lib["Runtime / Sink / 外部表現境界（候補）"]
+            runtime["Logging Runtime境界<br/>Logger m LogSpecを生成<br/>LogSpec + 実行時情報 → LogRecord<br/>module名未確定"]
+            sink["Sink境界<br/>module名未確定"]
+            json["JSON投影<br/>module配置未確定"]
+            sqlite["SQLite投影<br/>module配置未確定"]
         end
         subgraph core_lib["core"]
             contract["Logging core<br/>LogSpec / LogRecord / LogValue<br/>LogRecord: TraceContextは任意"]
