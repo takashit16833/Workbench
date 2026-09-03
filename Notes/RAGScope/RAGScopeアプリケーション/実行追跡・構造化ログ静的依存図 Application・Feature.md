@@ -16,6 +16,8 @@ created: 2026-09-01
 
 `RAGScope.<Feature>.Logging`はFeature eventから`LogSpec`への名前付き純粋関数を定義する。`ToLogSpec`型クラスとorphan instanceは使わず、`RAGScope.Application.LoggingInstances`も置かない。Application composition rootはこの関数と`Logger m LogSpec`を`contramap`で合成する。
 
+Feature / UseCaseが実行時に必要とする能力はFeature所有の依存recordへまとめる。正確な型名・module名は未確定なので図では`Feature所有の依存record`とだけ表す。Application composition rootがこのrecordを構築し、Feature / UseCaseはApplication全体の`AppEnv`を受け取らない。UseCaseが`withSpan`や`record`を実際に呼ぶためのObservability / Loggingへの静的import依存と、依存recordによる値の受け渡しは別に示す。
+
 OpenTelemetryによるTracing Portの具体実装は、`ragscope` package内のprivate `ragscope-tracing-otel` libraryにある`RAGScope.Application.Tracing.OpenTelemetry`へ置く。このmoduleだけがOpenTelemetry SDKへ直接依存する。
 
 ```mermaid
@@ -23,12 +25,13 @@ flowchart LR
     subgraph pkg_ragscope["ragscope"]
         subgraph app["ragscope-application"]
             app_exec["RAGScope.Application.Execution<br/>Operationを実行<br/>Either OperationFailure result"]
-            composition["Application composition root<br/>ObservabilityとFeature別Loggerを組み立てる"]
+            composition["Application composition root<br/>Observability / Feature別Logger / Feature依存recordを組み立てる"]
             interface_op["利用インターフェースのOperation<br/>例: DenseSearchOperation"]
             operation_failure["Application共通のOperationFailure<br/>ToErrorType failure =&gt; failure を保持"]
         end
         subgraph feature_lib["ragscope-features"]
             feature_usecase["RAGScope.&lt;Feature&gt;.UseCase"]
+            feature_deps["Feature所有の依存record<br/>正確な型名 / module名は未確定"]
             feature_event["RAGScope.&lt;Feature&gt;.Event"]
             feature_failure["RAGScope.&lt;Feature&gt;.Failure<br/>&lt;Feature&gt;Failure / ToErrorType instance"]
             feature_logging["RAGScope.&lt;Feature&gt;.Logging<br/>event → LogSpec"]
@@ -51,19 +54,24 @@ flowchart LR
     app_exec -->|本番用の実行を任せる| composition
     app_exec -->|Operationを実行| interface_op
     composition -->|Feature変換を利用| feature_logging
+    composition -->|依存recordを構築| feature_deps
     composition -->|Logger / record| logger
     composition -->|Logger m LogSpec| logging_runtime
     composition -->|contramap| contravariant
     feature_logging -->|Featureのevent型| feature_event
     feature_logging -->|LogSpec| logspec
-    interface_op -->|UseCaseを呼ぶ| feature_usecase
+    interface_op -->|依存recordと入力を渡してUseCaseを呼ぶ| feature_usecase
     interface_op -->|Logger m InterfaceEvent| logger
     interface_op -->|OperationFailure failureを構築| operation_failure
     operation_failure -->|ToErrorType / toErrorType| error_type
+    feature_usecase -->|依存recordを受け取る| feature_deps
+    feature_deps -->|FeatureEvent型を参照| feature_event
+    feature_deps -->|Observabilityを保持| obs
+    feature_deps -->|Logger m FeatureEventを保持| logger
     feature_usecase -->|event型| feature_event
     feature_usecase -->|failure型| feature_failure
-    feature_usecase -->|withSpan| obs
-    feature_usecase -->|Logger m FeatureEvent| logger
+    feature_usecase -->|withSpanを呼ぶ| obs
+    feature_usecase -->|recordを呼ぶ| logger
     feature_failure -->|ErrorType / ToErrorType| error_type
     composition -->|Observability API| obs
     composition -->|makeObservability| obs_runtime
@@ -76,7 +84,7 @@ flowchart LR
     classDef public fill:#052A59,stroke:#5EAFFF,color:#DDF0FF,stroke-width:2px
     classDef private fill:#211536,stroke:#8A5EC0,color:#DDF0FF,stroke-width:2px
     classDef outside fill:#001947,stroke:#316CBD,color:#A6CAFF,stroke-width:2px
-    class app_exec,interface_op,operation_failure,feature_usecase,feature_event,feature_failure,feature_logging public
+    class app_exec,interface_op,operation_failure,feature_usecase,feature_deps,feature_event,feature_failure,feature_logging public
     class composition,otel_adapter private
     class obs,obs_runtime,logger,logspec,logging_runtime,context,tracing,error_type,contravariant,sdk outside
     style pkg_ragscope fill:transparent,stroke:#153A75,color:#4C9EEB,stroke-width:2px
