@@ -2,7 +2,7 @@
 status: doing
 priority: medium
 dateCreated: 2026-08-27T08:12:00+09:00
-dateModified: 2026-09-03T07:37:11+09:00
+dateModified: 2026-09-03T09:31:23+09:00
 tags:
   - task
 projects:
@@ -79,7 +79,7 @@ timeEntries:
 
 - RAGScopeアプリケーションから見たlogging・tracing・observabilityの責務、公開API、module境界、依存方向を現在契約から確定する
 - `1利用者操作 = 1 trace`、UseCase子span、trace内外ログを扱う全体構造を、後続実装Subtaskが追加設計なしで着手できる粒度まで正本へ反映する
-- loggingのevent→`LogSpec`→`LogRecord`、Runtime、Sink、JSON / SQLite外部表現の責務境界を確定する
+- `Logger m event`・`Contravariant`・`event -> LogSpec`純粋変換、Runtime、Sink、JSON / SQLite外部表現の責務境界を確定する
 - Tracing / Observabilityの公開APIとCabal package・library・moduleの責務、許可する直接依存を確定する
 - 旧`ExecutionId`・`EventId`・`EventContext`・`OperationName`・通常/失敗イベント直和などを現在設計の前提として残さない
 
@@ -116,7 +116,7 @@ Workbenchでは次を作業用ビューとして使う。
 - 公開Haskell APIとして必要な型・関数シグネチャと、それぞれの所有module。
 - Cabal package・library・moduleの境界、`exposed-modules` / `other-modules`へ落とせる公開範囲、許可する直接`build-depends`の方向。
 - Feature / Interface / Lifecycle eventの所有者と、各eventから共通logging表現へ変換する境界。
-- `ToLogSpec -> LogSpec -> LogRecord`の責務、timestamp / component / optional Trace Contextを付加するRuntime境界。
+- `Logger m event`、`event -> LogSpec`、`Logger m LogSpec`、`LogRecord`の責務と、timestamp / component / optional Trace Contextを付加するRuntime境界。
 - trace内eventとtrace外eventを同じLogging基盤へ渡す公開APIと、Sink差し替え境界。
 - JSON / SQLiteを同じ`LogRecord`から独立して投影する責務境界。
 - Operation root span、UseCase子span、Tracing / Observability公開境界、current Trace Contextの管理責務。
@@ -125,7 +125,7 @@ Workbenchでは次を作業用ビューとして使う。
 ## このSubtaskでは実装しない
 
 - `ragscope-error`、`ragscope-logging`、`ragscope-tracing`、`ragscope-observability`などのHaskellソースとCabal stanzaの実装。
-- `ToLogSpec`、`LogSpec`、`LogRecord`、Logging Runtime / Sinkのコード実装とテスト。
+- `Logger m event`、`Contravariant` instance、event変換関数、`LogSpec`、`LogRecord`、Logging Runtime / Sinkのコード実装とテスト。
 - `RAGScope.Tracing`、`RAGScope.Observability.Runtime`、OpenTelemetry Adapter、root span / UseCase spanのコード実装とテスト。
 - JSON serialization、stderr / memory Sink、Schema適合、SQLite migration・投影・復元の実装とテスト。
 - `OperationFailure`の正確なmodule / constructor、同期・非同期Exception、logging failureとの最終結果合成のコード実装とテスト。
@@ -137,7 +137,8 @@ Workbenchでは次を作業用ビューとして使う。
 - `RAGScope.Observability`は`withTrace` / `withSpan`だけを公開し、Tracingの`observeResult`はObservability Runtime内部でscope終了前に適用する設計で確定済み。
 - `ragscope-observability`はmain + `runtime`の2 libraryとし、`internal` libraryや`Runner` moduleを置かない設計で確定済み。
 - Operation / FeatureはObservabilityを利用しTracingへ直接依存しない。Application composition rootだけがTracing実装を直接扱い、Observability Runtime / Logging Runtimeを組み立てる。
-- 次は構造化ログ側の公開API・中核型・Runtime / Sink境界を同じ粒度まで確定し、このSubtaskの設計を完了させる。
+- Logging公開APIは`RAGScope.Logging`の`Logger m event`と`record`とし、`Contravariant`で`event -> LogSpec`と`Logger m LogSpec`からFeature別Loggerを組み立てる設計を正本へ反映済み。`ToLogSpec`、orphan instance、`LoggingInstances`、Logging用`RankNTypes`、`RAGScope.Logging.Write`は採用しない。
+- 次はFeature別Loggerを`AppEnv`へ直接持たせるかFeature単位の依存recordへまとめるかを決め、`LogSpec` / `LogRecord`の正確な型、Logging Runtime / Sink境界、logging failureの通知とOperation結果との関係を確定する。
 
 ## 後続Subtask
 
