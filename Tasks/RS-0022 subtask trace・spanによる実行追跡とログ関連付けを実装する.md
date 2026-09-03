@@ -2,7 +2,7 @@
 status: waiting
 priority: medium
 dateCreated: 2026-08-27T08:12:00+09:00
-dateModified: 2026-09-03T07:37:11+09:00
+dateModified: 2026-09-03T11:31:04+09:00
 tags:
   - task
 projects:
@@ -46,7 +46,7 @@ Tracing Portは`ragscope-tracing` packageの`RAGScope.Tracing`、Trace Context�
 - 子spanの失敗が親へ伝播しただけでは同じ失敗ログを階層ごとに重複記録しない構造になっている
 - current Trace Contextを実行scopeごとに管理し、並行するトップレベル操作間で混在させない
 - private `ragscope-tracing-otel`の`RAGScope.Application.Tracing.OpenTelemetry`が`RAGScope.Tracing`を実装し、OpenTelemetry SDKへの直接依存がこのlibraryだけに閉じている
-- Observability RuntimeとFeatureからOpenTelemetry Adapter / SDKをimportできないCabal依存になっている
+- Observability RuntimeとUseCaseからOpenTelemetry Adapter / SDKをimportできないCabal依存になっている
 - OpenTelemetry固有の型・制約をRAGScopeの公開APIへ不要に漏らしていない
 - Operation root span、UseCase子span、UseCase未呼び出し、Trace Context関連付け、`makeObservability`の結果観測順序を自動テストで確認できる
 - 関係するHaskellテストと品質検査が成功する

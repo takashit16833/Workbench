@@ -6,7 +6,7 @@ projects:
 created: 2026-09-01
 ---
 
-# 実行追跡・構造化ログ静的依存図 Application・Feature
+# 実行追跡・構造化ログ静的依存図 Application・UseCase
 
 全体: [[実行追跡・構造化ログ静的依存図]]
 
@@ -14,9 +14,9 @@ created: 2026-09-01
 
 色は、青系が公開module、紫系が非公開library / module、低彩度の濃色が別packageの公開moduleまたは外部package、青灰色の外枠がCabal packageを表す。
 
-`RAGScope.<Feature>.Logging`はFeature eventから`LogSpec`への名前付き純粋関数を定義する。`ToLogSpec`型クラスとorphan instanceは使わず、`RAGScope.Application.LoggingInstances`も置かない。Application composition rootはこの関数と`Logger m LogSpec`を`contramap`で合成する。
+`RAGScope.<UseCase>.Logging`はUseCase eventから`LogSpec`への名前付き純粋関数を定義する。`ToLogSpec`型クラスとorphan instanceは使わず、`RAGScope.Application.LoggingInstances`も置かない。Application composition rootはこの関数と`Logger m LogSpec`を`contramap`で合成する。
 
-Feature / UseCaseが実行時に必要とする能力はFeature所有の依存recordへまとめる。正確な型名・module名は未確定なので図では`Feature所有の依存record`とだけ表す。Application composition rootがこのrecordを構築し、Feature / UseCaseはApplication全体の`AppEnv`を受け取らない。UseCaseが`withSpan`や`record`を実際に呼ぶためのObservability / Loggingへの静的import依存と、依存recordによる値の受け渡しは別に示す。
+UseCaseが実行時に必要とする能力はUseCase所有の依存recordへまとめる。正確な型名・module名は未確定なので図では`UseCase所有の依存record`とだけ表す。Application composition rootがこのrecordを構築し、UseCaseはApplication全体の`AppEnv`を受け取らない。UseCaseが`withSpan`や`record`を実際に呼ぶためのObservability / Loggingへの静的import依存と、依存recordによる値の受け渡しは別に示す。
 
 OpenTelemetryによるTracing Portの具体実装は、`ragscope` package内のprivate `ragscope-tracing-otel` libraryにある`RAGScope.Application.Tracing.OpenTelemetry`へ置く。このmoduleだけがOpenTelemetry SDKへ直接依存する。
 
@@ -25,16 +25,16 @@ flowchart LR
     subgraph pkg_ragscope["ragscope"]
         subgraph app["ragscope-application"]
             app_exec["RAGScope.Application.Execution<br/>Operationを実行<br/>Either OperationFailure result"]
-            composition["Application composition root<br/>Observability / Feature別Logger / Feature依存recordを組み立てる"]
+            composition["Application composition root<br/>Observability / UseCase別Logger / UseCase依存recordを組み立てる"]
             interface_op["利用インターフェースのOperation<br/>例: DenseSearchOperation"]
             operation_failure["Application共通のOperationFailure<br/>ToErrorType failure =&gt; failure を保持"]
         end
-        subgraph feature_lib["ragscope-features"]
-            feature_usecase["RAGScope.&lt;Feature&gt;.UseCase"]
-            feature_deps["Feature所有の依存record<br/>正確な型名 / module名は未確定"]
-            feature_event["RAGScope.&lt;Feature&gt;.Event"]
-            feature_failure["RAGScope.&lt;Feature&gt;.Failure<br/>&lt;Feature&gt;Failure / ToErrorType instance"]
-            feature_logging["RAGScope.&lt;Feature&gt;.Logging<br/>event → LogSpec"]
+        subgraph usecase_lib["ragscope-use-cases"]
+            usecase_body["RAGScope.&lt;UseCase&gt;.UseCase"]
+            usecase_deps["UseCase所有の依存record<br/>正確な型名 / module名は未確定"]
+            usecase_event["RAGScope.&lt;UseCase&gt;.Event"]
+            usecase_failure["RAGScope.&lt;UseCase&gt;.Failure<br/>&lt;UseCase&gt;Failure / ToErrorType instance"]
+            usecase_logging["RAGScope.&lt;UseCase&gt;.Logging<br/>event → LogSpec"]
         end
         subgraph otel_adapter_lib["ragscope-tracing-otel"]
             otel_adapter["RAGScope.Application.Tracing.OpenTelemetry<br/>Tracing PortのOpenTelemetry実装"]
@@ -53,26 +53,26 @@ flowchart LR
 
     app_exec -->|本番用の実行を任せる| composition
     app_exec -->|Operationを実行| interface_op
-    composition -->|Feature変換を利用| feature_logging
-    composition -->|依存recordを構築| feature_deps
+    composition -->|UseCase変換を利用| usecase_logging
+    composition -->|依存recordを構築| usecase_deps
     composition -->|Logger / record| logger
     composition -->|Logger m LogSpec| logging_runtime
     composition -->|contramap| contravariant
-    feature_logging -->|Featureのevent型| feature_event
-    feature_logging -->|LogSpec| logspec
-    interface_op -->|依存recordと入力を渡してUseCaseを呼ぶ| feature_usecase
+    usecase_logging -->|UseCaseのevent型| usecase_event
+    usecase_logging -->|LogSpec| logspec
+    interface_op -->|依存recordと入力を渡してUseCaseを呼ぶ| usecase_body
     interface_op -->|Logger m InterfaceEvent| logger
     interface_op -->|OperationFailure failureを構築| operation_failure
     operation_failure -->|ToErrorType / toErrorType| error_type
-    feature_usecase -->|依存recordを受け取る| feature_deps
-    feature_deps -->|FeatureEvent型を参照| feature_event
-    feature_deps -->|Observabilityを保持| obs
-    feature_deps -->|Logger m FeatureEventを保持| logger
-    feature_usecase -->|event型| feature_event
-    feature_usecase -->|failure型| feature_failure
-    feature_usecase -->|withSpanを呼ぶ| obs
-    feature_usecase -->|recordを呼ぶ| logger
-    feature_failure -->|ErrorType / ToErrorType| error_type
+    usecase_body -->|依存recordを受け取る| usecase_deps
+    usecase_deps -->|UseCaseEvent型を参照| usecase_event
+    usecase_deps -->|Observabilityを保持| obs
+    usecase_deps -->|Logger m UseCaseEventを保持| logger
+    usecase_body -->|event型| usecase_event
+    usecase_body -->|failure型| usecase_failure
+    usecase_body -->|withSpanを呼ぶ| obs
+    usecase_body -->|recordを呼ぶ| logger
+    usecase_failure -->|ErrorType / ToErrorType| error_type
     composition -->|Observability API| obs
     composition -->|makeObservability| obs_runtime
     composition -->|Tracing Portの値| tracing
@@ -84,11 +84,11 @@ flowchart LR
     classDef public fill:#052A59,stroke:#5EAFFF,color:#DDF0FF,stroke-width:2px
     classDef private fill:#211536,stroke:#8A5EC0,color:#DDF0FF,stroke-width:2px
     classDef outside fill:#001947,stroke:#316CBD,color:#A6CAFF,stroke-width:2px
-    class app_exec,interface_op,operation_failure,feature_usecase,feature_deps,feature_event,feature_failure,feature_logging public
+    class app_exec,interface_op,operation_failure,usecase_body,usecase_deps,usecase_event,usecase_failure,usecase_logging public
     class composition,otel_adapter private
     class obs,obs_runtime,logger,logspec,logging_runtime,context,tracing,error_type,contravariant,sdk outside
     style pkg_ragscope fill:transparent,stroke:#153A75,color:#4C9EEB,stroke-width:2px
     style app fill:transparent,stroke:#8A5EC0,color:#B07CFF,stroke-width:2px
-    style feature_lib fill:transparent,stroke:#8A5EC0,color:#B07CFF,stroke-width:2px
+    style usecase_lib fill:transparent,stroke:#8A5EC0,color:#B07CFF,stroke-width:2px
     style otel_adapter_lib fill:transparent,stroke:#8A5EC0,color:#B07CFF,stroke-width:2px
 ```

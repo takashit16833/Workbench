@@ -12,7 +12,7 @@ created: 2026-09-01
 
 `ragscope-logging` package内のmodule間依存候補を示す。矢印 `A → B` は、AがBを必要とすることを表す。JSONやSQLiteなど外部形式に依存する処理はcoreへ入れない。
 
-正本で確定済みなのは、`RAGScope.Logging`が`Logger m event` / `record` / `Contravariant` instanceを公開すること、Feature側の純粋変換が参照する共通`LogSpec`をLogging側が提供すること、Logging Runtimeが`Logger m LogSpec`を組み立ててcurrent Trace Contextを記録時に取得することである。Runtime / Sink / JSON / SQLiteの正確なmodule名とlibrary内配置はまだ固定していないため、図中では実装候補として示す。
+正本で確定済みなのは、`RAGScope.Logging`が`Logger m event` / `record` / `Contravariant` instanceを公開すること、UseCase側の純粋変換が参照する共通`LogSpec`をLogging側が提供すること、Logging Runtimeが`Logger m LogSpec`を組み立ててcurrent Trace Contextを記録時に取得することである。Runtime / Sink / JSON / SQLiteの正確なmodule名とlibrary内配置はまだ固定していないため、図中では実装候補として示す。
 
 色は、青系が公開library / module、紫系が非公開library / module、低彩度の濃色が別packageまたは外部package、青灰色の外枠がCabal packageを表す。
 

@@ -2,7 +2,7 @@
 status: waiting
 priority: medium
 dateCreated: 2026-09-03T07:37:11+09:00
-dateModified: 2026-09-03T07:37:11+09:00
+dateModified: 2026-09-03T11:31:04+09:00
 tags:
   - task
 projects:
@@ -19,7 +19,7 @@ branch: RS-0022/implement-logging-core
 - 全体設計で確定した構造化ログ公開APIと中核型をHaskell / Cabalへ実装する
 - `ErrorType` / `ToErrorType`、event→`LogSpec`、`LogSpec`→`LogRecord`の責務境界をコードと型で表現する
 - trace内外を同じLogging公開APIで扱えるRuntime境界を実装し、Trace Contextの有無を組として保持する
-- Feature / ApplicationからLogging backendや外部表現へ直接依存できないCabal依存を実装する
+- UseCase / ApplicationからLogging backendや外部表現へ直接依存できないCabal依存を実装する
 - 後続のtrace・span実装とJSON / Sink実装が利用できるLogging中核境界をテストで固定する
 
 ## 目的
@@ -36,7 +36,7 @@ branch: RS-0022/implement-logging-core
 - timestamp / component / optional Trace Contextなどの実行時情報を`LogRecord`へ付加するRuntime境界。
 - trace内eventとtrace外eventを同じLogging公開APIから受け付ける境界。
 - Sinkへ`LogRecord`を渡す抽象境界。JSON / SQLite固有のserialization・永続化はこのSubtaskでは実装しない。
-- Feature / Interface / Lifecycle eventの所有側から共通loggingへ渡すために必要な最小のinstance / 接続境界。
+- UseCase / Interface / Lifecycle eventの所有側から共通loggingへ渡すために必要な最小のinstance / 接続境界。
 - 上記の型、変換、Runtime、依存方向を確認する自動テスト。
 
 ## このSubtaskでは実装しない
@@ -52,7 +52,7 @@ branch: RS-0022/implement-logging-core
 - 全体設計で確定したLogging公開APIと中核型がコード上の正本として存在する。
 - `ToLogSpec -> LogSpec -> LogRecord`の変換責務が型・module・テストから追える。
 - Trace Contextを持つログと持たないログを同じLogging基盤で扱え、`TraceId` / `SpanId`片方だけの内部状態を作らない。
-- Feature / ApplicationからJSON / SQLite backendやTracing具体実装へ不要に依存できないCabal構造になっている。
+- UseCase / ApplicationからJSON / SQLite backendやTracing具体実装へ不要に依存できないCabal構造になっている。
 - 後続の`trace・span`実装Subtaskがcurrent Trace Context取得能力をLogging Runtimeへ接続できる。
 - 後続のJSON / Sink Subtaskが同じ`LogRecord`を外部表現へ投影できる。
 - JSON / SQLite固有の型・依存・表現をLogging中核型へ持ち込んでいない。
