@@ -2,7 +2,7 @@
 status: doing
 priority: medium
 dateCreated: 2026-08-27T08:12:00+09:00
-dateModified: 2026-09-04T07:13:00+09:00
+dateModified: 2026-09-04T07:31:00+09:00
 tags:
   - task
 projects:
@@ -27,7 +27,7 @@ timeEntries:
     endTime: 2026-09-01T01:40:47.208Z
   - startTime: 2026-09-01T02:02:29.733Z
     description: Work session
-    endTime: 2026-09-01T02:27:40.577Z
+    endTime: 2026-09-01T02:27:29.797Z
   - startTime: 2026-09-01T03:05:43.442Z
     description: Work session
     endTime: 2026-09-01T03:30:43.504Z
@@ -156,7 +156,7 @@ Workbenchでは次を作業用ビューとして使う。
 - Logging中核型は`LogSpec = EventName + LogLevel + Maybe Text + Attributes`、`LogRecord = Timestamp + Component + Maybe TraceContext + LogSpec`とする。`LogLevel`は`debug` / `info` / `warn` / `error` / `fatal`の5値をこの順で`Ord`比較し、`Attributes`は`Map AttributeName AttributeValue`、`AttributeValue`は`Text` / `Scientific` / `Bool` / array / objectの再帰型とし、`null`相当を持たない設計を正本へ反映済み。
 - Logging Runtimeはminimum level filterをtimestamp / current Trace Context取得より前に適用し、通過した`LogSpec`へtimestamp / component / optional Trace Contextを付加して`LogRecord`を完成する。Application composition rootは`Tracing m`全体ではなく`currentTraceContext` actionだけをRuntimeへ渡す。Sinkは完成済み`LogRecord`だけを受け取り、具体的な出力・保存境界へ渡す設計を正本へ反映済み。
 - logging failureは`OperationResult`から分離し、`record`からOperation / UseCaseへtyped resultとして返さない設計を正本へ反映済み。
-- Sinkは`LogRecord -> m (Either LoggingFailure ())`でtyped failureをRuntimeへ返し、Runtimeは`Left`を通常Logger / Sinkとは独立した`LoggingFailureReporter`へ渡す。本番の最初のReporterはbest-effort direct stderrとし、Reporter自身の失敗は再通知・伝播せず、failureの蓄積・保持は現在要件としない設計を正本へ反映済み。
+- Sinkは`LogRecord -> m (Either LoggingFailure ())`でtyped failureをRuntimeへ返し、Runtimeは`Left`を通常Logger / Sinkとは独立した`LoggingFailureReporter`へ渡す。本番の最初のReporterはbest-effort direct stderrとし、診断出力を完遂できなかったことを新たな`LoggingFailure`として同じReporterへ再通知しない。Reporter実行中の同期・非同期Exceptionの扱いはException境界で未決定とし、failureの蓄積・保持は現在要件としない設計を正本へ反映済み。
 - `LoggingFailure`は現在Sinkの出力・保存失敗を表し、Clock / current Trace Context取得中のExceptionを含めるかは同期・非同期Exception境界へ分離して未決定とする。
 - 次は同期・非同期Exception境界を確定する。
 
