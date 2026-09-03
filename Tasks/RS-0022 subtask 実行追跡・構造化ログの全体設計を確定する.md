@@ -2,7 +2,7 @@
 status: doing
 priority: medium
 dateCreated: 2026-08-27T08:12:00+09:00
-dateModified: 2026-09-03T20:27:00+09:00
+dateModified: 2026-09-03T21:17:00+09:00
 tags:
   - task
 projects:
@@ -153,9 +153,10 @@ Workbenchでは次を作業用ビューとして使う。
 - 失敗eventの`error_type`は同じ名前付きClassifierを利用し、failureの詳細値を他のattributesへ反映する処理とは分離する。Classifierは詳細値を消去・代替しない。
 - UseCaseが必要とする能力はUseCase所有の依存recordへまとめ、Application全体の`AppEnv`をUseCaseへ渡さない。UseCase別`Observability m failure`とLoggerもこの依存recordを通して渡す。
 - OperationもOperation固有の依存recordから必要なruntime能力だけを受け取る。Application composition rootがUseCase依存recordをUseCase実行関数へ適用して依存を閉じ、その実行関数をOperation依存recordへ渡す。Classifierは所有moduleから静的に利用しruntime依存recordへ入れない。現在はApplication全体の`AppEnv`を導入しない。
-- Logging中核型は`LogSpec = EventName + LogLevel + Maybe Text + Attributes`、`LogRecord = Timestamp + Component + Maybe TraceContext + LogSpec`とする。`LogLevel`は`debug` / `info` / `warn` / `error` / `fatal`の5値、`Attributes`は`Map AttributeName AttributeValue`、`AttributeValue`は`Text` / `Scientific` / `Bool` / array / objectの再帰型とし、`null`相当を持たない設計を正本へ反映済み。
+- Logging中核型は`LogSpec = EventName + LogLevel + Maybe Text + Attributes`、`LogRecord = Timestamp + Component + Maybe TraceContext + LogSpec`とする。`LogLevel`は`debug` / `info` / `warn` / `error` / `fatal`の5値をこの順で`Ord`比較し、`Attributes`は`Map AttributeName AttributeValue`、`AttributeValue`は`Text` / `Scientific` / `Bool` / array / objectの再帰型とし、`null`相当を持たない設計を正本へ反映済み。
+- Logging Runtimeはminimum level filterをtimestamp / current Trace Context取得より前に適用し、通過した`LogSpec`へtimestamp / component / optional Trace Contextを付加して`LogRecord`を完成する。Application composition rootは`Tracing m`全体ではなく`currentTraceContext` actionだけをRuntimeへ渡す。Sinkは完成済み`LogRecord`だけを受け取り、具体的な出力・保存境界へ渡す設計を正本へ反映済み。
 - logging failureは`OperationResult`から分離し、`record`からOperation / UseCaseへtyped resultとして返さない設計を正本へ反映済み。
-- 次はLogging Runtime / Sink境界を具体化する。logging failureの内部通知・保持先はこのSubtaskの完了前に確定する。
+- 次はSink / Logging Runtimeのlogging failureをLogging内部でどこへ通知・保持するかを確定する。
 
 ## 後続Subtask
 
