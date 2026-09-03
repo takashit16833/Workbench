@@ -11,7 +11,7 @@ source: obsidian://open?vault=project-docs&file=project-management/milestones/v0
 blockedBy:
   - uid: "[[RS-0021 構造化ログJSON Schemaとfixtureを現在契約へ更新する]]"
     reltype: FINISHTOSTART
-branch: RS-0022/design-logging-architecture
+branch: feat/RS-0022-logging-redesign
 ---
 
 ## 実行方針
