@@ -541,20 +541,9 @@
   "enableDebugLogging": false,
   "lastSeenVersion": "4.12.3",
   "pomodoroState": {
-    "isRunning": true,
+    "isRunning": false,
     "timeRemaining": 1500,
-    "currentSession": {
-      "id": "1788397256058",
-      "startTime": "2026-09-03T10:00:56.058+09:00",
-      "plannedDuration": 25,
-      "type": "work",
-      "completed": false,
-      "activePeriods": [
-        {
-          "startTime": "2026-09-03T10:00:56.058+09:00"
-        }
-      ]
-    }
+    "nextSessionType": "work"
   },
   "lastPomodoroDate": "2026-09-02",
   "pomodoroHistory": [
@@ -3990,6 +3979,91 @@
         {
           "startTime": "2026-09-03T09:21:33.266+09:00",
           "endTime": "2026-09-03T09:26:33.266+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1788397256058",
+      "startTime": "2026-09-03T10:00:56.058+09:00",
+      "endTime": "2026-09-03T10:25:56.058+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-09-03T10:00:56.058+09:00",
+          "endTime": "2026-09-03T10:25:56.058+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1788398757137",
+      "startTime": "2026-09-03T10:25:57.137+09:00",
+      "endTime": "2026-09-03T10:30:57.137+09:00",
+      "plannedDuration": 5,
+      "type": "short-break",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-09-03T10:25:57.137+09:00",
+          "endTime": "2026-09-03T10:30:57.137+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1788399073713",
+      "startTime": "2026-09-03T10:31:13.713+09:00",
+      "endTime": "2026-09-03T10:56:13.713+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-09-03T10:31:13.713+09:00",
+          "endTime": "2026-09-03T10:56:13.713+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1788400574791",
+      "startTime": "2026-09-03T10:56:14.791+09:00",
+      "endTime": "2026-09-03T11:01:14.791+09:00",
+      "plannedDuration": 5,
+      "type": "short-break",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-09-03T10:56:14.791+09:00",
+          "endTime": "2026-09-03T11:01:14.791+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1788401184027",
+      "startTime": "2026-09-03T11:06:24.027+09:00",
+      "endTime": "2026-09-03T11:31:24.027+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "taskPath": "Tasks/RS-0022 subtask logging全体像を設計して公開APIと中核型を実装する.md",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-09-03T11:06:24.027+09:00",
+          "endTime": "2026-09-03T11:31:24.027+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1788403193515",
+      "startTime": "2026-09-03T11:39:53.515+09:00",
+      "endTime": "2026-09-03T11:54:53.515+09:00",
+      "plannedDuration": 15,
+      "type": "long-break",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-09-03T11:39:53.515+09:00",
+          "endTime": "2026-09-03T11:54:53.515+09:00"
         }
       ]
     }
