@@ -2,7 +2,7 @@
 status: doing
 priority: medium
 dateCreated: 2026-08-26T21:00:57+09:00
-dateModified: 2026-09-02T08:20:00+09:00
+dateModified: 2026-09-03T09:31:23+09:00
 tags:
   - task
 projects:
@@ -20,7 +20,7 @@ branch: RS-0022/design-logging-architecture
 - Workbenchでは現在地、次の行動、Subtask依存、実装候補、判断の経緯だけを管理する。
 - 全体構造は`Notes/RAGScope/RAGScopeアプリケーション/実行追跡・構造化ログ概要図.md`、実装検討は`実行追跡・構造化ログ設計ノート.md`、静的依存は`実行追跡・構造化ログ静的依存図.md`以下のMermaid図、判断履歴は`実行追跡・構造化ログ設計日誌.md`を使う。
 - Operation / UseCase / ErrorType / logging契約の決定済み内容はRAGScope正本の設計書を参照し、Workbench側へ別の現在仕様を作らない。
-- 現在実行中のSubtaskは`RS-0022 subtask logging全体像を設計して公開APIと中核型を実装する`。
+- 現在実行中のSubtaskは`RS-0022 subtask 実行追跡・構造化ログの全体設計を確定する`。
 - logging / tracing / observabilityの責務、公開API、Cabal依存、データの流れを先に確定し、その構造を基準に既存実装を置き換える。
 - `ragscope-tracing`はTracing PortとTrace Context契約だけを公開し、OpenTelemetry具体実装は`ragscope` package内のprivate `ragscope-tracing-otel`へ置く。OpenTelemetry SDKへ直接依存するのはこのprivate libraryだけとする。
 - `Observation`、`Result`、`AppError`など既存moduleは維持を前提にせず、後続のApplication実行・失敗境界Subtaskで必要性を判断する。
