@@ -2,7 +2,7 @@
 status: waiting
 priority: medium
 dateCreated: 2026-08-27T08:12:00+09:00
-dateModified: 2026-09-03T07:37:11+09:00
+dateModified: 2026-09-03T11:31:04+09:00
 tags:
   - task
 projects:
@@ -29,7 +29,7 @@ branch: RS-0022/redesign-execution-failure
 
 利用者操作全体の実行境界と`OperationSuccess`・`OperationFailure`の意味は、RAGScope正本の`project-docs/design/利用者操作基本設計.md`を正本とする。Haskellでの結果表現、共通`OperationFailure`が具体failureを保持する方法、UseCase failureの受け渡し、`ToErrorType OperationFailure`の処理は`project-docs/design/利用者操作詳細設計.md`を正本とする。このSubtaskではWorkbenchだけに新しいOperation設計を確定せず、正本に反映された現在設計を実装する。正確なconstructor構文・関数・moduleはコードとテストを機械可読な正本とする。
 
-UseCase実行結果は概念上`UseCaseResult = UseCaseSuccess | UseCaseFailure`とし、Haskell境界では`Either failure result`の`Right result`を`UseCaseSuccess`、`Left failure`を`UseCaseFailure`として扱う。`UseCaseFailure`は結果区分であり、`DenseSearchFailure`など具体的なUseCase固有failure型とは分ける。具体failure型はそのUseCaseを所有するFeatureが持つ。
+UseCase実行結果は概念上`UseCaseResult = UseCaseSuccess | UseCaseFailure`とし、Haskell境界では`Either failure result`の`Right result`を`UseCaseSuccess`、`Left failure`を`UseCaseFailure`として扱う。`UseCaseFailure`は結果区分であり、`DenseSearchFailure`など具体的なUseCase固有failure型とは分ける。具体failure型はそのUseCaseが所有し、`RAGScope.<UseCase>.Failure`へ置く。
 
 1回の利用者操作全体は概念上`OperationResult = OperationSuccess | OperationFailure`とし、必要な場合だけ内側に`UseCaseResult`を含む。Haskellの利用者操作境界は次の形とする。
 
@@ -49,7 +49,7 @@ data OperationFailure where
 
 UseCaseが`Left failure`を返した場合、Applicationは具体的な`failure`値を受け取った場所でUseCase span、失敗ログ、利用者向け結果など必要な処理を行い、利用者操作も失敗として終了する場合に`Left (OperationFailure failure)`を返す。UseCase前・UseCase後の通常failureも、その具体型を必要とする処理を終えた後に同じconstructorで包む。具体failureを先に`ErrorType`へ変換しない。
 
-`ToErrorType OperationFailure`は`OperationFailure failure`から中のfailure値を取り出して`toErrorType failure`を実行する。利用者操作ごとのfailure ADTや、Input / UseCase / Outputなど処理段階を表すconstructorは作らない。`OperationFailure`の定義はFeature固有failure型をimportせず、`ToErrorType`のために`RAGScope.ErrorType`へ依存する。
+`ToErrorType OperationFailure`は`OperationFailure failure`から中のfailure値を取り出して`toErrorType failure`を実行する。利用者操作ごとのfailure ADTや、Input / UseCase / Outputなど処理段階を表すconstructorは作らない。`OperationFailure`の定義はUseCase固有failure型をimportせず、`ToErrorType`のために`RAGScope.ErrorType`へ依存する。
 
 このSubtaskでは、上記の確定済み表現を前提に、`OperationFailure`の正確なmoduleとconstructor構文、Exception境界、logging failureとの最終結果合成を実装へ落とす。
 
@@ -61,12 +61,12 @@ Application / processの起動・終了など、利用者操作外のライフ�
 - 1回の利用者操作全体を`Either OperationFailure result`で表し、すべてのトップレベルな利用者操作が共通`OperationFailure`を使用している
 - `OperationFailure`が`ToErrorType` instanceを持つ具体failure値を保持し、利用者操作ごとのfailure ADTやInput / UseCase / Outputなど処理段階ごとのconstructorを必要としない
 - UseCaseの`Either failure result`について、`Right result`を`UseCaseSuccess`、`Left failure`を`UseCaseFailure`として扱い、これをOperation全体の結果と同一視せず内側の結果として受け取れる
-- `UseCaseFailure`という結果区分と、`DenseSearchFailure`などUseCase固有の具体failure型を同一視せず、具体failure型をそのUseCaseを所有するFeatureへ配置できる
+- `UseCaseFailure`という結果区分と、`DenseSearchFailure`などUseCase固有の具体failure型を同一視せず、具体failure型をそのUseCaseが所有する`RAGScope.<UseCase>.Failure`へ配置できる
 - UseCaseの`Left failure`を受け取った場所でUseCase failureとして必要な処理を行った後、具体failure値を失わず`Left (OperationFailure failure)`として返せる
 - routing・command判定・入力変換・検証などUseCase前の通常failureをUseCase固有failureへ変換せず、必要な処理の後に`OperationFailure failure`として返せる
 - `UseCaseSuccess`後のresponse / output側の結果処理で起きた通常failureを、必要な処理の後に`OperationFailure failure`として返せ、UseCase自身の`UseCaseSuccess`を変更しない
 - `ToErrorType OperationFailure`が中のfailure値に`toErrorType`を適用し、同じUseCase failureをUseCase spanとroot spanで観測する場合に同じ`ErrorType`を得られる
-- `OperationFailure`の定義がFeature固有failure型をimportせず、`ragscope-application`から`ragscope-error`への直接依存だけで成立する
+- `OperationFailure`の定義がUseCase固有failure型をimportせず、`ragscope-application`から`ragscope-error`への直接依存だけで成立する
 - Operation境界の外側で具体failure型に応じた分岐を要求せず、必要な失敗理由を`toErrorType operationFailure`から取得できる
 - Application / process lifecycleのstartup・shutdown failureを`OperationResult`へ混在させない
 - 同期Exceptionについて、どこで捕捉するか、通常の`OperationFailure`へ変換する条件、変換しないExceptionをどう伝播させるかをコードとテストで確定している
