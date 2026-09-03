@@ -2,7 +2,7 @@
 status: doing
 priority: medium
 dateCreated: 2026-08-27T08:12:00+09:00
-dateModified: 2026-09-03T18:51:37+09:00
+dateModified: 2026-09-03T20:27:00+09:00
 tags:
   - task
 projects:
@@ -79,7 +79,7 @@ timeEntries:
 
 - RAGScopeアプリケーションから見たlogging・tracing・observabilityの責務、公開API、module境界、依存方向を現在契約から確定する
 - `1利用者操作 = 1 trace`、UseCase子span、trace内外ログを扱う全体構造を、後続実装Subtaskが追加設計なしで着手できる粒度まで正本へ反映する
-- `Logger m event`・`Contravariant`・`event -> LogSpec`純粋変換、Runtime、Sink、JSON / SQLite外部表現の責務境界を確定する
+- `Logger m event`・`Contravariant`・`event -> LogSpec`純粋変換と、`LogSpec` / `LogRecord` / attributes中核型、Runtime、Sink、JSON / SQLite外部表現の責務境界を確定する
 - UseCaseをfailure・ErrorClassification・event・依存record・Logging変換の所有単位とし、Application全体の`AppEnv`を受け取らず自身に必要な能力だけを受け取る境界を確定する
 - OperationもOperation固有の依存recordから必要なruntime能力だけを受け取り、UseCase依存を閉じた実行関数を受け取る境界を確定する。Classifierはruntime依存recordへ入れず、現在は`AppEnv`を導入しない
 - `ToErrorType`型クラスを廃止し、具体failure値を保持したまま名前付き`ErrorClassifier failure`で`ErrorType`へ分類する境界を確定する
@@ -153,8 +153,9 @@ Workbenchでは次を作業用ビューとして使う。
 - 失敗eventの`error_type`は同じ名前付きClassifierを利用し、failureの詳細値を他のattributesへ反映する処理とは分離する。Classifierは詳細値を消去・代替しない。
 - UseCaseが必要とする能力はUseCase所有の依存recordへまとめ、Application全体の`AppEnv`をUseCaseへ渡さない。UseCase別`Observability m failure`とLoggerもこの依存recordを通して渡す。
 - OperationもOperation固有の依存recordから必要なruntime能力だけを受け取る。Application composition rootがUseCase依存recordをUseCase実行関数へ適用して依存を閉じ、その実行関数をOperation依存recordへ渡す。Classifierは所有moduleから静的に利用しruntime依存recordへ入れない。現在はApplication全体の`AppEnv`を導入しない。
+- Logging中核型は`LogSpec = EventName + LogLevel + Maybe Text + Attributes`、`LogRecord = Timestamp + Component + Maybe TraceContext + LogSpec`とする。`LogLevel`は`debug` / `info` / `warn` / `error` / `fatal`の5値、`Attributes`は`Map AttributeName AttributeValue`、`AttributeValue`は`Text` / `Scientific` / `Bool` / array / objectの再帰型とし、`null`相当を持たない設計を正本へ反映済み。
 - logging failureは`OperationResult`から分離し、`record`からOperation / UseCaseへtyped resultとして返さない設計を正本へ反映済み。
-- 次は`LogSpec` / `LogRecord`の正確な型を決め、その後Logging Runtime / Sink境界を具体化する。logging failureの内部通知・保持先はこのSubtaskの完了前に確定する。
+- 次はLogging Runtime / Sink境界を具体化する。logging failureの内部通知・保持先はこのSubtaskの完了前に確定する。
 
 ## 後続Subtask
 
