@@ -2,7 +2,7 @@
 status: doing
 priority: medium
 dateCreated: 2026-08-27T08:12:00+09:00
-dateModified: 2026-09-04T09:15:00+09:00
+dateModified: 2026-09-04T09:29:40+09:00
 tags:
   - task
 projects:
@@ -86,7 +86,7 @@ timeEntries:
 - `ToErrorType`型クラスを廃止し、具体failure値を保持したまま名前付き`ErrorClassifier failure`で`ErrorType`へ分類する境界を確定する
 - `OperationFailure`が具体failure値と対応Classifierを保持し、failureの詳細値を先に`ErrorType`へ変換して失わない構造を確定する
 - Observability Runtimeが`Either failure result`を`SpanOutcome`へ変換し、TracingがApplicationの`Either`・具体failure・Classifierを知らない境界を確定する
-- logging failureを`OperationResult`から分離し、`record`からOperation / UseCaseへtyped resultとして返さない境界と、Logging内部でのfailure通知・保持境界を確定する
+- logging failureを`OperationResult`から分離し、`record`から利用インターフェースのhandler / UseCaseへtyped resultとして返さない境界と、Logging内部でのfailure通知・保持境界を確定する
 - 旧`ExecutionId`・`EventId`・`EventContext`・`OperationName`・通常/失敗イベント直和などを現在設計の前提として残さない
 
 ## 目的
@@ -148,9 +148,9 @@ Workbenchでは次を作業用ビューとして使う。
 - UseCase固有failureは`RAGScope.<UseCase>.Failure`、対応Classifierは`RAGScope.<UseCase>.ErrorClassification`へ分離する。failure型自身は`ErrorType`へ依存しない。
 - `OperationFailure`は具体failure値と対応`ErrorClassifier failure`を保持する。failureのconstructor引数などの詳細値は先に`ErrorType`へ変換して失わない。root span用には`operationFailureErrorClassifier :: ErrorClassifier OperationFailure`をApplication側が提供する。
 - Tracing Portは`SpanOutcome = SpanSucceeded | SpanFailed ErrorType`を観測し、`Either`・具体failure・Classifierを扱わない。`observeResult`は廃止し、`observeOutcome`へ置き換える設計を正本へ反映済み。
-- `RAGScope.Observability`は`Observability m failure`とし、UseCase / Operationのfailure型へ特殊化する。`makeObservability :: Monad m => Tracing m -> ErrorClassifier failure -> Observability m failure`がObservability Runtimeで`Either`を解釈し`SpanOutcome`へ変換する。
+- `RAGScope.Observability`は`Observability m failure`とし、Application側の`withOperation`では`OperationFailure`、UseCaseではそのUseCase固有failure型へ特殊化する。`makeObservability :: Monad m => Tracing m -> ErrorClassifier failure -> Observability m failure`がObservability Runtimeで`Either`を解釈し`SpanOutcome`へ変換する。
 - `ragscope-observability`はmain + `runtime`の2 libraryとする。mainは`ragscope-tracing` main、runtimeはObservability main + Tracing main + `ragscope-error` mainへ直接依存する。
-- Operation / UseCaseはObservabilityを利用しTracingへ直接依存しない。Application composition rootだけがTracing実装と名前付きClassifierを直接扱い、failure型ごとのObservabilityを組み立てる。
+- Application側の`withOperation`、利用インターフェースのhandler、UseCaseは、実行追跡にObservabilityを利用し、Tracingへ直接依存しない。Application composition rootだけがTracing実装と名前付きClassifierを直接扱い、failure型ごとのObservabilityを組み立てる。
 - Logging公開APIは`RAGScope.Logging`の`Logger m event`と`record`とし、`Contravariant`で`event -> LogSpec`と`Logger m LogSpec`からUseCase別Loggerを組み立てる設計を正本へ反映済み。`ToLogSpec`、orphan instance、`LoggingInstances`、Logging用`RankNTypes`、`RAGScope.Logging.Write`は採用しない。
 - 失敗eventの`error_type`は同じ名前付きClassifierを利用し、failureの詳細値を他のattributesへ反映する処理とは分離する。Classifierは詳細値を消去・代替しない。
 - UseCaseが必要とする能力はUseCase所有の依存recordへまとめ、Application全体の`AppEnv`をUseCaseへ渡さない。UseCase別`Observability m failure`とLoggerもこの依存recordを通して渡す。
@@ -158,7 +158,7 @@ Workbenchでは次を作業用ビューとして使う。
 - Application composition rootがUseCase依存recordをUseCase実行関数へ適用して依存を閉じ、その関数、Operation用Observability、Interface Loggerをhandlerへ必要な能力として渡す。機能固有Operation module、Operation固有依存record、共通Operation Runnerは導入せず、現在はApplication全体の`AppEnv`も導入しない。
 - Logging中核型は`LogSpec = EventName + LogLevel + Maybe Text + Attributes`、`LogRecord = Timestamp + Component + Maybe TraceContext + LogSpec`とする。`LogLevel`は`debug` / `info` / `warn` / `error` / `fatal`の5値をこの順で`Ord`比較し、`Attributes`は`Map AttributeName AttributeValue`、`AttributeValue`は`Text` / `Scientific` / `Bool` / array / objectの再帰型とし、`null`相当を持たない設計を正本へ反映済み。
 - Logging Runtimeはminimum level filterをtimestamp / current Trace Context取得より前に適用し、通過した`LogSpec`へtimestamp / component / optional Trace Contextを付加して`LogRecord`を完成する。Application composition rootは`Tracing m`全体ではなく`currentTraceContext` actionだけをRuntimeへ渡す。Sinkは完成済み`LogRecord`だけを受け取り、具体的な出力・保存境界へ渡す設計を正本へ反映済み。
-- logging failureは`OperationResult`から分離し、`record`からOperation / UseCaseへtyped resultとして返さない設計を正本へ反映済み。
+- logging failureは`OperationResult`から分離し、`record`から利用インターフェースのhandler / UseCaseへtyped resultとして返さない設計を正本へ反映済み。
 - Sink / Logging Runtimeのlogging failureは独立した`LoggingFailureReporter`へ1回通知し、本番の最初の実装ではbest-effortにstderrへ直接診断する設計まで確定した。次は同期・非同期Exceptionの境界を確定する。
 
 ## 後続Subtask
