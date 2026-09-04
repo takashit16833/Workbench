@@ -10,6 +10,7 @@ dateModified: 2026-09-04T15:20:00+09:00
 tags:
   - task
   - job
+tasknotes_manual_order: tngmzzzzzzzz
 ---
 
 # AI活用データトラスト基盤PaaS開発支援【Python】

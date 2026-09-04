@@ -1,14 +1,15 @@
 ---
-status: doing
+status: todo
 projects:
   - "[[案件管理]]"
 agent: PE-BANK
 priority: medium
 dateCreated: 2026-09-04T11:57:00+09:00
-dateModified: 2026-09-04T12:02:12.519+09:00
+dateModified: 2026-09-04T15:22:33.871+09:00
 tags:
   - task
   - job
+tasknotes_manual_order: tntmzzzzzzzx
 ---
 
 # Node.js / TypeScriptによるエンタメ系社内プラットフォーム開発・保守

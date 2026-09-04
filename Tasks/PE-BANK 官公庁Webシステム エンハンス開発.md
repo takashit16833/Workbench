@@ -1,14 +1,15 @@
 ---
-status: doing
+status: todo
 projects:
   - "[[案件管理]]"
 agent: PE-BANK
 priority: medium
 dateCreated: 2026-09-04T11:57:00+09:00
-dateModified: 2026-09-04T12:02:14.064+09:00
+dateModified: 2026-09-04T15:22:37.723+09:00
 tags:
   - task
   - job
+tasknotes_manual_order: tntmzzzzzzzy
 ---
 
 # TypeScript / Javaエンジニア（官公庁向け大規模Webシステム エンハンス開発）

@@ -1,5 +1,5 @@
 ---
-status: doing
+status: todo
 projects:
   - "[[案件管理]]"
 agent: ギークス
@@ -12,10 +12,11 @@ hours: 140-180
 interview_count: 1
 priority: medium
 dateCreated: 2026-09-02T09:57:00+09:00
-dateModified: 2026-09-02T10:43:00+09:00
+dateModified: 2026-09-04T15:22:45.645+09:00
 tags:
   - task
   - job
+tasknotes_manual_order: tntnaaaaaaaa
 ---
 
 # 企業全社AI活用におけるAIエージェント・業務自動化開発【Python】

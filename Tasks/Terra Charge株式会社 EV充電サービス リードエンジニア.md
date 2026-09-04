@@ -1,5 +1,5 @@
 ---
-status: doing
+status: todo
 projects:
   - "[[案件管理]]"
 agent: ギークス
@@ -12,10 +12,11 @@ hours: 140-180
 interview_count: 1
 priority: medium
 dateCreated: 2026-09-02T09:57:00+09:00
-dateModified: 2026-09-02T10:43:00+09:00
+dateModified: 2026-09-04T15:22:41.854+09:00
 tags:
   - task
   - job
+tasknotes_manual_order: tntmzzzzzzzz
 ---
 
 # 国内トップとして急成長中のEV充電サービスの自社開発【リードエンジニア】【Python】
