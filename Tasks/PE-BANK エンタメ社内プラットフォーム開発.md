@@ -1,11 +1,11 @@
 ---
-status: todo
+status: doing
 projects:
   - "[[案件管理]]"
 agent: PE-BANK
 priority: medium
 dateCreated: 2026-09-04T11:57:00+09:00
-dateModified: 2026-09-04T11:57:00+09:00
+dateModified: 2026-09-04T12:02:12.519+09:00
 tags:
   - task
   - job
