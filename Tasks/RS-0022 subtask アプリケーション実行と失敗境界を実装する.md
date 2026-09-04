@@ -1,8 +1,8 @@
 ---
-status: waiting
+status: dropped
 priority: medium
 dateCreated: 2026-08-27T08:12:00+09:00
-dateModified: 2026-09-03T11:31:04+09:00
+dateModified: 2026-09-05T06:23:28.431+09:00
 tags:
   - task
 projects:
@@ -12,6 +12,7 @@ blockedBy:
   - uid: "[[RS-0022 subtask trace・spanによる実行追跡とログ関連付けを実装する]]"
     reltype: FINISHTOSTART
 branch: RS-0022/redesign-execution-failure
+completedDate: 2026-09-05
 ---
 
 ## Squash merge commit body

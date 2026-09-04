@@ -1,8 +1,8 @@
 ---
-status: waiting
+status: dropped
 priority: medium
 dateCreated: 2026-08-27T08:12:00+09:00
-dateModified: 2026-09-03T07:37:11+09:00
+dateModified: 2026-09-05T06:23:37.311+09:00
 tags:
   - task
 projects:
@@ -14,6 +14,7 @@ blockedBy:
   - uid: "[[RS-0022 subtask JSON出力・Sink・Schema適合を現在契約へ移行する]]"
     reltype: FINISHTOSTART
 branch: RS-0022/finalize-logging-redesign
+completedDate: 2026-09-05
 ---
 
 ## Squash merge commit body

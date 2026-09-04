@@ -1,8 +1,8 @@
 ---
-status: doing
+status: dropped
 priority: medium
 dateCreated: 2026-08-26T21:00:57+09:00
-dateModified: 2026-09-03T09:31:23+09:00
+dateModified: 2026-09-05T06:23:48.923+09:00
 tags:
   - task
 projects:
@@ -12,6 +12,7 @@ blockedBy:
   - uid: "[[RS-0021 構造化ログJSON Schemaとfixtureを現在契約へ更新する]]"
     reltype: FINISHTOSTART
 branch: feat/RS-0022-logging-redesign
+completedDate: 2026-09-05
 ---
 
 ## 実行方針

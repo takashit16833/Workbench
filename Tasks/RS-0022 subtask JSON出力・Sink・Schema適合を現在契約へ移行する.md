@@ -1,8 +1,8 @@
 ---
-status: waiting
+status: dropped
 priority: medium
 dateCreated: 2026-08-27T08:12:00+09:00
-dateModified: 2026-09-03T07:37:11+09:00
+dateModified: 2026-09-05T06:23:15.876+09:00
 tags:
   - task
 projects:
@@ -12,6 +12,7 @@ blockedBy:
   - uid: "[[RS-0022 subtask 構造化ログ公開APIと中核型を実装する]]"
     reltype: FINISHTOSTART
 branch: RS-0022/update-json-sink-schema
+completedDate: 2026-09-05
 ---
 
 ## Squash merge commit body

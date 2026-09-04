@@ -1,8 +1,8 @@
 ---
-status: waiting
+status: dropped
 priority: medium
 dateCreated: 2026-09-03T07:37:11+09:00
-dateModified: 2026-09-03T11:31:04+09:00
+dateModified: 2026-09-05T06:23:33.473+09:00
 tags:
   - task
 projects:
@@ -12,6 +12,7 @@ blockedBy:
   - uid: "[[RS-0022 subtask 実行追跡・構造化ログの全体設計を確定する]]"
     reltype: FINISHTOSTART
 branch: RS-0022/implement-logging-core
+completedDate: 2026-09-05
 ---
 
 ## Squash merge commit body
