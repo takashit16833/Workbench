@@ -12,7 +12,7 @@ created: 2026-09-01
 
 `ragscope-logging` package内のmodule間依存候補を示す。矢印 `A → B` は、AがBを必要とすることを表す。JSONやSQLiteなど外部形式に依存する処理はcoreへ入れない。
 
-正本で確定済みなのは、`RAGScope.Logging`が`Logger m event` / `record` / `Contravariant` instanceを公開すること、Logging coreが`EventName`、5値の`LogLevel`、`AttributeName`、再帰的`AttributeValue`、`Attributes`、`Timestamp`、`Component`、`LogSpec`、`LogRecord`を持つこと、Logging Runtimeがminimum level filterを適用して`Logger m LogSpec`から`LogRecord`を完成すること、Sinkが完成済み`LogRecord`だけを受け取ることである。Runtime / Sink / JSON / SQLiteの正確なmodule名とlibrary内配置、Sink failureのAPIはまだ固定していないため、図中では実装候補として示す。
+正本で確定済みなのは、`RAGScope.Logging`が`Logger m event` / `record` / `Contravariant` instanceを公開すること、Logging coreが`EventName`、5値の`LogLevel`、`AttributeName`、再帰的`AttributeValue`、`Attributes`、`Timestamp`、`Component`、`LogSpec`、`LogRecord`を持つこと、Logging Runtimeがminimum level filterを適用して`Logger m LogSpec`から`LogRecord`を完成すること、Sinkが完成済み`LogRecord`を受け取り`m (Either LoggingFailure ())`で成否を返すこと、`Left`を通常Logger / Sinkとは独立した`LoggingFailureReporter`へ渡すことである。Runtime / Sink / Reporter / JSON / SQLiteの正確なmodule名とlibrary内配置、`LoggingFailure`のconstructorはまだ固定していないため、図中では実装候補として示す。
 
 色は、青系が公開library / module、紫系が非公開library / module、低彩度の濃色が別packageまたは外部package、青灰色の外枠がCabal packageを表す。
 
@@ -26,7 +26,8 @@ flowchart LR
         end
         subgraph internal_lib["Runtime / Sink / 外部表現境界（候補）"]
             runtime["Logging Runtime境界<br/>minimumLevel filter<br/>LogSpec + timestamp / component / current TraceContext → LogRecord<br/>module名未確定"]
-            sink["Sink境界<br/>完成済みLogRecordを出力・保存へ渡す<br/>failure API / module名未確定"]
+            sink["Sink境界<br/>LogRecord → m (Either LoggingFailure ())<br/>module名未確定"]
+            diagnostics["LoggingFailureReporter境界<br/>通常Logger / Sinkとは独立<br/>best-effort direct stderr<br/>module名未確定"]
             json["JSON投影<br/>module配置未確定"]
             sqlite["SQLite投影<br/>module配置未確定"]
         end
@@ -47,7 +48,8 @@ flowchart LR
     runtime -->|Logger / record| logger
     runtime -->|LogSpec / LogRecord| contract
     runtime -->|m (Maybe TraceContext)| context
-    runtime -->|LogRecord| sink
+    runtime -->|write LogRecord / m (Either LoggingFailure ())| sink
+    runtime -->|Left LoggingFailure| diagnostics
     sink -->|LogRecord| contract
     json -->|LogRecord| contract
     json -->|JSONへ変換| aeson
@@ -63,7 +65,7 @@ flowchart LR
     classDef private fill:#211536,stroke:#8A5EC0,color:#DDF0FF,stroke-width:2px
     classDef outside fill:#001947,stroke:#316CBD,color:#A6CAFF,stroke-width:2px
     class logger,contract public
-    class runtime,sink,json,sqlite private
+    class runtime,sink,diagnostics,json,sqlite private
     class context,contravariant,aeson,sqlite_lib,text_pkg,containers_pkg,scientific_pkg,time_pkg outside
     style pkg_logging fill:transparent,stroke:#153A75,color:#4C9EEB,stroke-width:2px
     style main_lib fill:transparent,stroke:#2759AA,color:#7CBEFF,stroke-width:2px

@@ -2,7 +2,7 @@
 status: doing
 priority: medium
 dateCreated: 2026-08-27T08:12:00+09:00
-dateModified: 2026-09-04T09:29:40+09:00
+dateModified: 2026-09-04T07:31:00+09:00
 tags:
   - task
 projects:
@@ -128,7 +128,7 @@ Workbenchでは次を作業用ビューとして使う。
 - Application composition rootがUseCase依存recordをUseCase実行関数へ適用して依存を閉じ、その関数、Operation用Observability、Interface Loggerをhandlerへ必要な能力として渡す境界。Classifierはruntime依存recordへ入れず、Application全体の`AppEnv`は導入しない。
 - `Logger m event`、`event -> LogSpec`、`Logger m LogSpec`、`LogRecord`の責務と、timestamp / component / optional Trace Contextを付加するRuntime境界。
 - trace内eventとtrace外eventを同じLogging基盤へ渡す公開APIと、Sink差し替え境界。
-- logging failureと`OperationResult`の関係、およびSink / Logging RuntimeのfailureをLogging内部で通知・保持する境界。
+- logging failureと`OperationResult`の関係、およびSinkのtyped failureを通常Logger / Sinkとは独立した診断経路へ渡す境界。
 - JSON / SQLiteを同じ`LogRecord`から独立して投影する責務境界。
 - Operation root span、UseCase子span、`SpanOutcome`、Tracing / Observability公開境界、current Trace Contextの管理責務。
 - 後続実装Subtaskごとの担当範囲と依存順序。
@@ -139,7 +139,7 @@ Workbenchでは次を作業用ビューとして使う。
 - `ErrorClassifier`、`OperationFailure`、`withOperation`、`SpanOutcome`、`Observability m failure`、`Logger m event`、`Contravariant` instance、event変換関数、UseCase所有の依存record、`LogSpec`、`LogRecord`のコード実装とテスト。
 - Logging Runtime / Sink、`RAGScope.Tracing`、`RAGScope.Observability.Runtime`、OpenTelemetry Adapter、root span / UseCase spanのコード実装とテスト。
 - JSON serialization、stderr / memory Sink、Schema適合、SQLite migration・投影・復元の実装とテスト。
-- 同期・非同期Exception、logging failureの内部通知・保持処理のコード実装とテスト。
+- 同期・非同期Exception、logging failureの独立診断処理のコード実装とテスト。
 
 ## 現在地
 
