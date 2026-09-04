@@ -2,7 +2,7 @@
 status: doing
 priority: medium
 dateCreated: 2026-08-27T08:12:00+09:00
-dateModified: 2026-09-03T21:17:00+09:00
+dateModified: 2026-09-04T09:15:00+09:00
 tags:
   - task
 projects:
@@ -81,7 +81,8 @@ timeEntries:
 - `1利用者操作 = 1 trace`、UseCase子span、trace内外ログを扱う全体構造を、後続実装Subtaskが追加設計なしで着手できる粒度まで正本へ反映する
 - `Logger m event`・`Contravariant`・`event -> LogSpec`純粋変換と、`LogSpec` / `LogRecord` / attributes中核型、Runtime、Sink、JSON / SQLite外部表現の責務境界を確定する
 - UseCaseをfailure・ErrorClassification・event・依存record・Logging変換の所有単位とし、Application全体の`AppEnv`を受け取らず自身に必要な能力だけを受け取る境界を確定する
-- OperationもOperation固有の依存recordから必要なruntime能力だけを受け取り、UseCase依存を閉じた実行関数を受け取る境界を確定する。Classifierはruntime依存recordへ入れず、現在は`AppEnv`を導入しない
+- Operationを1回の利用者操作全体という意味上の境界とし、Application側の薄い`withOperation`が`Observability.withTrace`へ処理を委譲する構造を確定する
+- 利用インターフェースのhandlerが操作固有処理を担当し、composition rootから依存を閉じたUseCase実行関数、Operation用Observability、Interface Loggerを必要な能力として受け取る境界を確定する
 - `ToErrorType`型クラスを廃止し、具体failure値を保持したまま名前付き`ErrorClassifier failure`で`ErrorType`へ分類する境界を確定する
 - `OperationFailure`が具体failure値と対応Classifierを保持し、failureの詳細値を先に`ErrorType`へ変換して失わない構造を確定する
 - Observability Runtimeが`Either failure result`を`SpanOutcome`へ変換し、TracingがApplicationの`Either`・具体failure・Classifierを知らない境界を確定する
@@ -123,7 +124,8 @@ Workbenchでは次を作業用ビューとして使う。
 - UseCase / Interface / Lifecycle eventの所有者と、各eventから共通logging表現へ変換する境界。
 - failure型、名前付き`ErrorClassifier failure`、失敗event、`event -> LogSpec`の責務分離と、具体failureの詳細値を失わない受け渡し。
 - UseCaseへ渡す依存能力をUseCase所有の依存recordへ閉じ、Application全体の環境をUseCaseへ漏らさない境界。
-- Operationへ渡す実行時能力をOperation所有の依存recordへ閉じ、UseCase依存recordではなく依存を閉じたUseCase実行関数を渡す境界。Classifierはruntime依存recordへ入れず、Application全体の`AppEnv`は導入しない。
+- Operationを機能固有Application Serviceや依存recordとして設けず、利用インターフェースのhandlerが担当する操作全体をApplication側の`withOperation`で囲む境界。`withOperation`はOperation用Observabilityの`withTrace`へ処理を委譲する。
+- Application composition rootがUseCase依存recordをUseCase実行関数へ適用して依存を閉じ、その関数、Operation用Observability、Interface Loggerをhandlerへ必要な能力として渡す境界。Classifierはruntime依存recordへ入れず、Application全体の`AppEnv`は導入しない。
 - `Logger m event`、`event -> LogSpec`、`Logger m LogSpec`、`LogRecord`の責務と、timestamp / component / optional Trace Contextを付加するRuntime境界。
 - trace内eventとtrace外eventを同じLogging基盤へ渡す公開APIと、Sink差し替え境界。
 - logging failureと`OperationResult`の関係、およびSink / Logging RuntimeのfailureをLogging内部で通知・保持する境界。
@@ -134,7 +136,7 @@ Workbenchでは次を作業用ビューとして使う。
 ## このSubtaskでは実装しない
 
 - `ragscope-error`、`ragscope-logging`、`ragscope-tracing`、`ragscope-observability`などのHaskellソースとCabal stanzaの実装。
-- `ErrorClassifier`、`OperationFailure`、`SpanOutcome`、`Observability m failure`、`Logger m event`、`Contravariant` instance、event変換関数、UseCase所有の依存record、`LogSpec`、`LogRecord`のコード実装とテスト。
+- `ErrorClassifier`、`OperationFailure`、`withOperation`、`SpanOutcome`、`Observability m failure`、`Logger m event`、`Contravariant` instance、event変換関数、UseCase所有の依存record、`LogSpec`、`LogRecord`のコード実装とテスト。
 - Logging Runtime / Sink、`RAGScope.Tracing`、`RAGScope.Observability.Runtime`、OpenTelemetry Adapter、root span / UseCase spanのコード実装とテスト。
 - JSON serialization、stderr / memory Sink、Schema適合、SQLite migration・投影・復元の実装とテスト。
 - 同期・非同期Exception、logging failureの内部通知・保持処理のコード実装とテスト。
@@ -152,11 +154,12 @@ Workbenchでは次を作業用ビューとして使う。
 - Logging公開APIは`RAGScope.Logging`の`Logger m event`と`record`とし、`Contravariant`で`event -> LogSpec`と`Logger m LogSpec`からUseCase別Loggerを組み立てる設計を正本へ反映済み。`ToLogSpec`、orphan instance、`LoggingInstances`、Logging用`RankNTypes`、`RAGScope.Logging.Write`は採用しない。
 - 失敗eventの`error_type`は同じ名前付きClassifierを利用し、failureの詳細値を他のattributesへ反映する処理とは分離する。Classifierは詳細値を消去・代替しない。
 - UseCaseが必要とする能力はUseCase所有の依存recordへまとめ、Application全体の`AppEnv`をUseCaseへ渡さない。UseCase別`Observability m failure`とLoggerもこの依存recordを通して渡す。
-- OperationもOperation固有の依存recordから必要なruntime能力だけを受け取る。Application composition rootがUseCase依存recordをUseCase実行関数へ適用して依存を閉じ、その実行関数をOperation依存recordへ渡す。Classifierは所有moduleから静的に利用しruntime依存recordへ入れない。現在はApplication全体の`AppEnv`を導入しない。
+- Operationは機能固有Application Serviceではなく、利用インターフェースのhandlerが担当する1回の利用者操作全体という意味上の境界とする。Application側の薄い`withOperation`が`Observability m OperationFailure`の`withTrace`へ操作全体を委譲する。
+- Application composition rootがUseCase依存recordをUseCase実行関数へ適用して依存を閉じ、その関数、Operation用Observability、Interface Loggerをhandlerへ必要な能力として渡す。機能固有Operation module、Operation固有依存record、共通Operation Runnerは導入せず、現在はApplication全体の`AppEnv`も導入しない。
 - Logging中核型は`LogSpec = EventName + LogLevel + Maybe Text + Attributes`、`LogRecord = Timestamp + Component + Maybe TraceContext + LogSpec`とする。`LogLevel`は`debug` / `info` / `warn` / `error` / `fatal`の5値をこの順で`Ord`比較し、`Attributes`は`Map AttributeName AttributeValue`、`AttributeValue`は`Text` / `Scientific` / `Bool` / array / objectの再帰型とし、`null`相当を持たない設計を正本へ反映済み。
 - Logging Runtimeはminimum level filterをtimestamp / current Trace Context取得より前に適用し、通過した`LogSpec`へtimestamp / component / optional Trace Contextを付加して`LogRecord`を完成する。Application composition rootは`Tracing m`全体ではなく`currentTraceContext` actionだけをRuntimeへ渡す。Sinkは完成済み`LogRecord`だけを受け取り、具体的な出力・保存境界へ渡す設計を正本へ反映済み。
 - logging failureは`OperationResult`から分離し、`record`からOperation / UseCaseへtyped resultとして返さない設計を正本へ反映済み。
-- 次はSink / Logging Runtimeのlogging failureをLogging内部でどこへ通知・保持するかを確定する。
+- Sink / Logging Runtimeのlogging failureは独立した`LoggingFailureReporter`へ1回通知し、本番の最初の実装ではbest-effortにstderrへ直接診断する設計まで確定した。次は同期・非同期Exceptionの境界を確定する。
 
 ## 後続Subtask
 
@@ -177,7 +180,8 @@ Workbenchでは次を作業用ビューとして使う。
 - 後続Subtaskが新しい全体設計判断を行わず、確定済み設計をコード・Cabal設定・テストへ落とせる。
 - Logging公開API、中核型、Runtime、Sink、JSON / SQLite外部表現の責務境界が決まっている。
 - UseCaseがApplication全体の`AppEnv`を直接受けず、UseCase所有の依存recordから自身に必要な能力だけを受け取る依存境界が正本から一意に追える。
-- OperationがOperation所有の依存recordから必要なruntime能力だけを受け取り、UseCase依存を閉じた実行関数を利用し、Classifierや`AppEnv`をruntime依存として受け取らない境界が正本から一意に追える。
+- Operationが機能固有Application Serviceや依存recordではなく、利用インターフェースのhandlerが担当する操作全体を`withOperation`で囲む境界であることを正本から一意に追える。
+- `withOperation`がOperation用Observabilityの`withTrace`へ処理を委譲し、handlerが依存を閉じたUseCase実行関数、Operation用Observability、Interface Loggerだけを受け取る構造を正本から一意に追える。
 - logging failureが`OperationResult`を変更しないことと、Sink / Logging RuntimeのfailureをどのLogging内部境界へ通知・保持するかが正本から一意に追える。
 - Tracing / Observabilityの公開API、current Trace Context管理、OpenTelemetry Adapterの配置、UseCase / Application composition rootの依存境界が決まっている。
 - Workbenchの概要図・静的依存図が正本の現在設計と矛盾していない。
