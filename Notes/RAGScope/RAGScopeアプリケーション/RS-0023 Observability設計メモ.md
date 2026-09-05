@@ -28,10 +28,79 @@ flowchart LR
     H --> UC
 ```
 
+Composition Rootは1回の利用者処理を構成する実行ステップではなく、実行に必要な部品を構築・接続する責務である。
+APIサーバーのような長時間動作するプロセスでは、Composition Rootで一度構築したhandlerやUseCaseを複数のInvocationから利用できる。
+
+実装上のmodule/function名として`Bootstrap`を使うかは、package / module設計時に決める。
+
 ### handlerはインターフェース固有の仕事をする
 
 CLI / APIのhandlerは、入力をUseCaseへ渡せる形へ変換し、UseCaseを呼び、戻ってきた結果を表示やHTTPレスポンスへ変換する。
 UseCase内部の依存構造までは知らず、Composition Rootから依存を閉じたUseCase実行能力を受け取る。
+
+handlerはUseCaseの外側にあり、UseCase呼び出し前の入力受付・変換と、UseCase終了後の出力変換を担当する。
+CLI parserやHTTP routingのどこまでをhandlerに含めるかという実装上の詳細境界は、必要になった時点で決める。
+
+### Invocationを1 Traceの単位とする
+
+RAGScopeがCLI / APIなどの利用インターフェースを通じて外部から1回呼び出され、その呼び出しに対する処理が完了するまでを**Invocation**と呼ぶ。
+
+Invocationはmoduleやlayerではなく、1回の実行範囲を表す概念である。
+1 Invocationに伴って発生する一連の処理を、1つのOpenTelemetry Traceとして追跡する。
+
+```mermaid
+flowchart TB
+    USER["利用者"] --> H1["CLI / API handler\n入力受付・変換"]
+    H1 --> UC["UseCase"]
+    UC --> H2["CLI / API handler\n表示・HTTP response変換"]
+
+    subgraph INV["1 Invocation = 1 Trace"]
+        H1
+        UC
+        H2
+    end
+```
+
+UseCaseが呼び出される前にhandlerで処理が終了した場合でもInvocationは発生しているためTraceには残る。
+一方、UseCaseは呼び出されていないためUseCase実行は発生しない。
+
+RAGScope ApplicationからAI推論サービスなど別プロセスへ処理が続く場合は、Trace Contextを伝播し、同じInvocationに対応するTraceを継続する。
+
+### Composition Root・handler・Invocation・UseCaseは同じ階層ではない
+
+4つを`Composition Root -> handler -> Invocation -> UseCase`という処理順として扱わない。
+
+| 概念 | 境界 |
+|---|---|
+| Composition Root | 実行に必要な依存を構築・接続する |
+| handler | CLI / API固有表現とUseCaseの入力・結果の間を仲介する |
+| Invocation | RAGScopeが外部から1回呼び出され、その処理が完了するまでの実行範囲 |
+| UseCase | RAGScope ApplicationがUseCaseを呼び出してから、Applicationへ制御が戻るまで |
+
+構築時と実行時は次のように分けて考える。
+
+```mermaid
+flowchart TB
+    subgraph BUILD["構築時"]
+        MAIN["Main"] --> CR["Composition Root"]
+        CR --> HDEF["CLI / API handler"]
+        CR --> UCDEF["UseCase"]
+        CR --> TEL["Telemetry実装"]
+    end
+
+    subgraph RUN["1 Invocation"]
+        INPUT["CLI / API入力"] --> H1["handler"]
+        H1 --> UC["UseCase実行"]
+        UC --> H2["handler"]
+        H2 --> OUTPUT["CLI出力 / HTTP response"]
+    end
+```
+
+UseCaseから呼び出されるEmbedding生成、DB検索などは、そのUseCaseを構成する内部処理である。
+AI推論サービス側の処理は同じTraceへ参加できるが、RAGScope Application側のUseCaseそのものではない。
+
+すべてのRAGScope内部処理がhandlerやUseCaseを通るわけではない。
+たとえばプロセス起動時のComposition Rootによる構築や、OpenTelemetry SDK / ExporterによるTelemetry送信はInvocationやUseCaseとは別の処理である。
 
 ### Telemetryは処理を制御しない
 
@@ -56,7 +125,7 @@ UseCaseから見えるのは、RAGScope側のTelemetry利用境界までとす�
 
 ```mermaid
 flowchart LR
-    UC["UseCase"] --> TAPI["RAGScope側の<br/>Telemetry利用境界"]
+    UC["UseCase"] --> TAPI["RAGScope側の\nTelemetry利用境界"]
 
     OTEL["OpenTelemetry Adapter / SDK"] --> TAPI
     CR["Composition Root"] --> OTEL
@@ -78,23 +147,41 @@ RAGScope固有の意味はRAGScope側で持つ。一方、Telemetryの共通機�
 
 event名、属性、failureの意味など、RAGScope固有のTelemetry表現はRAGScope側で決める。
 
+### OpenTelemetry Semantic Conventionsを優先する
+
+Telemetry表現をRAGScope独自に定義する前に、対象へ適用可能なOpenTelemetry Semantic Conventionsが存在するか確認する。
+
+適用可能なSemantic Conventionが存在する場合は、Span名、Span Kind、属性、event、Metric名・instrument・unitなど、そのConventionで定義されている表現を優先して使用する。
+HTTP、Database、CLI、Exceptionなどについて、既存Conventionと同じ意味を持つRAGScope独自表現を重複して作らない。
+
+RAGScope独自のTelemetry表現は、UseCase、Invocation、実験、評価データなど、既存のSemantic Conventionsだけでは表現できないRAGScope固有の意味に限定する。
+独自属性が必要な場合も、まず既存属性を再利用できないか確認し、OpenTelemetryが使用するnamespaceと衝突する属性は作らない。
+
+Semantic Conventionごとにstabilityが異なるため、実装時には使用するOpenTelemetry / instrumentationのバージョンと対象Conventionのstabilityを確認する。
+
 ## 今の一枚絵
 
 ここまで決めた時点では、ざっくりこの形で考える。
 
 ```mermaid
-flowchart LR
-    USER["利用者"] --> IF["CLI / API"]
-    IF --> UC["UseCase"]
+flowchart TB
+    CR["Composition Root"] --> H["CLI / API handler"]
+    CR --> UC["UseCase"]
+    CR --> TEL["RAGScope Telemetry利用境界"]
 
-    UC --> AI["AI推論サービス"]
-    UC --> DB[("PostgreSQL")]
+    USER["利用者"] --> H
 
-    UC -.-> TEL["RAGScope Telemetry利用境界"]
-    AI -. "Trace Contextを引き継ぐ" .-> TEL
+    subgraph INV["1 Invocation = 1 Trace"]
+        H --> UC
+        UC --> DB[("PostgreSQL")]
+        UC --> AIREQ["AI推論サービスへの依頼"]
+        AIREQ --> AI["AI推論サービス"]
+    end
 
-    OTEL["OpenTelemetry"] --> TEL
+    AIREQ -. "Trace Contextを伝播" .-> AI
 
+    UC -. "観測" .-> TEL
+    OTEL["OpenTelemetry Adapter / SDK"] --> TEL
     OTEL --> TR["Traces"]
     OTEL --> LG["Logs"]
     OTEL --> MT["Metrics"]
@@ -108,12 +195,13 @@ Collector / Tempo / Lokiはまだ候補である。
 
 ## 🤔 次に決めること
 
-完全な工程表ではないが、依存関係を考えるとこの順番が自然そうだ。
+Trace境界は、**1 Invocation = 1 Trace**として決めた。
+次は、そのTraceの中で何を独立したSpanとして追跡するかを決める。
 
 ```mermaid
 flowchart TD
-    subgraph FIRST["まず"]
-        A["Trace境界"] --> B["Span境界"]
+    subgraph FIRST["次"]
+        B["Span境界"]
     end
 
     subgraph NEXT["その次"]
@@ -133,10 +221,10 @@ flowchart TD
     E --> F
 ```
 
-### まず: Trace / Span
+### 次: Span境界
 
-最初に、**1回の実行をどこからどこまで同じTraceとして追うか**を決める。
-そのTraceの中で、UseCase、AI推論サービス、DB、内部処理のどこを独立したSpanとして見るかを決める。
+1 InvocationのTraceの中で、handler、UseCase、AI推論サービス、DB、内部処理のどこを独立したSpanとして見るかを決める。
+既存のOpenTelemetry instrumentation / Semantic Conventionsで表現されるSpanと、RAGScope固有の意味を表すSpanを重複させないことも同時に確認する。
 
 ここがLogsを考えるときの基準にもなる。
 
