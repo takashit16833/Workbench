@@ -310,6 +310,75 @@ OpenTelemetryのException Logは`exception.type`を標準属性として使用�
 
 これはWorkbench上の判断だけで現在のADRを変更したことにはしない。
 
+## ✅ Logsの共通設計
+
+Logsの表現はOpenTelemetry Logs / Semantic Conventionsを土台とし、RAGScopeは既存仕様で表現できないRAGScope固有の意味だけを追加で所有する。
+RAGScope独自のログモデルを作ってOpenTelemetryへ変換する構造にはせず、OpenTelemetryの表現へRAGScope固有Eventを載せる。
+
+### Span・Span属性・Eventを分ける
+
+期間を持つ処理はSpan、operation全体を説明する値はSpan属性、その時点で起きたこと自体を後から確認する意味がある出来事はEventとして表現する。
+RAGScopeの構造化Eventは、`EventName`を持つOpenTelemetry `LogRecord`として記録する。
+
+operationの開始・終了、duration、最終成功・失敗だけを表すLogを機械的に追加しない。これらはSpanとSpan Statusで表現する。
+typed failureが発生したことだけでもEventを生成しない。retryを選択した、fallbackへ切り替えた、retryを使い切ったなど、failureとは別に時点として確認する意味がある出来事が存在する場合にEventを定義する。
+
+### Eventのownerが意味と記録条件を定義する
+
+RAGScope固有Eventを定義する場合は、その出来事を所有するfeature / UseCase / operationが次を定義する。
+
+- Eventが表す出来事
+- 記録条件
+- `EventName`
+- 発生時刻が指す時点
+- 既定severity
+- Event固有attributes
+
+全Eventを先に共通型へ列挙したり、共通`LogSpec`のような型へ押し込んだりしない。
+複数featureで実際に同じEvent定義を共有する必要が生じた場合にだけ共通化を検討する。
+
+### Semantic ConventionsをEventでも優先する
+
+対象の出来事に適用可能なOpenTelemetry Semantic Conventionが存在する場合は、そのEventName、attributes、severity等の定義を優先する。
+同じ意味のRAGScope独自Eventや独自attributeを重複して定義しない。
+
+RAGScope固有Eventが必要な場合は、OpenTelemetryのnamespaceと衝突しない`ragscope.*`をEventNameのnamespaceとして使用する。
+ID、attempt番号、対象名など実行ごとに変化する値をEventNameへ埋め込まず、attributesとして持たせる。
+
+Semantic Conventionごとにstabilityが異なるため、Developmentの規約を含む現在仕様の細部をRAGScope独自の恒久契約として固定しない。実装時に採用するOpenTelemetry / instrumentation versionと対象Conventionのstabilityを確認する。
+
+### Trace Contextを独自属性として複製しない
+
+Eventを現在のTrace / Spanへ関連付けるために、RAGScope独自の`trace_id` / `span_id`属性を追加しない。
+OpenTelemetry `LogRecord`自身が持つTrace Contextとの関連付けを使用する。
+
+旧RS-0022のように、Logging専用ContextへTrace Contextを手動注入する仕組みも作らない。
+
+### 共通`payload`を設けない
+
+旧ログ契約の`payload`のようなRAGScope共通コンテナは設けない。
+Eventを検索・分類・集計するために機械可読であるべき値は、そのEventのattributesとして定義する。
+
+`Body`をRAGScope固有の構造化契約の入れ物にはせず、必要な場合の補助的な表示情報として扱う。
+RAGScope固有Eventの機械可読な意味は、EventNameとattributesで表現する。
+
+### severityはOpenTelemetryの体系を使う
+
+RAGScope独自の`debug` / `info` / `warn` / `error` / `fatal`という別のLog Level契約は新設計では維持しない。
+Eventの重要度はOpenTelemetry `SeverityNumber`の意味体系に従い、各Eventのownerが既定severityを決める。
+
+これはUseCaseやfeatureへ`hs-opentelemetry`固有型を直接渡すことを意味しない。SDK型を境界の外へ漏らすかどうかと、Telemetry上のseverity体系をOpenTelemetryへ合わせることは別問題として扱う。
+
+severityからSpan Status、Applicationの最終結果、保存状態を導出しない。Span StatusとLog severityは引き続き独立した意味を持つ。
+
+### signalごとのSemantic Conventionを使う
+
+同じ論理的な失敗を複数signalへ反映する場合も、各signalへ適用されるSemantic Conventionの属性を使用する。
+たとえばunexpected Exceptionでは、Span側は`error.type`、Exception Log側は`exception.type`を使用する。
+
+同じ失敗を表す値の意味は矛盾させないが、同じ属性名をSpanとLogの両方へ置くことは共通契約として要求しない。
+この方針を正本へ反映する際は、ADR-0005の「同じ失敗をSpanと構造化ログの両方へ記録する場合は同じ`error_type`を使う」という現在契約を、このsignalごとのSemantic Conventionとの関係が明確になるよう見直す。
+
 ## 今の一枚絵
 
 ここまで決めた時点では、ざっくりこの形で考える。
@@ -346,13 +415,13 @@ Collector / Tempo / Lokiはまだ候補である。
 
 ## 🤔 次に決めること
 
-Trace境界、Span境界と、failure / Exception / interruption / Telemetry failureの共通方針までは決めた。
-次は、その構造を基準にLogsとMetricsを具体化し、その後でTelemetry利用境界とpackage / moduleへ落とす。
+Trace境界、Span境界、failure / Exception / interruption / Telemetry failureと、Logsの共通表現方針までは決めた。
+次は、RAGScope固有Eventが実際に必要になるケースを具体例で確認しながらLogsを具体化し、Metricsを決める。その後でTelemetry利用境界とpackage / moduleへ落とす。
 
 ```mermaid
 flowchart TD
     subgraph NEXT["次"]
-        C["Logs"]
+        C["RAGScope固有Eventの具体化"]
         D["Metrics"]
     end
 
@@ -375,9 +444,9 @@ flowchart TD
     S --> F
 ```
 
-### 次: Logs / Metrics
+### 次: Logsの具体化 / Metrics
 
-- Logs: 「その時点で何が起きたか」として残したいevent、属性、既定severity、記録条件を決める。
+- Logs: retry、timeout、experimentなどを具体例に、Eventとして残す必要があるか、必要ならEventName、attributes、既定severity、記録条件を決める。
 - Metrics: 処理時間、TTFT、token数など、RAGScopeで必要な計測を決める。
 
 failure / Exceptionについては共通方針を再検討するのではなく、具体的なfeature / interruption / Adapterを設計するときに上記の未決定部分だけを具体化する。
@@ -391,6 +460,9 @@ packageを先に切って、あとから責務を当てはめる順番にはし�
 
 ## 参考にした外部仕様・実装
 
+- [OpenTelemetry — Logs Data Model](https://opentelemetry.io/docs/specs/otel/logs/data-model/)
+- [OpenTelemetry — Events](https://opentelemetry.io/docs/specs/semconv/general/events/)
+- [OpenTelemetry — Naming](https://opentelemetry.io/docs/specs/semconv/general/naming/)
 - [OpenTelemetry — Recording errors](https://opentelemetry.io/docs/specs/semconv/general/recording-errors/)
 - [OpenTelemetry — Exceptions in Logs](https://opentelemetry.io/docs/specs/semconv/exceptions/exceptions-logs/)
 - [OpenTelemetry — Error handling](https://opentelemetry.io/docs/specs/otel/error-handling/)
