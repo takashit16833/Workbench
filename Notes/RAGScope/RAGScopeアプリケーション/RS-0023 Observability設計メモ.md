@@ -78,13 +78,6 @@ RAGScope固有の意味はRAGScope側で持つ。一方、Telemetryの共通機�
 
 event名、属性、failureの意味など、RAGScope固有のTelemetry表現はRAGScope側で決める。
 
-### 旧Operationは復活させない
-
-旧RS-0022ではUseCaseの前後まで含む利用者操作全体を`Operation`と呼んでいたが、現在の正本ではトップレベルの利用者操作をUseCaseと定義している。
-
-両方を置くと意味が二重になるため、旧`Operation`はApplicationの別概念として復活させない。
-CLI / APIの前後処理をTraceへ含めるかどうかは、Operationとは切り離してTrace境界の問題として決める。
-
 ## 今の一枚絵
 
 ここまで決めた時点では、ざっくりこの形で考える。
