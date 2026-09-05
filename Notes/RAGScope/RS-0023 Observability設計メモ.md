@@ -98,7 +98,7 @@ flowchart LR
     UC --> DBP["DB Port"]
 
     TEL --> OTEL["OpenTelemetry Adapter / SDK"]
-    TAPI --> OTEL
+    OTEL --> TAPI
 
     OTEL --> EXT["Exporter / Collector"]
 ```
