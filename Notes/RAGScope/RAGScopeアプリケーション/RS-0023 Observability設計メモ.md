@@ -12,9 +12,7 @@ created: 2026-09-05
 > これはRS-0023を考えるための**Workbench上の検討メモ**であり、RAGScopeの正本ではない。
 > 現在の正本にあるUseCase境界とRAGScope Application / AI推論サービス / DBの責務を前提に、RS-0023で新しく決めるObservability設計だけを扱う。
 
-## RS-0023で採用して進めること
-
-ここからは旧RS-0022の考え方も見直したうえで、特に懸念なく使えるものを先に採用する。
+## ✅ 今回決めたこと
 
 ### Composition Rootで依存を組み立てる
 
@@ -32,14 +30,12 @@ flowchart LR
 
 ### handlerはインターフェース固有の仕事をする
 
-CLI / APIのhandlerは、入力を受け取り、UseCaseへ渡せる形へ変換し、UseCaseを呼び、戻ってきた結果を表示やHTTPレスポンスへ変換する。
-
-UseCase内部の依存構造までは知らない。
-Composition Rootから、依存を閉じたUseCase実行能力を受け取る方向で進める。
+CLI / APIのhandlerは、入力をUseCaseへ渡せる形へ変換し、UseCaseを呼び、戻ってきた結果を表示やHTTPレスポンスへ変換する。
+UseCase内部の依存構造までは知らず、Composition Rootから依存を閉じたUseCase実行能力を受け取る。
 
 ### Telemetryは処理を制御しない
 
-処理を続けるか、retryするか、timeoutで打ち切るかはRAGScope Applicationの責務である。
+処理を続けるか、retryするか、timeoutで打ち切るかはRAGScope Applicationが決める。
 Telemetryは、その処理を観測する。
 
 ```mermaid
@@ -56,9 +52,7 @@ Telemetryの都合でUseCaseの意味や処理順序を変えない。
 ### UseCaseへOpenTelemetry SDKを直接漏らさない
 
 UseCaseがOpenTelemetry SDKそのものを直接扱う構造にはしない。
-UseCaseから必要になるのは「spanを作る」「logを記録する」「metricを記録する」といったRAGScope側の利用境界までとする。
-
-その利用境界をTrace / Logs / Metricsでどう分けるか、名前をどうするかはまだ決めない。
+UseCaseから見えるのは、RAGScope側のTelemetry利用境界までとする。
 
 ```mermaid
 flowchart LR
@@ -68,48 +62,32 @@ flowchart LR
     CR["Composition Root"] --> OTEL
 ```
 
+Trace / Logs / Metricsの利用境界を1つにまとめるか分けるか、名前をどうするかは後で決める。
+
 ### OpenTelemetryが持っているTelemetry基盤は作り直さない
 
-OpenTelemetry LogsにはLogRecordのData Modelがあり、SDKにはProcessor / Exporterなどの仕組みがある。
-Trace Contextとの関連付けもOpenTelemetryの責務として扱える。
+RAGScope固有の意味はRAGScope側で持つ。一方、Telemetryの共通機構はOpenTelemetryへ任せる。
 
-そのため、旧RS-0022にあった次の仕組みは**原則として復活させない**。
-
-| 旧設計 | 今回の方針 |
+| 旧RS-0022で自前にしていたもの | 今回 |
 |---|---|
 | RAGScope独自LogRecord | 作らない |
 | Logging Runtime | 作らない |
 | 独自Sink | 作らない |
 | Trace ContextをLoggingへ手動注入する仕組み | 作らない |
-| OTelと並行して存在する独自ログ転送基盤 | 作らない |
+| OTelと並行する独自ログ転送基盤 | 作らない |
 
-RAGScope固有のevent名、属性、failureの意味までOpenTelemetryが決めてくれるわけではない。
-**RAGScope固有の意味だけをRAGScope側で持ち、Telemetryの共通機構はOpenTelemetryへ任せる**という線で進める。
+event名、属性、failureの意味など、RAGScope固有のTelemetry表現はRAGScope側で決める。
 
-## 旧Operationはそのまま復活させない
+### 旧Operationは復活させない
 
-ここだけは旧RS-0022をそのまま戻さない。
+旧RS-0022ではUseCaseの前後まで含む利用者操作全体を`Operation`と呼んでいたが、現在の正本ではトップレベルの利用者操作をUseCaseと定義している。
 
-旧設計では、UseCaseの前後まで含む1回の利用者操作全体を`Operation`と呼んでいた。
-一方、現在の正本では「利用者がRAGScopeへ依頼するトップレベルの操作」をUseCaseと定義している。
+両方を置くと意味が二重になるため、旧`Operation`はApplicationの別概念として復活させない。
+CLI / APIの前後処理をTraceへ含めるかどうかは、Operationとは切り離してTrace境界の問題として決める。
 
-両方を置くと、どちらも「利用者のトップレベル操作」を表すことになって意味が二重になる。
+## 今の一枚絵
 
-```mermaid
-flowchart LR
-    OLD["旧RS-0022<br/>Operation"] --> OLD_UC["UseCase"]
-
-    NOW["現在の正本<br/>UseCase = トップレベル操作"]
-```
-
-そのため、旧`Operation`をApplicationの別概念として復活させるのではなく、現在のUseCaseを中心にTelemetry境界を考える。
-
-CLI / APIの入力変換や結果変換をTraceへ含める必要があるかは、Trace境界を決めるときに考える。
-これは`Operation`概念を復活させることとは分ける。
-
-## Telemetryの今の一枚絵
-
-ここまで採用すると、かなりシンプルになる。
+ここまで決めた時点では、ざっくりこの形で考える。
 
 ```mermaid
 flowchart LR
@@ -133,35 +111,60 @@ flowchart LR
     COL --> LOKI["Loki候補"]
 ```
 
-Collector / Tempo / Lokiはまだ候補であり、RAGScope Application側の設計とは分けて考える。
+Collector / Tempo / Lokiはまだ候補である。
 
-## ここから先だけ話し合う
+## 🤔 次に決めること
 
-もう全部を白紙として話す必要はない。
-残る主要論点はこのくらいでよさそうだ。
+完全な工程表ではないが、依存関係を考えるとこの順番が自然そうだ。
 
 ```mermaid
 flowchart TD
-    A["Traceをどこから始めるか"] --> B["root / child Spanの切り方"]
-    B --> C["何をLogsへ記録するか"]
-    C --> D["Metricsで何を計測するか"]
-    D --> E["failure / ExceptionをTelemetryへどう表すか"]
-    E --> F["Telemetry利用境界をどう分けるか"]
-    F --> G["package / module分割"]
-    G --> H["Collector / Tempo / Loki構成"]
+    subgraph FIRST["まず"]
+        A["Trace境界"] --> B["Span境界"]
+    end
+
+    subgraph NEXT["その次"]
+        C["Logs"]
+        D["Metrics"]
+        E["failure / Exception"]
+    end
+
+    subgraph LAST["最後に形へ落とす"]
+        F["Telemetry利用境界"] --> G["package / module"] --> H["Collector / Tempo / Loki"]
+    end
+
+    B --> C
+    B --> D
+    C --> E
+    D --> E
+    E --> F
 ```
 
-### 今の時点で特に残しておきたい論点
+### まず: Trace / Span
 
-| 論点 | なぜ話す必要があるか |
-|---|---|
-| Trace開始位置 | UseCaseだけを1 Traceとするか、CLI / API側の前後処理まで同じTraceへ入れるかで構造が変わる |
-| Span境界 | UseCase、AI推論サービス、DB、内部処理のどこまでを独立Spanとして扱うか決める必要がある |
-| Logs | Spanで十分な情報と、時点として残すLogRecordを分けたい |
-| Metrics | 段階別処理時間、TTFT、token数などをどうinstrumentするか決めたい |
-| failure | Applicationの失敗とSpan Status / Logsを混同しないルールが必要 |
-| Telemetry利用境界 | Trace / Logs / Metricsを1つのPortにするか分けるかは、実際の利用責務を見て決めたい |
-| package分割 | APIが決まってから静的依存を見て決める |
+最初に、**1回の実行をどこからどこまで同じTraceとして追うか**を決める。
+そのTraceの中で、UseCase、AI推論サービス、DB、内部処理のどこを独立したSpanとして見るかを決める。
 
-この先は、この表にないものを毎回わざわざ再検討しない。
-新しい制約や問題が見つかったときだけ戻る。
+ここがLogsを考えるときの基準にもなる。
+
+### その次: Logs / Metrics / failure
+
+Trace / Spanで表せるものが見えたら、残る情報を整理する。
+
+- Logs: 「その時点で何が起きたか」として残したいもの
+- Metrics: 処理時間、TTFT、token数などの計測
+- failure / Exception: Applicationの失敗をSpan StatusやLogsへどう反映するか
+
+LogsとMetricsはある程度独立しているので、必要なら順番を入れ替えてよい。
+
+### 最後: 実装境界と外部構成
+
+実際に何を観測するかが決まってから、RAGScope側のTelemetry利用境界を決める。
+そのAPIと依存方向を見てpackage / moduleを分け、最後にCollector / Tempo / Lokiを含む外部構成へ落とす。
+
+packageを先に切って、あとから責務を当てはめる順番にはしない。
+
+---
+
+今後は、ここで「今回決めたこと」に入ったものを毎回再検討しない。
+新しい制約や具体的な問題が見つかった場合だけ戻る。
