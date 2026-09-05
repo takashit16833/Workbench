@@ -1,4 +1,5 @@
 {
   "enabledCssSnippets": [],
-  "showRibbon": false
+  "showRibbon": false,
+  "baseFontSize": 15
 }
