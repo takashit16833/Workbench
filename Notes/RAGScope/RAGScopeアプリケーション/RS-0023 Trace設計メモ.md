@@ -24,7 +24,7 @@ created: 2026-09-06
 | DB / HTTP / GenAI | ✅ | 適用可能なSemantic Conventionsを優先 |
 | Span Status | ✅ | operation自身の最終結果で決める |
 | child failure | ✅ | 親SpanへErrorを自動伝播しない |
-| async interruption | ⚠ | 一律分類しない。実際の中断源とownerで具体化 |
+| async interruption | 注意 | 一律分類しない。実際の中断源とownerで具体化 |
 
 ## Trace構造
 
@@ -78,7 +78,7 @@ Semantic Conventionで決まらない具体Span名・attributesはfeature設計�
 
 Logを生成するかどうかはSpan Statusとは別に判断する。[[RS-0023 Logs設計メモ]]を参照する。
 
-## 🚫 現時点で採用しない
+## 現時点で採用しない
 
 | 候補 | 判断 | 理由 |
 |---|---|---|
@@ -90,7 +90,7 @@ Logを生成するかどうかはSpan Statusとは別に判断する。[[RS-0023
 > [!important]
 > 「採用しない」は将来も不要という意味ではない。必要な要求が正本で追加された場合は再評価する。
 
-## 🚧 feature / 実装時に具体化すること
+## feature / 実装時に具体化すること
 
 | 論点 | 具体化する時点 |
 |---|---|

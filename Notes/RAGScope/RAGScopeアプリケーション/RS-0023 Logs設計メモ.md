@@ -25,7 +25,7 @@ created: 2026-09-06
 | TraceId / SpanId | ✅ | RAGScope独自属性へ複製しない |
 | severity | ✅ | OTel `SeverityNumber`の意味体系を使う |
 | 共通`payload` | ✅ | 作らない |
-| `Body`の具体利用 | 🚧 | 個別Event / SemConvで決める |
+| `Body`の具体利用 | 個別設計で決定 | 個別Event / SemConvで決める |
 
 ## Eventを作る判断フロー
 
@@ -88,7 +88,7 @@ Eventを定義するownerは次を決める。
 Exception Logでは`exception.type`、`exception.message`、取得できる場合は`exception.stacktrace`を記録する。
 Span側のStatus / `error.type` / rethrowは[[RS-0023 Trace設計メモ]]を参照する。
 
-## 🚫 作り直さない旧Logging基盤
+## 作り直さない旧Logging基盤
 
 | 旧RS-0022 | 今回 |
 |---|---|
@@ -100,23 +100,23 @@ Span側のStatus / `error.type` / rethrowは[[RS-0023 Trace設計メモ]]を参�
 
 RAGScope側で所有するのは、Eventの意味、EventName、attributes、failureとの関係などRAGScope固有の表現である。
 
-## 🚫 現時点で採用しない / 🚧 保留
+## 現時点で採用しない / 保留
 
 | 項目 | 状態 | 理由 / 具体化時点 |
 |---|---|---|
-| typed failure → Logの共通自動変換 | 🚫 | Span StatusとEvent Logは別責務 |
-| Exception Span Eventを主表現にする | 🚫 | 現在のException Logs SemConvを優先 |
-| 全RAGScope Eventを列挙する共通`LogSpec` | 🚫 | 複数featureで共有が必要になった時だけ検討 |
-| 旧ログ契約の共通`payload` | 🚫 | Event固有の機械可読情報はattributesで表現 |
-| `Body`の具体内容 | 🚧 | 個別Event / 適用SemConvを決める時 |
-| feature固有EventName / attributes / severity | 🚧 | 対象feature設計時 |
-| ExperimentとTelemetryの関連付け | 🚧 | 実験実行境界が具体化した時 |
-| AdapterのException処理実装 | 🚧 | Adapter実装時 |
+| typed failure → Logの共通自動変換 | 採用しない | Span StatusとEvent Logは別責務 |
+| Exception Span Eventを主表現にする | 採用しない | 現在のException Logs SemConvを優先 |
+| 全RAGScope Eventを列挙する共通`LogSpec` | 採用しない | 複数featureで共有が必要になった時だけ検討 |
+| 旧ログ契約の共通`payload` | 採用しない | Event固有の機械可読情報はattributesで表現 |
+| `Body`の具体内容 | 保留 | 個別Event / 適用SemConvを決める時 |
+| feature固有EventName / attributes / severity | 保留 | 対象feature設計時 |
+| ExperimentとTelemetryの関連付け | 保留 | 実験実行境界が具体化した時 |
+| AdapterのException処理実装 | 保留 | Adapter実装時 |
 
 > [!important]
 > 「採用しない」は将来も不要という意味ではない。必要な要求が正本で追加された場合は再評価する。
 
-## ⚠ 正本反映時に確認する点
+## 正本反映時に確認する点
 
 現在のADR-0005は、同じ失敗をSpanと構造化ログの両方へ記録する場合に同じ`error_type`値を使うとしている。
 

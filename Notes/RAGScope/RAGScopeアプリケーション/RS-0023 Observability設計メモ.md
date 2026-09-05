@@ -18,10 +18,12 @@ created: 2026-09-05
 |---|---|---|
 | Trace | ✅ 共通設計決定 | 1 Invocation = 1 Trace。詳細は[[RS-0023 Trace設計メモ]] |
 | Logs | ✅ 共通設計決定 | OTel Logs / Eventを土台にし、Spanと重複させない。詳細は[[RS-0023 Logs設計メモ]] |
-| Metrics | 🚧 検討中 | 正本の計測要求から必要なMetricを決める。[[RS-0023 Metrics設計メモ]] |
-| Telemetry利用境界 | ⏳ 後続 | Trace / Logs / Metricsが固まった後に決める |
-| package / module | ⏳ 後続 | Telemetry利用境界を見て決める |
-| Collector / backend | ⏳ 後続 | 実際に必要なsignalと利用方法を見て決める |
+| Metrics | ✅ 共通設計決定 | 性能値は実験結果へ保持し、集約観測には適用可能な標準Metricを使う。詳細は[[RS-0023 Metrics設計メモ]] |
+| Telemetry利用境界 | 次に検討 | Trace / Logs / MetricsをHaskellからどう利用するかを決める |
+| package / module | 後続 | Telemetry利用境界を見て決める |
+| Collector / backend | 後続 | 実際に必要なsignalと利用方法を見て決める |
+
+**Trace / Logs / Metricsの共通設計は一通り揃った。次は、その設計をHaskellへ落とすためのTelemetry利用境界を決める。**
 
 このメモは**全体像とsignal横断の共通方針**だけを扱う。
 
@@ -103,18 +105,18 @@ UseCaseから呼び出されるEmbedding生成、DB検索などはUseCaseを構�
 AI推論サービス側の処理は同じTraceへ参加できるが、RAGScope Application側のUseCaseそのものではない。
 プロセス起動時の構築やTelemetry送信はInvocation / UseCaseとは別の処理である。
 
-## 🚧 未決定・後続
+## 未決定・後続
 
 | 論点 | 状態 |
 |---|---|
-| Trace / Logs / Metricsの利用境界を1つにまとめるか分けるか | 未決定 |
-| Telemetry利用境界の名前と公開API | 未決定 |
+| Trace / Logs / Metricsの利用境界を1つにまとめるか分けるか | 未決定。次に検討する |
+| Telemetry利用境界の名前と公開API | 未決定。次に検討する |
 | SDK初期化設定エラー時に起動失敗するかTelemetryなしで起動するか | 未決定 |
-| package / module構成 | Metrics後に決める |
+| package / module構成 | Telemetry利用境界の決定後に決める |
 | Collector / Tempo / Lokiなどの外部構成 | 後続で決める |
 
-次は[[RS-0023 Metrics設計メモ]]を具体化する。
-Metricsまで決めた後、**Telemetry利用境界 → package / module → 外部構成**の順で落とす。
+次は**Telemetry利用境界**を具体化する。
+その後、**package / module → 外部構成**の順で落とす。
 packageを先に切って、あとから責務を当てはめない。
 
 ## 詳細

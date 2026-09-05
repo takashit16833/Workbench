@@ -24,9 +24,9 @@ created: 2026-09-06
 | TTFT | ✅ | AI推論サービス側の`gen_ai.server.time_to_first_token`を標準Metricとして利用する |
 | token usage | ✅ | 適用可能なら`gen_ai.client.token.usage`を利用する |
 | DB operation時間 | ✅ | `db.client.operation.duration`を利用する |
-| RAGScope固有Metric | 🚫 | 現時点では追加しない |
+| RAGScope固有Metric | 追加しない | 現時点では追加しない |
 | Metric attributes | ✅ | 実験ID・文書ID等のhigh-cardinality値を入れない |
-| GenAI SemConv | ⚠ | Development。現在名をRAGScope独自の恒久契約として固定しない |
+| GenAI SemConv | 注意 | Development。現在名をRAGScope独自の恒久契約として固定しない |
 
 **正本が要求する性能値は実験結果として保持する。OpenTelemetry Metricsは、多数の実行を集約して観測する意味がある標準Metricだけを追加で使う。**
 
@@ -87,7 +87,7 @@ flowchart LR
 | 実験比較用の検索時間 | RAGScope Applicationが検索stage全体を計測し、実験結果へ保存する |
 | Embedding時間 | 適用可能なGenAI Span / Metricで観測する |
 | PostgreSQL時間 | DB Spanと`db.client.operation.duration`で観測する |
-| `ragscope.search.duration` | 🚫 現時点では作らない |
+| `ragscope.search.duration` | 作らない |
 
 ### reranking
 
@@ -162,16 +162,16 @@ Metricは集約して利用するため、attributesへ実行ごとに増える�
 
 | 値 | Metric attribute |
 |---|---|
-| 実験ID | 🚫 入れない |
-| 評価データID | 🚫 入れない |
-| 文書ID / 文書チャンクID | 🚫 入れない |
-| TraceId / SpanId | 🚫 RAGScope独自属性として入れない |
-| SemConvが要求 / 推奨する低cardinality属性 | ✅ 適用SemConvに従う |
-| RAGScope独自属性 | 🚧 集約上の具体的用途が確認できた場合だけ検討 |
+| 実験ID | 入れない |
+| 評価データID | 入れない |
+| 文書ID / 文書チャンクID | 入れない |
+| TraceId / SpanId | RAGScope独自属性として入れない |
+| SemConvが要求 / 推奨する低cardinality属性 | 適用SemConvに従う |
+| RAGScope独自属性 | 集約上の具体的用途が確認できた場合だけ検討 |
 
 個別実行の識別はTraceと実験結果が担当し、Metric attributesに実験識別を持ち込まない。
 
-## 🚫 現時点でRAGScope固有Metricを追加しない
+## 現時点でRAGScope固有Metricを追加しない
 
 正本の性能要求を照合した結果、現時点でMetrics signalにしか置けないRAGScope固有の性能値は確認できていない。
 
@@ -183,7 +183,7 @@ Metricは集約して利用するため、attributesへ実行ごとに増える�
 したがって、**RS-0023の共通設計ではRAGScope固有Metricを0個とする**。
 feature固有の集約要求が後から具体化し、Trace / 実験結果 / 標準Metricでは満たせないことが確認された場合だけ、そのownerが独自Metricを定義する。
 
-## ⚠ Semantic Conventionsのstability
+## Semantic Conventionsのstability（注意）
 
 2026-09-06確認時点では、OpenTelemetry core Semantic Conventionsは1.44.0で、GenAI Semantic Conventionsは別リポジトリのDevelopment規約として管理されている。
 確認したGenAI manifestは`gen-ai-dev/1.42.0-dev`で、core Semantic Conventions 1.44.0へ依存している。
@@ -202,7 +202,7 @@ feature固有の集約要求が後から具体化し、Trace / 実験結果 / �
 | `gen_ai.server.time_to_first_token` | Histogram | `s` | Development |
 | `gen_ai.server.time_per_output_token` | Histogram | `s` | Development |
 
-## 🚧 後続で具体化すること
+## 後続で具体化すること
 
 | 論点 | 状態 / 時点 |
 |---|---|
