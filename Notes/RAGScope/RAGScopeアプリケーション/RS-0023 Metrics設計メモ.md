@@ -12,50 +12,80 @@ created: 2026-09-06
 > これはRS-0023を考えるための**Workbench上の検討メモ**であり、RAGScopeの正本ではない。
 > Observability全体の共通方針と、Metrics後に決めるTelemetry利用境界 / package / 外部構成は[[RS-0023 Observability設計メモ]]を参照する。
 
-## このノートで扱うこと
+## 30秒で見る
 
-OpenTelemetry Metricsを前提に、RAGScopeで何をMetricとして計測するかを検討する。
+| 項目 | 状態 |
+|---|---|
+| 正本の計測要求 | ✅ 確認済み |
+| Metric化する値 | 🚧 未決定 |
+| instrument | 🚧 未決定 |
+| Metric名 / unit / attributes | 🚧 未決定 |
+| OTel Semantic Conventionsとの対応 | 🚧 これから確認 |
+| RAGScope Application / AI推論サービスのowner | 🚧 未決定 |
 
-Traceのdurationや既存のSemantic Conventionsで得られる情報をそのまま重複して独自Metricにせず、RAGScopeの要求を満たすためにMetrics signalとして必要な計測だけを定義する。
+このノートでは**Metricの意味と表現を決めるところまで**扱う。
+Telemetry利用境界、package / module、Collector / backend構成は全体像ノートで扱う。
 
-このノートではMetricの意味と表現を決めるところまでを扱い、その後のTelemetry利用境界、package / module構成、Collector / backend構成は全体像ノートで扱う。
+## 正本から確認済みの計測要求
 
-## 正本から確認済みの要求
+| 計測対象 | 要求として確認済み | 既存signal / SemConvの確認対象 | Metric化 |
+|---|---|---|---|
+| 検索の処理時間 | ✅ | Span duration等で満たせるか確認 | 🚧 未決定 |
+| rerankingの処理時間 | ✅ | Span / 適用可能なSemConvを確認 | 🚧 未決定 |
+| 回答生成の処理時間 | ✅ | Span / 適用可能なGenAI SemConvを確認 | 🚧 未決定 |
+| TTFT | ✅ | 適用可能なGenAI SemConvを確認 | 🚧 未決定 |
+| 生成token数 | ✅ | 適用可能なGenAI SemConvを確認 | 🚧 未決定 |
 
-現時点で、正本の要求定義から少なくとも次の計測要求を確認している。
+> [!important]
+> 上表は**計測要求が確認済み**という意味であり、各値についてOpenTelemetry Metricを新設すると決めたものではない。
 
-- 検索、reranking、回答生成などの処理時間を段階別に計測できること
-- 回答生成についてTTFTを計測できること
-- 回答生成について生成token数を計測できること
-- 回答生成時間を計測できること
+## Metricを追加する判断フロー
 
-これらは**計測要求として確認済み**であり、OpenTelemetry Metricとして個別instrumentを作ることまで決定したものではない。
-Span durationやGenAI Semantic Conventionsなど、他signal / 既存Conventionで満たせるものを確認してからMetric化の要否を決める。
+```mermaid
+flowchart TD
+    A["正本の計測要求"] --> B{"Trace / Spanや既存SemConvで取得できる?"}
+    B -->|No| C{"Metrics signalとして必要?"}
+    B -->|Yes| D{"集計のためMetricとして持つ意味がある?"}
+    D -->|No| E["独自Metricを追加しない"]
+    D -->|Yes| C
+    C -->|No| E
+    C -->|Yes| F{"適用可能なMetric SemConvがある?"}
+    F -->|Yes| G["SemConvのMetric名 / instrument / unit / attributesを採用"]
+    F -->|No| H["必要なRAGScope固有Metricだけ定義"]
+```
 
-## ✅ 決めたこと
+## ✅ すでに決まっている共通制約
+
+| 制約 | 方針 |
+|---|---|
+| Semantic Conventions | 適用可能なOTel ConventionをRAGScope独自Metricより優先 |
+| SDK境界 | OpenTelemetry SDK固有型をUseCaseへ直接漏らさない |
+| 重複計測 | Span等で取れる値を理由なく独自Metricへ重複させない |
+| 高cardinality属性 | 実験ID、文書IDなどを安易にMetric attributesへ入れない |
+| 自動 / 手動計装 | Metricの意味を決めた後の実装論点として判断 |
 
 現時点ではMetrics固有のinstrument、Metric名、unit、attributesはまだ決めていない。
 
-signal横断の共通方針として、適用可能なOpenTelemetry Semantic ConventionsをRAGScope独自Metricより優先し、OpenTelemetry SDK固有型をUseCaseへ直接漏らさないことは[[RS-0023 Observability設計メモ]]で決定済みである。
+## 🚧 次に確認すること
 
-## 🤔 次に決めること
+| 論点 | 確認内容 |
+|---|---|
+| 処理時間 | 検索 / reranking / 回答生成をSpan durationで満たせるか、別Metricが必要か |
+| TTFT | 適用可能なGenAI Semantic Conventionに対応表現があるか |
+| token usage | 適用可能なGenAI Semantic Conventionに対応Metricがあるか |
+| operation duration | 適用可能なGenAI Semantic Conventionに対応Metricがあるか |
+| owner | RAGScope Application側 / AI推論サービス側のどちらが各値を所有するか |
+| Spanとの重複 | 同じ値をSpanとMetricで持つ場合に集計上の意味があるか |
+| success / failure集計 | 既存の`error.type`等のSemConvとどう整合するか |
 
-次の順で検討する。
+## 検討順序
 
-1. 正本要求にある各計測値について、Trace / Spanまたは既存のOpenTelemetry Semantic Conventionsですでに取得できるか確認する
+1. 各計測要求をTrace / Spanまたは既存Semantic Conventionsで取得できるか確認する
 2. Metrics signalとして追加で保持する必要がある値を特定する
-3. 適用可能なSemantic Conventionがある場合は、そのMetric名・instrument・unit・attributesを採用する
-4. RAGScope固有Metricが必要な場合だけ、意味、instrument、unit、attributes、記録条件を定義する
-5. attributesのcardinalityを確認し、実験IDや文書IDなど高cardinalityな値を安易にMetric属性へ持ち込まない
-6. 自動計装 / 手動計装のどちらで取得するかは、Metricの意味を決めた後に実装論点として判断する
-
-特に次を確認する。
-
-- 検索・reranking・回答生成の処理時間をSpan durationで満たせるか、それとは別にHistogram等が必要か
-- GenAI Semantic ConventionsにTTFT、token usage、operation durationに対応するMetricが存在するか
-- RAGScope Application側とAI推論サービス側のどちらが各計測値を所有するか
-- 同じ値をSpanとMetricで持つ場合、その重複に集計上の意味があるか
-- success / failure別の集計が必要な場合、既存の`error.type`等のSemConvとどう整合するか
+3. 適用可能なMetric Semantic Conventionがあれば、そのMetric名・instrument・unit・attributesを採用する
+4. RAGScope固有Metricが必要な場合だけ、意味・instrument・unit・attributes・記録条件を定義する
+5. attributesのcardinalityを確認する
+6. 自動計装 / 手動計装は最後に判断する
 
 ## 参考
 
