@@ -10,36 +10,7 @@ created: 2026-09-05
 
 > [!note]
 > これはRS-0023を考えるための**Workbench上の検討メモ**であり、RAGScopeの正本ではない。
-> 正本で既に決まっている土台と、RS-0023でこのまま採用して進める設計を先に固定し、本当に話し合う必要があるところだけ残す。
-
-## まず、ここはもう動かさない
-
-現在の正本で、RAGScope Applicationの大枠はすでに決まっている。
-
-| 土台 | 扱い |
-|---|---|
-| 利用者がRAGScopeへ依頼するトップレベルの操作をUseCaseとする | 正本で決定済み |
-| UseCase実行はApplicationがUseCaseを呼んでから、Applicationへ制御が戻るまで | 正本で決定済み |
-| CLI / APIの入力受け取り・変換と、UseCase後の表示 / HTTP変換はUseCase実行の外側 | 正本で決定済み |
-| RAGScope Applicationが処理全体を制御する | 正本で決定済み |
-| AI推論サービスはモデル / Tokenizer依存の計算を担当する | 正本で決定済み |
-| AI推論サービスはDBへ直接アクセスしない | 正本で決定済み |
-
-```mermaid
-flowchart LR
-    USER["利用者"] --> IF["CLI / API"]
-    IF --> APP["RAGScope Application"]
-
-    subgraph APPFLOW["RAGScope Application"]
-        PRE["入力受け取り・変換"] --> UC["UseCase"]
-        UC --> POST["表示 / HTTP変換"]
-    end
-
-    UC --> AI["AI推論サービス"]
-    UC --> DB[("PostgreSQL")]
-```
-
-ここはRS-0022から救出するというより、現在の正本をそのまま土台にする。
+> 現在の正本にあるUseCase境界とRAGScope Application / AI推論サービス / DBの責務を前提に、RS-0023で新しく決めるObservability設計だけを扱う。
 
 ## RS-0023で採用して進めること
 
