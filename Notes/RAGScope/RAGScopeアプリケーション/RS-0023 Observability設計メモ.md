@@ -133,6 +133,22 @@ flowchart LR
 
 Trace / Logs / Metricsの利用境界を1つにまとめるか分けるか、名前をどうするかは後で決める。
 
+### Haskell側OpenTelemetry SDKは`hs-opentelemetry`を採用する
+
+RAGScopeアプリケーションのOpenTelemetry SDKとして`hs-opentelemetry` 1.xを採用する。
+`hs-opentelemetry`固有の型やAPIはOpenTelemetry Adapterの内側に閉じ込め、UseCaseやfeature固有のfailure型へ直接依存させない。
+
+採用理由は次のとおり。
+
+- RAGScopeが必要とするTrace、Logs、Context / Propagator、Processor、OTLP Exporterの主要能力が揃っている。
+- HaskellでTrace + Logs + Context + Processor + OTLPまで一式を提供する実用的な候補として最も適合しており、同等の別SDKを探し続ける具体的な理由がない。
+- OpenTelemetry SDK相当をRAGScopeで自作すると、Context管理、batching、Processor / Exporter、flush / shutdown、export失敗処理などRAGScope固有ではない責務まで保守することになる。
+- 旧RS-0022でもSDK利用はPort / Adapterの内側へ隔離しており、今回も同じ境界を維持できるため、SDK採用がUseCase設計を固定する理由にはならない。
+
+採用前の大規模PoCを必須条件にはしない。実装時にRAGScopeのGHC / dependency構成との互換性や、必要なAdapter動作を確認する。
+
+この判断を見直すのは、`hs-opentelemetry` 1.xではRAGScopeの必須能力を薄いAdapterでも成立させられない、RAGScopeの採用GHC / dependency構成で実用上解消できない問題がある、またはSDKのruntime挙動がApplicationの正しさを損なう具体的事実が確認された場合とする。
+
 ### OpenTelemetryが持っているTelemetry基盤は作り直さない
 
 RAGScope固有の意味はRAGScope側で持つ。一方、Telemetryの共通機構はOpenTelemetryへ任せる。
@@ -185,27 +201,114 @@ RAGScope固有の処理についてだけ、独立して観測する価値があ
 
 具体的なSpan名、属性、Span StatusのError条件は、適用するSemantic Conventionまたは対象機能の設計で後から具体化する。
 
-## 🧪 failure / `error.type`設計の採用候補
+## ✅ failure / Exception / interruption / Telemetry failureの扱い
 
-ここはまだ採用済み設計ではない。旧RS-0022のfailure分類設計から、現在のTrace / Span境界とOpenTelemetry Semantic Conventions優先方針へ合わせて再利用できそうな考え方だけを候補として残す。
+通常のtyped failure、unexpected同期Exception、async interruption / cancellation、Telemetry基盤自身の失敗は、原因やApplicationへの意味が異なるため同じ経路へまとめない。
 
-### 採用候補
+### typed failure
 
-- **具体failureの意味は、そのfailureを所有する側が定義する。** UseCase固有failureであればUseCase側、利用インターフェース固有failureであればそのインターフェース側など、failureを最も具体的に理解できる所有側が意味を持つ。
-- **RAGScope固有operationが最終的に失敗し、RAGScope側で`error.type`を付ける必要がある場合は、そのoperation / failureの所有側が安定した機械可読な分類規則を定義する。** HTTP、Database、GenAIなど適用可能なSemantic Conventionやinstrumentationが分類を定義する領域では、同義のRAGScope独自分類を重複して作らない。
-- **具体failureの詳細値とTelemetry用の分類を分離する。** `error.type`を得るために具体failureそのものを共通エラーへ置換せず、failureが保持する原因・詳細値を失わない。
-- **failure型自身をOpenTelemetryやObservability固有型へ依存させない。** Telemetry分類が必要な場合は、failure型とTelemetry表現の境界に変換規則を置く。
-- **分類規則が必要なら、実行状態やTrace Contextへ依存しない純粋な変換を第一候補とする。** 旧`ErrorClassifier failure`のような名前付き値にするか、専用の`ErrorType`型を持つかは未決定であり、必要な公開API・package依存を見て判断する。
-- **すべてのtyped failureへRAGScope独自分類を要求しない。** retryや代替処理で回復し、そのRAGScope固有operation自体が最終的に成功した場合、そのoperationのSpanへ失敗として反映するための分類は不要である。また、DB / HTTP / GenAIなど対象SemConvやinstrumentationが`error.type`を所有するfailureについても、RAGScope独自分類を追加する理由にはしない。
+具体failureの意味は、そのfailureを所有するfeature / UseCase / operationが定義する。
+RAGScope固有operationが最終的に失敗し、RAGScope側で`error.type`を付ける必要がある場合は、そのoperation / failureの所有側が安定した機械可読な分類規則を定義する。
+
+具体failureの詳細値とTelemetry用の分類は分離する。`error.type`を得るために具体failureそのものを共通エラーへ置換せず、failureが保持する原因・詳細値を失わない。
+failure型自身をOpenTelemetryやObservability固有型へ依存させない。分類規則が必要なら、実行状態やTrace Contextへ依存しない純粋な変換を第一候補とする。
+
+operationのSpan Statusは、そのoperation自身の**最終結果**で決める。
+
+```text
+final success
+  -> Span Status = Unset
+  -> error.typeなし
+
+final typed failure
+  -> Span Status = Error
+  -> 必要なerror.typeを設定
+```
+
+途中でfailureが発生しても、retryや代替処理によってoperationが最終的に成功した場合は、そのoperationのSpanをErrorにしない。
+child Spanのfailureも、親operationのSpan Statusへ自動伝播させない。
+
+HTTP、Database、GenAIなど適用可能なSemantic Conventionやinstrumentationが`error.type`を所有する領域では、同義のRAGScope独自分類を重複して作らない。
+すべてのtyped failureへRAGScope独自分類を要求しない。
+
+また、typed failureでSpanがErrorになったことだけを理由にLogRecordを自動生成しない。
+retry scheduled、retry exhausted、timeoutなど、後から確認する意味がある出来事をeventとしてLogへ記録する。
+
+**決定理由**: OpenTelemetryのRecording errorsでは、retryや内部処理でerrorが起きても最終的にoperationが成功した場合は、囲っているoperationをerrorとして記録しない。RAGScopeのUseCase設計でも、内部処理が失敗しても最終結果を成立させればUseCase成功であるため、この意味をそのままSpan Statusへ反映できる。Spanの結果とevent Logを分離することで、failureが発生しただけで同義のTelemetryを重複生成する必要もなくなる。
+
+**見直し条件**: feature固有のfailureだけでは複数operationを横断して必要な集計・契約を成立させられない具体的要求が正本で追加された場合は、共通分類や共通型を再検討する。
+
+### unexpected同期Exception
+
+RAGScopeが所有するoperation境界からunexpectedな同期Exceptionがescapeする場合は、次の扱いを基本とする。
+
+```text
+unexpected synchronous Exception
+  -> Span Status = Error
+  -> error.type = exception class相当
+  -> Exception Logを1件記録
+  -> original Exceptionをrethrow
+```
+
+Exception LogではOpenTelemetryのException Logs Semantic Conventionを使用し、`exception.type`、`exception.message`、取得できる場合は`exception.stacktrace`を記録する。
+`exception.stacktrace`は取得できる情報の品質を超えて作らない。
+
+同じExceptionをUseCase / handler / rootなど伝播経路の各層で重複記録しない。
+下位のHTTP / DB / GenAI instrumentationなどが同じExceptionをすでに所有・記録している場合は、RAGScope上位層が同じException Logを追加しない。
+一方、親operation自身が最終的に失敗した場合に、その親SpanをErrorとすることはException Logの重複防止とは別に判断する。
+
+`hs-opentelemetry`の`inSpan`は、既定ではescapeしたExceptionをSpanのException Eventとして記録する。一方、現在のOpenTelemetry Semantic ConventionsではExceptionをLogsとして記録する方向へ移行しているため、RAGScopeが所有するmanual SpanではSDKの既定挙動をそのままRAGScope契約にしない。
+必要な場合はOpenTelemetry Adapterで既定のException記録を抑え、RAGScopeが採用するException Log + Span Status / `error.type`へ写像する。
+具体的に`ExceptionHandler`を使うか、Span lifecycleを別の方法で扱うかはAdapter実装時に決める。
+
+**決定理由**: OpenTelemetryではfailed operationのSpanをErrorにし、operationがExceptionで失敗した場合はExceptionをLogRecordとして記録することが推奨されている。また同じExceptionを複数回記録しないことが求められる。RAGScopeでもExceptionの観測のためにApplicationの例外制御を変えるべきではないため、記録後もoriginal Exceptionを維持する。
+
+**見直し条件**: 採用する`hs-opentelemetry`の将来versionが現在のException Logs Semantic Conventionを直接扱い、RAGScope固有Adapterでの補正が不要になった場合はAdapter内部の実装を簡略化する。RAGScope側の「Span Error + Exception Log 1件 + rethrow」という意味は、OpenTelemetry仕様またはRAGScope要求が変わらない限り維持する。
+
+### async interruption / cancellation
+
+async interruption / cancellationをtyped failureやunexpected同期Exceptionへ一括して統合しない。
+Haskellでは`AsyncCancelled`、`ThreadKilled`、`UserInterrupt`、`StackOverflow`、`HeapOverflow`などが同じ意味ではなく、`AsyncException`であることだけから「意図的cancellation」と判断できない。
+
+async interruptionを捕捉する必要がある境界でも、original exceptionを飲み込まない。必要なcleanupとTelemetry処理を行った後はrethrowする。
+Span StatusをErrorにするかUnsetにするかは、そのoperationのownerがその中断をどう扱うかで決める。
+`ThreadKilled`を一律に正常cancellationとして扱う、またはすべての`AsyncException`を一律にErrorとして扱う共通規則は作らない。
+
+**決定理由**: Haskellのasync exception constructorは発生理由の業務的意味を一意に表さない。たとえば`ThreadKilled`だけでは利用者が意図したcancelか、別の終了処理かを判別できず、`StackOverflow` / `HeapOverflow`までcancellationとして扱うのは不正確である。対象operationの意味を確認せずTelemetryだけで分類するとApplicationの結果意味とずれる。
+
+**見直し条件**: RAGScopeに実際のstructured cancellation、CLI interrupt、timeout打ち切りなどの仕組みが実装される時点で、実際に発生・捕捉するExceptionとowner operationを確認し、そのケースに必要なStatus / Log表現を具体化する。
+
+### Telemetry基盤自身の失敗
+
+Exporter、Processor、Collectorへの送信などTelemetry基盤自身の失敗は、Application本体の結果を変更しない。
+UseCaseが成功している場合、Telemetry exportに失敗してもUseCase成功のままとする。
+
+Telemetry基盤の診断は、まず`hs-opentelemetry` SDK自身のerror handling / internal diagnosticsを使用する。
+旧RS-0022の`LoggingFailureReporter`、独自Logging Runtime、独自Sinkのような別経路を先に再構築しない。
+SDKで具体的に不足する診断要求が判明した場合だけRAGScope側の補助経路を追加検討する。
+
+**決定理由**: ObservabilityはApplicationを観測するための補助機構であり、runtimeでTelemetryが壊れたことによって本来成功するApplication処理を失敗へ変えると、観測対象の意味そのものを変えてしまう。OpenTelemetryのerror handlingもruntimeのTelemetry失敗をApplicationへ未処理Exceptionとして漏らさないことを要求している。
+
+**見直し条件**: Telemetryの欠落をApplication処理失敗として扱わなければならない明示的なRAGScope要求が追加された場合に限り再検討する。なお、SDK初期化時の設定不備で起動を失敗させるか、Telemetryなしで起動するかは別論点であり未決定とする。
 
 ### 現時点で採用しない・保留するもの
 
 - **全体共通の上位`ErrorCategory`** は現時点では導入しない。旧設計には`Input` / `Resource` / `Data` / `Dependency` / `Timeout` / `Internal`のような横断カテゴリが存在したが、現在確認しているRAGScope要求から、異なるUseCaseやoperationをこの共通カテゴリで集計・分岐・契約化する必要性はまだ確認できていない。現在の要求なしに導入すると、feature固有のfailure分類とは別に維持すべき分類軸と共通依存を増やすためである。今後、横断的な成功率・failure集計、運用判断、API契約などで共通カテゴリが実際に必要だと正本から確認できた場合は、その要求と必要な分類粒度を基準に改めて設計する。
-- **共通`ErrorType`型、共通`ErrorClassifier failure`型、専用の共通error package** は現時点では採用済みにしない。RAGScope固有operationの`error.type`を安定して決める責務は必要になり得るが、それを全operationで共有する型・packageとして持つ必要があるかは未確認である。実際に複数のRAGScope固有operationで同じ抽象が必要になった時点で、公開API・依存方向・重複削減の効果を比較して判断する。
-- **`OperationFailure`へ具体failureとClassifierをまとめ、root Spanまで共通分類を伝播する旧構造** は現在のSpan境界にはそのまま適用しない。現在はInvocation専用Spanを作らず、API / CLI entry Spanは各Semantic Convention、UseCase SpanはRAGScope固有operationとしてそれぞれ自身の規則でStatus / `error.type`を決めるため、異なるoperationへ同じ分類を伝播させること自体を共通要件にしない。
+- **共通`ErrorType`型、共通`ErrorClassifier failure`型、専用の共通error package** は現時点では採用済みにしない。RAGScope固有operationの`error.type`を安定して決める責務は必要だが、それを全operationで共有する型・packageとして持つ必要があるかは未確認である。実際に複数のRAGScope固有operationで同じ抽象が必要になった時点で、公開API・依存方向・重複削減の効果を比較して判断する。
+- **`OperationFailure`へ具体failureとClassifierをまとめ、root Spanまで共通分類を伝播する旧構造** は採用しない。entry SpanとUseCase Spanなど異なるoperationはそれぞれ自身の最終結果とSemConv / owner規則でStatus / `error.type`を決めるため、同じ分類をrootまで運ぶことを共通要件にしない。将来、異なるoperationへ同じfailure classificationを伝播させる明示的な要求が出た場合だけ再検討する。
+- **typed failureを自動的にLogへ変換する共通処理** は採用しない。Span Statusとevent Logは別責務として扱う。featureごとの意味のあるeventが必要な場合にLogを定義する。
+- **Exception Span EventをRAGScopeの新しい主表現にすること** は採用しない。現在のOpenTelemetry Exception Logs Semantic Conventionを優先する。OpenTelemetry側の仕様が再度変わった場合はその時点で再評価する。
+- **`AsyncException`を一括してcancellationまたはErrorへ分類する規則** は採用しない。実際の中断源とowner operationが確定した時点で具体化する。
 
 > [!important]
 > このメモで「採用しない」「保留」と記録する場合は、後続の検討者が再評価できるように、**現在採用しない理由と、判断を見直す条件を可能な範囲で併記する**。現在要求から導入根拠を確認できないだけのものを、将来も不要な恒久ルールとして扱わない。
+
+### 正本へ反映するときに確認する点
+
+現在のADR-0005は、同じ失敗をSpanと構造化ログの両方へ記録する場合に同じ`error_type`値を使うとしている。
+OpenTelemetryのException Logは`exception.type`を標準属性として使用するため、unexpected Exceptionについては「Spanの`error.type`とException Logの`exception.type`が同じ失敗クラスを表す」という意味を維持しつつ、同じ属性名をLogへ重複して持たせる必要があるかを正本反映時に確認する。
+
+これはWorkbench上の判断だけで現在のADRを変更したことにはしない。
 
 ## 今の一枚絵
 
@@ -229,7 +332,7 @@ flowchart TB
     AIREQ -. "Trace Contextを伝播" .-> AI
 
     UC -. "観測" .-> TEL
-    OTEL["OpenTelemetry Adapter / SDK"] --> TEL
+    OTEL["hs-opentelemetry\nAdapter / SDK"] --> TEL
     OTEL --> TR["Traces"]
     OTEL --> LG["Logs"]
     OTEL --> MT["Metrics"]
@@ -243,35 +346,41 @@ Collector / Tempo / Lokiはまだ候補である。
 
 ## 🤔 次に決めること
 
-Trace境界は**1 Invocation = 1 Trace**、Span境界は上記の表として決めた。
-次は、そのTrace / Span構造を基準にLogs、Metrics、failure / Exceptionの扱いを決める。
+Trace境界、Span境界と、failure / Exception / interruption / Telemetry failureの共通方針までは決めた。
+次は、その構造を基準にLogsとMetricsを具体化し、その後でTelemetry利用境界とpackage / moduleへ落とす。
 
 ```mermaid
 flowchart TD
     subgraph NEXT["次"]
         C["Logs"]
         D["Metrics"]
-        E["failure / Exception"]
+    end
+
+    subgraph DETAIL["必要な時点で具体化"]
+        E["featureごとのerror.type"]
+        I["実際のcancellation / interrupt"]
+        X["hs-opentelemetry AdapterのException実装"]
+        S["Telemetry初期化失敗方針"]
     end
 
     subgraph LAST["最後に形へ落とす"]
         F["Telemetry利用境界"] --> G["package / module"] --> H["Collector / Tempo / Loki"]
     end
 
-    C --> E
-    D --> E
+    C --> F
+    D --> F
     E --> F
+    I --> F
+    X --> F
+    S --> F
 ```
 
-### 次: Logs / Metrics / failure
+### 次: Logs / Metrics
 
-Trace / Spanで表せるものが見えたので、残る情報を整理する。
+- Logs: 「その時点で何が起きたか」として残したいevent、属性、既定severity、記録条件を決める。
+- Metrics: 処理時間、TTFT、token数など、RAGScopeで必要な計測を決める。
 
-- Logs: 「その時点で何が起きたか」として残したいもの
-- Metrics: 処理時間、TTFT、token数などの計測
-- failure / Exception: Applicationの失敗をSpan StatusやLogsへどう反映するか
-
-LogsとMetricsはある程度独立しているので、必要なら順番を入れ替えてよい。
+failure / Exceptionについては共通方針を再検討するのではなく、具体的なfeature / interruption / Adapterを設計するときに上記の未決定部分だけを具体化する。
 
 ### 最後: 実装境界と外部構成
 
@@ -279,3 +388,10 @@ LogsとMetricsはある程度独立しているので、必要なら順番を入
 そのAPIと依存方向を見てpackage / moduleを分け、最後にCollector / Tempo / Lokiを含む外部構成へ落とす。
 
 packageを先に切って、あとから責務を当てはめる順番にはしない。
+
+## 参考にした外部仕様・実装
+
+- [OpenTelemetry — Recording errors](https://opentelemetry.io/docs/specs/semconv/general/recording-errors/)
+- [OpenTelemetry — Exceptions in Logs](https://opentelemetry.io/docs/specs/semconv/exceptions/exceptions-logs/)
+- [OpenTelemetry — Error handling](https://opentelemetry.io/docs/specs/otel/error-handling/)
+- [hs-opentelemetry](https://github.com/iand675/hs-opentelemetry)
