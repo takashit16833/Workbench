@@ -159,6 +159,32 @@ RAGScope独自のTelemetry表現は、UseCase、Invocation、実験、評価デ�
 
 Semantic Conventionごとにstabilityが異なるため、実装時には使用するOpenTelemetry / instrumentationのバージョンと対象Conventionのstabilityを確認する。
 
+### Span境界
+
+Spanは、開始・終了、所要時間、失敗、親子関係を独立して確認する価値がある処理に切る。
+既存のOpenTelemetry Semantic ConventionsがSpanモデルを定義している領域ではそのモデルを採用し、同じ意味のRAGScope独自Spanを重複して作らない。
+RAGScope固有の処理についてだけ、独立して観測する価値がある場合にRAGScope独自Spanを追加する。
+
+採用するSpan境界は次のとおり。
+
+| 対象 | Span境界 | 表現方針 |
+|---|---|---|
+| Invocation | 専用Spanは作らない。Invocationは1 Traceの意味上の単位とする | API / CLIのentry側SpanをTraceの入口として使う |
+| API | 1回のHTTP requestをSERVER Spanとして追跡する | HTTP Semantic Conventionsに従う |
+| CLI | 1回のCLI executionをSpanとして追跡する | CLI Semantic Conventionsに従う |
+| handler | 原則として独立Spanにしない | API / CLIのentry側Spanの内部処理として扱う |
+| UseCase | 1回のUseCase実行を1 Spanとして追跡する | RAGScope固有Spanとして表現する |
+| PostgreSQL | database client operationをDB client Spanとして追跡する | Database / PostgreSQL Semantic Conventionsに従う |
+| AI推論サービスへの通信 | 通信のclient / server処理をSpanとして追跡する | 採用する通信方式に対応するHTTP / RPC等のSemantic Conventionsに従う |
+| Embedding / generation | 適用可能なGenAI Semantic Conventionが定義するSpanモデルをまず採用する | GenAI Semantic Conventionsを確認し、同義のRAGScope独自Spanを重複させない |
+| RAGScope内部処理 | 開始・終了、所要時間、失敗、親子関係を独立して確認する価値がある場合だけSpanにする | 必要な場合はRAGScope固有Spanとして表現する |
+| retry attempt | instrumentationや対象SemConvですでにattempt単位のSpanが表現される場合は重複して作らない | 既存表現で不足する場合だけ対象機能の設計で追加要否を決める |
+
+この表は、**どの処理をSpanとして扱うか**と、**そのSpanをどのSemantic ConventionまたはRAGScope固有表現で表すか**を決めるものである。
+自動計装 / 手動計装のどちらでSpanを生成するかは別の実装論点であり、この表では決めない。
+
+具体的なSpan名、属性、Span StatusのError条件は、適用するSemantic Conventionまたは対象機能の設計で後から具体化する。
+
 ## 今の一枚絵
 
 ここまで決めた時点では、ざっくりこの形で考える。
@@ -195,16 +221,12 @@ Collector / Tempo / Lokiはまだ候補である。
 
 ## 🤔 次に決めること
 
-Trace境界は、**1 Invocation = 1 Trace**として決めた。
-次は、そのTraceの中で何を独立したSpanとして追跡するかを決める。
+Trace境界は**1 Invocation = 1 Trace**、Span境界は上記の表として決めた。
+次は、そのTrace / Span構造を基準にLogs、Metrics、failure / Exceptionの扱いを決める。
 
 ```mermaid
 flowchart TD
-    subgraph FIRST["次"]
-        B["Span境界"]
-    end
-
-    subgraph NEXT["その次"]
+    subgraph NEXT["次"]
         C["Logs"]
         D["Metrics"]
         E["failure / Exception"]
@@ -214,23 +236,14 @@ flowchart TD
         F["Telemetry利用境界"] --> G["package / module"] --> H["Collector / Tempo / Loki"]
     end
 
-    B --> C
-    B --> D
     C --> E
     D --> E
     E --> F
 ```
 
-### 次: Span境界
+### 次: Logs / Metrics / failure
 
-1 InvocationのTraceの中で、handler、UseCase、AI推論サービス、DB、内部処理のどこを独立したSpanとして見るかを決める。
-既存のOpenTelemetry instrumentation / Semantic Conventionsで表現されるSpanと、RAGScope固有の意味を表すSpanを重複させないことも同時に確認する。
-
-ここがLogsを考えるときの基準にもなる。
-
-### その次: Logs / Metrics / failure
-
-Trace / Spanで表せるものが見えたら、残る情報を整理する。
+Trace / Spanで表せるものが見えたので、残る情報を整理する。
 
 - Logs: 「その時点で何が起きたか」として残したいもの
 - Metrics: 処理時間、TTFT、token数などの計測
