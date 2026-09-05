@@ -17,9 +17,13 @@ created: 2026-09-05
 このメモはRS-0023 Observability設計の**全体像とsignal横断の共通方針**を扱う。
 Trace / Logs / Metricsの詳細は次のノートへ分ける。
 
-- [[RS-0023 Trace設計メモ]]
-- [[RS-0023 Logs設計メモ]]
-- [[RS-0023 Metrics設計メモ]]
+| signal | このメモから切り出す詳細 |
+|---|---|
+| Trace | [[RS-0023 Trace設計メモ]] — Invocation / Trace / Span境界、Span Status、failure / Exception / interruptionのTrace側 |
+| Logs | [[RS-0023 Logs設計メモ]] — Event / LogRecord、severity、Exception Log、Logs固有の表現規則 |
+| Metrics | [[RS-0023 Metrics設計メモ]] — RAGScopeで必要なMetricと既存Semantic Conventionsとの関係 |
+
+ここでは、各signalへ共通するApplicationとの境界、OpenTelemetryの採用方針、実行時構成、全体構成だけを保持する。
 
 ## ✅ 今回決めたこと
 
@@ -133,19 +137,12 @@ RAGScopeアプリケーションのOpenTelemetry SDKとして`hs-opentelemetry` 
 
 この判断を見直すのは、`hs-opentelemetry` 1.xではRAGScopeの必須能力を薄いAdapterでも成立させられない、RAGScopeの採用GHC / dependency構成で実用上解消できない問題がある、またはSDKのruntime挙動がApplicationの正しさを損なう具体的事実が確認された場合とする。
 
-### OpenTelemetryが持っているTelemetry基盤は作り直さない
+### OpenTelemetryが持つ共通Telemetry機構は作り直さない
 
-RAGScope固有の意味はRAGScope側で持つ。一方、Telemetryの共通機構はOpenTelemetryへ任せる。
+Context伝播、Processor / Exporter、batching、flush / shutdown、Telemetry送信など、OpenTelemetryが共通機構として提供するものをRAGScope固有基盤として並行実装しない。
+RAGScopeが追加で所有するのは、既存のOpenTelemetry表現だけでは定義できないRAGScope固有の意味と、それをApplicationから利用するための境界である。
 
-| 旧RS-0022で自前にしていたもの | 今回 |
-|---|---|
-| RAGScope独自LogRecord | 作らない |
-| Logging Runtime | 作らない |
-| 独自Sink | 作らない |
-| Trace ContextをLoggingへ手動注入する仕組み | 作らない |
-| OTelと並行する独自ログ転送基盤 | 作らない |
-
-event名、属性、failureの意味など、RAGScope固有のTelemetry表現はRAGScope側で決める。
+Logs固有の旧RS-0022基盤について、何を再導入しないかは[[RS-0023 Logs設計メモ]]へ集約する。
 
 ### OpenTelemetry Semantic Conventionsを優先する
 
@@ -165,8 +162,7 @@ Exporter、Processor、Collectorへの送信などTelemetry基盤自身の失敗
 UseCaseが成功している場合、Telemetry exportに失敗してもUseCase成功のままとする。
 
 Telemetry基盤の診断は、まず`hs-opentelemetry` SDK自身のerror handling / internal diagnosticsを使用する。
-旧RS-0022の`LoggingFailureReporter`、独自Logging Runtime、独自Sinkのような別経路を先に再構築しない。
-SDKで具体的に不足する診断要求が判明した場合だけRAGScope側の補助経路を追加検討する。
+旧RS-0022のような別の診断・転送経路を先に再構築せず、SDKで具体的に不足する診断要求が判明した場合だけRAGScope側の補助経路を追加検討する。
 
 **見直し条件**: Telemetryの欠落をApplication処理失敗として扱わなければならない明示的なRAGScope要求が追加された場合に限り再検討する。なお、SDK初期化時の設定不備で起動を失敗させるか、Telemetryなしで起動するかは別論点であり未決定とする。
 
@@ -201,6 +197,7 @@ flowchart TB
 ```
 
 Collector / Tempo / Lokiはまだ候補である。
+Trace / Logs / Metricsのsignal固有設計はそれぞれの詳細ノートで扱い、この図はsignal間とApplication / OpenTelemetry基盤の関係だけを示す。
 
 ## 🤔 次に決めること
 

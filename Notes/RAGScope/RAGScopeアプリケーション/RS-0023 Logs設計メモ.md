@@ -17,6 +17,20 @@ created: 2026-09-06
 Logsの表現はOpenTelemetry Logs / Semantic Conventionsを土台とし、RAGScopeは既存仕様で表現できないRAGScope固有の意味だけを追加で所有する。
 RAGScope独自のログモデルを作ってOpenTelemetryへ変換する構造にはせず、OpenTelemetryの表現へRAGScope固有Eventを載せる。
 
+### OpenTelemetryが持つLogging基盤は作り直さない
+
+旧RS-0022でRAGScope側に置いていたLogging共通基盤は、新設計ではOpenTelemetryと重複して再構築しない。
+
+| 旧RS-0022で自前にしていたもの | 今回 |
+|---|---|
+| RAGScope独自LogRecord | 作らない |
+| Logging Runtime | 作らない |
+| 独自Sink | 作らない |
+| Trace ContextをLoggingへ手動注入する仕組み | 作らない |
+| OTelと並行する独自ログ転送基盤 | 作らない |
+
+RAGScope側で定義するのは、Eventの意味、EventName、attributes、failureとの関係など、RAGScope固有の表現だけとする。
+
 ### Span・Span属性・Eventを分ける
 
 期間を持つ処理はSpan、operation全体を説明する値はSpan属性、その時点で起きたこと自体を後から確認する意味がある出来事はEventとして表現する。
@@ -24,6 +38,18 @@ RAGScopeの構造化Eventは、`EventName`を持つOpenTelemetry `LogRecord`と�
 
 operationの開始・終了、duration、最終成功・失敗だけを表すLogを機械的に追加しない。これらはSpanとSpan Statusで表現する。
 typed failureが発生したことだけでもEventを生成しない。failureとは別に、時点として後から確認する意味がある出来事が存在する場合にEventを定義する。
+
+### Eventを追加する判断順序
+
+RAGScope固有Eventを追加する前に、次の順で確認する。
+
+1. 適用可能なOpenTelemetry Semantic Conventionですでに同じ意味を表現できないか
+2. Span / Span属性 / Span Statusだけで後から必要な意味を確認できないか
+3. それでも失われる、独立して確認する価値がある時点の出来事がある場合だけEventを定義する
+
+retryやtimeoutという種類だけを理由に、共通のRAGScope Eventを先に定義しない。
+attemptの実行、duration、最終失敗などをSpanや既存Semantic Conventionで十分に追跡できる場合はEventを重複して追加しない。
+一方、retryを選択した、fallbackへ切り替えた、これ以上retryしないと決定したなど、Spanだけでは失われる状態変化を後から独立して確認する必要がある場合は、そのownerがEventとして定義する。
 
 ### Eventのownerが意味と記録条件を定義する
 
@@ -61,8 +87,8 @@ OpenTelemetry `LogRecord`自身が持つTrace Contextとの関連付けを使用
 旧ログ契約の`payload`のようなRAGScope共通コンテナは設けない。
 Eventを検索・分類・集計するために機械可読であるべき値は、そのEventのattributesとして定義する。
 
-`Body`をRAGScope固有の構造化契約の入れ物にはせず、必要な場合の補助的な表示情報として扱う。
-RAGScope固有Eventの機械可読な意味は、EventNameとattributesで表現する。
+この共通設計で決めるのは、RAGScope固有Eventの機械可読な意味を共通`payload`へまとめないことまでとする。
+OpenTelemetry `LogRecord`の`Body`を具体的にどう使用するかは、適用するSemantic Conventionまたは個別Eventを定義する時点で決める。
 
 ### severityはOpenTelemetryの体系を使う
 
@@ -137,6 +163,7 @@ Logs共通設計として次までは固定しない。
 - Event固有attributes
 - 既定severity
 - 記録条件
+- `Body`を使用する場合の具体的な内容
 - 実験実行が具体化された時点でのExperimentとTelemetryの関連付け
 
 Eventを追加するときは、まずSpanまたは適用可能なSemantic Conventionですでに同じ意味を表現できないか確認する。

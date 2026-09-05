@@ -10,13 +10,15 @@ created: 2026-09-06
 
 > [!note]
 > これはRS-0023を考えるための**Workbench上の検討メモ**であり、RAGScopeの正本ではない。
-> Observability全体の共通方針は[[RS-0023 Observability設計メモ]]を参照する。
+> Observability全体の共通方針と、Metrics後に決めるTelemetry利用境界 / package / 外部構成は[[RS-0023 Observability設計メモ]]を参照する。
 
 ## このノートで扱うこと
 
 OpenTelemetry Metricsを前提に、RAGScopeで何をMetricとして計測するかを検討する。
 
 Traceのdurationや既存のSemantic Conventionsで得られる情報をそのまま重複して独自Metricにせず、RAGScopeの要求を満たすためにMetrics signalとして必要な計測だけを定義する。
+
+このノートではMetricの意味と表現を決めるところまでを扱い、その後のTelemetry利用境界、package / module構成、Collector / backend構成は全体像ノートで扱う。
 
 ## 正本から確認済みの要求
 
@@ -54,16 +56,6 @@ signal横断の共通方針として、適用可能なOpenTelemetry Semantic Con
 - RAGScope Application側とAI推論サービス側のどちらが各計測値を所有するか
 - 同じ値をSpanとMetricで持つ場合、その重複に集計上の意味があるか
 - success / failure別の集計が必要な場合、既存の`error.type`等のSemConvとどう整合するか
-
-## Metricsの後に決めること
-
-Metricsまで固めた後に、Trace / Logs / Metricsで実際に必要な利用方法を基準として次を決める。
-
-- RAGScope側のTelemetry利用境界
-- package / module構成
-- Collector / Tempo / Lokiなどの外部構成
-
-packageやPort APIを先に決めてからMetricsの責務を当てはめない。
 
 ## 参考
 
