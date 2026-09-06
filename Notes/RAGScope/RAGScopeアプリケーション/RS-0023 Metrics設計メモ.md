@@ -59,7 +59,7 @@ OpenTelemetry Metricを出したことだけでは、正本が求める評価デ
 
 `REQ-NF-PERF-003`はCPU / GPU、メモリ、デバイス、`dtype`等を性能比較条件として実験結果へ記録することを要求している。この要求を満たすためだけに、これらをRAGScope Application独自Metricへしない。
 
-Runtime / host / accelerator MetricsをObservabilityとして追加するかは、外部構成と、どの集計・比較・監視で利用するかが定義された時点で判断する。
+runtime / host / acceleratorのMetricsをObservabilityとして追加するかは、外部構成と、どの集計・比較・監視で利用するかが定義された時点で判断する。
 
 ## 検索時間をどう扱うか
 
@@ -130,14 +130,14 @@ flowchart LR
 
 ## TTFTをどう扱うか
 
-現在のOpenTelemetry GenAI Semantic Conventionsには、AI serverが最初のtokenを生成するまでを表す`gen_ai.server.time_to_first_token`がある。
+現在のOpenTelemetry GenAI Semantic Conventionsには、AI推論サービスが最初のtokenを生成するまでを表す`gen_ai.server.time_to_first_token`がある。
 RAGScopeで適用できる場合は、`REQ-NF-PERF-002`にあるTTFTを複数実行で集約観測する標準Metricとして利用する。
 
 一方、client側の`gen_ai.client.operation.time_to_first_chunk`は、streaming responseの**最初のchunkを受信するまで**を表す。
 TTFTとは開始点・終了点が異なるため、同じ値として扱わない。
 
 RAGScopeの実験結果では、AI推論サービス側で計測したTTFTを評価データごとの実行結果から取得できる形で保持する。
-Telemetry backendだけへTTFTを送り、後から取得して実験結果を補完する構造にはしない。
+Telemetryの保存・集約先だけへTTFTを送り、後から取得して実験結果を補完する構造にはしない。
 
 そのため、AI推論サービス側で計測したTTFTをApplicationへ渡せる必要がある。ただし、どの通信Contractで返すかは現在の正本で具体化されていないため、このノートではフィールド名や通信表現まで決めない。
 
@@ -146,13 +146,13 @@ Telemetry backendだけへTTFTを送り、後から取得して実験結果を�
 GenAI Semantic Conventionsには`gen_ai.client.token.usage`があり、input / output token数をHistogramで記録できる。
 ApplicationがAI推論サービスの応答などから正確なtoken数を取得できる場合に利用する。Telemetryのためだけに取得できない値を推定しない。
 
-RAGScopeでは生成token数を評価データ単位で比較するため、**正確なoutput token countを実験結果へ保持する経路が主**である。
+RAGScopeでは生成token数を評価データ単位で比較するため、**正確な出力token数を実験結果へ保持する経路が主**である。
 
-その上で、AI推論サービスから返されたcountをApplication側で取得でき、GenAI client operationの標準Metricへ記録できる場合は`gen_ai.client.token.usage`を併用する。
+その上で、AI推論サービスから返された出力token数をApplication側で取得でき、GenAI client operationの標準Metricへ記録できる場合は`gen_ai.client.token.usage`を併用する。
 
 ```mermaid
 flowchart LR
-    AI["AI推論サービス<br>output token count"] --> APP["RAGScope Application"]
+    AI["AI推論サービス<br>出力token数"] --> APP["RAGScope Application"]
     APP --> RESULT["評価データごとの実行結果"]
     APP --> METRIC["gen_ai.client.token.usage"]
 ```
@@ -209,12 +209,12 @@ HTTP / Databaseの文書全体にはMixedなstabilityの項目も存在するた
 | 論点 | 具体化する時点 |
 |---|---|
 | 回答生成処理時間の厳密な開始・終了点 | 回答生成を定義する設計時 |
-| TTFT / output token countをAI推論サービスから返すContract | AI通信方式・Contract設計時 |
+| TTFT / 出力token数をAI推論サービスから返すContract | AI通信方式・Contract設計時 |
 | rerankingのSemConv対応 | reranking実装時に現行SemConvを再確認 |
 | Metricsの具体的な計装方法 | Telemetry利用境界 / Adapter設計時 |
-| standard Metricsをどこまで自動計装するか | 計装方法の選定時 |
-| Runtime / host / accelerator Metrics | 外部構成と必要な集約・比較・監視を定める時 |
-| Collector / backend側のaggregation / retention | 外部構成設計時 |
+| 標準Metricsをどこまで自動計装するか | 計装方法の選定時 |
+| runtime / host / acceleratorのMetrics | 外部構成と必要な集約・比較・監視を定める時 |
+| Collector / 保存・集約先での集約 / 保持期間 | 外部構成設計時 |
 
 ## 参考
 
