@@ -22,8 +22,8 @@ created: 2026-09-06
 | 用語 | 意味 |
 |---|---|
 | Metric | OpenTelemetry Metricsで複数の観測値を集約して扱うための計測データ |
-| TTFT | Time To First Token。最初のtokenが得られるまでの時間 |
-| GenAI operation | OpenTelemetry GenAI Semantic Conventionsが定義する、モデルまたはGenAIサービスに対する論理operation |
+| TTFT | Time To First Token。このノートでは、AI推論サービスが生成を開始してから最初のtokenを生成するまでの時間を指す。clientが最初のresponse chunkを受信するまでの時間とは区別する |
+| GenAI operation | OpenTelemetry GenAI Semantic Conventionsが定義する、ApplicationからモデルまたはGenAIサービスへ行う論理的な依頼 |
 | high-cardinality属性 | 実行や対象ごとに値の種類が増えやすく、Metricの集約系列を増加させる属性 |
 
 ## まず結論
@@ -31,10 +31,10 @@ created: 2026-09-06
 - 正本が要求する評価データごとの性能値は実験結果へ保存し、OpenTelemetry Metricを個別実行値の保存先にしない。
 - 検索、reranking、回答生成の処理全体の時間は実験結果へ保存し、Trace / Spanで1実行の内訳を確認する。検索 / reranking用のRAGScope固有Metricは設けない。
 - DB / HTTP / GenAIについて適用可能な標準Metricがある場合は利用する。
-- GenAI client operationの時間と、そのoperationを運ぶHTTP requestの時間は同一視しない。**両方を計装する場合**は論理operationとtransportとして別に観測する。
-- TTFTと生成token数は評価データごとの実行結果から取得できる形で保持し、適用可能な標準GenAI Metricを併用する。
-- RAGScope固有Metricはこの共通設計では0個とし、Metric attributesへ実験ID・評価データID・文書IDなどのhigh-cardinality値を入れない。
-- HTTP / Databaseの採用MetricはStable、現在参照するGenAI MetricsはDevelopmentであり、同じstabilityとして固定しない。
+- GenAI client operationの所要時間と、そのGenAI処理の中で行われるHTTP requestの所要時間は同じ値として扱わない。**両方を計装する場合**は、GenAIへの論理的な依頼全体と、その依頼を運ぶHTTP通信を別々に観測する。
+- TTFTと生成token数は、評価データごとの実行結果から取得できる値として保持する。その上で、同じ値を集約観測できる標準GenAI Metricが適用できる場合は併用する。
+- この共通設計ではRAGScope独自Metricを新たに定義しない（0個）。Metric attributesへ実験ID・評価データID・文書IDなどのhigh-cardinality値を入れない。
+- このノートで採用候補としているHTTP / Database MetricはStable、現在参照するGenAI MetricsはDevelopmentである。OpenTelemetry Metrics signal全体を一括して同じstabilityとは扱わない。
 
 ## 性能値とTelemetryをどう分けるか
 
@@ -67,7 +67,7 @@ flowchart LR
 | `REQ-NF-PERF-002` | 生成token数 | 実験結果 | `gen_ai.client.token.usage`を適用可能なら使用 |
 | `REQ-EVAL-007` | 処理時間 / 成功率 / timeout率等 | 実験結果を集計 | Telemetry側は適用SemConvがある値だけ利用 |
 
-`REQ-NF-PERF-003`のCPU / GPU、メモリ、デバイス、`dtype`等は**性能比較条件を実験結果へ記録する要求**であり、このノートでApplication固有Metricへ変換しない。
+`REQ-NF-PERF-003`は、CPU / GPU、メモリ、デバイス、`dtype`等を性能比較条件として実験結果へ記録することを要求している。この要求を満たすためだけに、これらの値をRAGScope Application独自のMetricとして記録することはしない。
 Runtime / host / accelerator MetricsをObservabilityとして追加するかは、外部構成と、どの集計・比較・監視で利用するかが定義された時点で判断する。
 
 ## 各処理時間をどう扱うか
@@ -91,17 +91,17 @@ flowchart LR
 | 観測 | 方針 |
 |---|---|
 | 実験比較用の検索時間 | RAGScope Applicationが検索処理全体を計測し、実験結果へ保存する |
-| Embedding時間 | 適用可能なGenAI embeddings client Span / Metricで論理operationを観測する |
-| EmbeddingのHTTP通信時間 | HTTP計装を行う場合はHTTP client Span / `http.client.request.duration`でtransportを別に観測する |
+| Applicationから見たEmbedding生成の論理処理時間 | 適用可能なGenAI embeddings client Span / Metricで、Embedding生成の論理的な依頼全体を観測する |
+| Embedding生成のために行うHTTP通信時間 | HTTP計装を行う場合はHTTP client Span / `http.client.request.duration`で、そのHTTP requestだけの所要時間を別に観測する |
 | PostgreSQL時間 | DB Spanと`db.client.operation.duration`で観測する |
 | `ragscope.search.duration` | 設けない |
 
-EmbeddingのGenAI client operationとHTTP requestは測定境界が異なる。両方を計装する場合のSpan関係は[[RS-0023 Trace設計メモ#RAGScopeの1回の実行はTrace上どう見えるか]]に従い、HTTP時間をEmbedding operation全体の時間とみなさない。
+EmbeddingのGenAI client operationはEmbedding生成の論理的な依頼全体を表し、HTTP requestはその依頼の中で行われる通信だけを表す。両方を計装する場合のSpan関係は[[RS-0023 Trace設計メモ#RAGScopeの1回の実行はTrace上どう見えるか]]に従い、HTTP requestの時間をEmbedding operation全体の時間とはみなさない。
 
 ### reranking
 
 RAGScope Applicationは検索候補をAI推論サービスへ渡し、並べ替え済み結果を受け取る。
-したがって、Applicationから見たreranking処理全体の時間と、AI推論サービス内部のモデル計算時間を分けて扱う。
+したがって、Applicationがrerankingを依頼して結果を受け取るまでの処理全体の時間と、AI推論サービス内部でモデルがreranking計算を行う時間を分けて扱う。
 
 現時点で確認したGenAI Semantic Conventionsには、RAGScopeのreranking処理全体へそのまま適用できる専用Metricを確認できていない。
 このため、実験比較に必要なreranking処理時間は実験結果へ保存し、`ragscope.reranking.duration`のような独自Metricは設けない。
@@ -109,7 +109,14 @@ RAGScope Applicationは検索候補をAI推論サービスへ渡し、並べ替�
 
 ### 回答生成
 
-回答生成では、Applicationから見た処理全体、GenAI client operation、HTTP transport、AI推論サービス側request処理を区別する。下図は**各層を計装する場合**の測定境界を示す。
+回答生成では、次の4つを別の測定対象として扱う。
+
+1. RAGScope Applicationが回答生成処理を開始してから結果を得るまでの処理全体
+2. ApplicationからモデルまたはGenAIサービスへ行う論理的なGenAI client operation
+3. そのGenAI処理の中でAI推論サービスへ送るHTTP request
+4. AI推論サービス側でrequestを受けて処理する時間
+
+下図は**各層を計装する場合**の測定境界を示す。
 
 ```mermaid
 flowchart LR
@@ -127,38 +134,38 @@ flowchart LR
 | 時間 | 意味 | 扱い |
 |---|---|---|
 | 回答生成処理時間 | Applicationが回答生成処理を開始してから結果を得るまでの時間 | 実験結果へ保存 |
-| `gen_ai.client.operation.duration` | Applicationから見た論理的なGenAI client operationの所要時間 | 適用可能でGenAI client operationを計装する場合の標準Metric |
-| `http.client.request.duration` | AI推論サービスへ送るHTTP requestのtransport所要時間 | HTTP計装を行う場合の標準Metric |
-| `gen_ai.server.request.duration` | AI推論サービス側のGenAI request処理時間 | 適用可能でserver側GenAI Metricを計装する場合の標準Metric |
+| `gen_ai.client.operation.duration` | ApplicationからモデルまたはGenAIサービスへ行う論理的な依頼全体の所要時間 | 適用可能でGenAI client operationを計装する場合の標準Metric |
+| `http.client.request.duration` | AI推論サービスへ送る1回のHTTP requestの所要時間 | HTTP計装を行う場合の標準Metric |
+| `gen_ai.server.request.duration` | AI推論サービスがGenAI requestを受けて処理する時間 | 適用可能でserver側GenAI Metricを計装する場合の標準Metric |
 
-これらは包含しうるが測定境界が異なる。`gen_ai.client.operation.duration`と`http.client.request.duration`を同じ時間の別名として扱わず、一方の値から他方の値を導出しない。AI推論サービス側のMetricもApplication側のMetricから導出しない。
+`gen_ai.client.operation.duration`には、そのGenAI処理のために行うHTTP通信時間が含まれる場合がある。一方、`http.client.request.duration`が測るのは1回のHTTP requestだけである。このため、2つを同じ時間の別名として扱わず、一方の値から他方の値を導出しない。AI推論サービス側の`gen_ai.server.request.duration`も、Application側で観測した値から導出しない。
 
 ## TTFTをどう扱うか
 
 現在のOpenTelemetry GenAI Semantic Conventionsには、AI serverが最初のtokenを生成するまでを表す`gen_ai.server.time_to_first_token`がある。
-RAGScopeでこれを計装できる場合は、`REQ-NF-PERF-002`にあるTTFTを集約観測する標準Metricとして利用する。
+RAGScopeでこれを計装できる場合は、`REQ-NF-PERF-002`にあるTTFTを複数実行で集約観測する標準Metricとして利用する。
 
 一方、client側の`gen_ai.client.operation.time_to_first_chunk`は、streaming responseの**最初のchunkを受信するまで**を表す。
-最初のtoken生成時間とは測定境界が異なるため、同じ値として扱わない。
+AI推論サービスが最初のtokenを生成するまでの時間とは開始点・終了点が異なるため、同じ値として扱わない。
 
 | 項目 | 方針 |
 |---|---|
 | TTFTの計測 | AI推論サービス側で最初のtoken生成までの時間を計測する |
 | 実験結果 | 評価データごとの実行結果から取得できる形で保持する |
 | OTel Metric | `gen_ai.server.time_to_first_token`を適用可能なら利用する |
-| `gen_ai.client.operation.time_to_first_chunk` | streaming採用時のclient観測値として別に扱う |
+| `gen_ai.client.operation.time_to_first_chunk` | streaming採用時に、clientが最初のresponse chunkを受信するまでの別の観測値として扱う |
 
 > [!info]- Applicationへの受け渡し
-> 正本要求を満たすには、TTFTをTelemetry backendから後で引き戻すのではなく、実験処理が取得できる値としてApplicationへ渡せる必要がある。
+> 正本要求を満たすため、TTFTをTelemetry backendだけへ記録し、後から取得して実験結果を補完する構造にはしない。実験処理が評価データごとのTTFTを取得できるよう、AI推論サービス側で計測した値をApplicationへ渡せる必要がある。
 > AI推論サービスからApplicationへどの通信Contractで返すかは現在の正本では具体化されていないため、このノートではフィールド名や通信表現まで決めない。
 
 ## 生成token数をどう扱うか
 
 GenAI Semantic Conventionsには`gen_ai.client.token.usage`があり、input / output token数をHistogramで記録できる。
-client側で正確なcountを容易に取得できる場合に使用し、取得できない値をTelemetryのためだけに推定しない。
+ApplicationがAI推論サービスの応答などから正確なtoken数を取得できる場合に使用し、取得できない値をTelemetryのためだけに推定しない。
 
 RAGScopeでは生成token数を評価データ単位で比較するため、**正確なoutput token countを実験結果へ保持する経路が主**である。
-その上で、AI推論サービスから返されたcountをApplication側のGenAI client operationから取得できる場合は、標準Metricの`gen_ai.client.token.usage`を併用する。
+その上で、AI推論サービスから返されたcountをApplication側で取得でき、GenAI client operationの標準Metricへ記録できる場合は`gen_ai.client.token.usage`を併用する。
 
 ```mermaid
 flowchart LR
@@ -184,15 +191,15 @@ Metricは複数の観測値を同じ属性集合で集約するため、実行�
 
 ## RAGScope固有Metricを追加するか
 
-正本の性能要求を照合した結果、現時点でMetrics signalにしか置けないRAGScope固有の性能値は確認できていない。
+正本の性能要求を照合した結果、現時点では「RAGScope独自Metricとして持たなければ要求を満たせない性能値」は確認できていない。
 
 - 個別実行の性能値は実験結果へ保存できる
 - 1回の詳細な所要時間と内訳はSpanで確認できる
 - DB / HTTP / GenAIには適用可能な標準Metricが存在する
 - 検索 / rerankingについて、独自Metricで集約しなければ成立しない要求を現在確認できない
 
-したがって、**RS-0023の共通設計ではRAGScope固有Metricを0個とする**。
-対象機能で必要な集計・比較・監視が具体化し、Trace / 実験結果 / 標準Metricではその用途を満たせないことが確認された場合だけ、対象機能の設計で独自Metricを定義する。
+したがって、**RS-0023の共通設計ではRAGScope独自Metricを新たに定義しない（0個）**。
+対象機能で必要な集約・比較・監視が具体化し、Trace / 実験結果 / 標準Metricではその用途を満たせないことが確認された場合だけ、対象機能の設計で独自Metricを定義する。
 
 ## Semantic Conventionsのstability
 
@@ -225,7 +232,7 @@ HTTP / Databaseの文書全体にはMixedなstabilityの項目も存在するた
 | rerankingのSemConv対応 | 対象機能の実装時に現行SemConvを再確認 |
 | Metricsの具体的な計装方法 | Telemetry利用境界 / Adapter設計時 |
 | standard Metricsをどこまで自動計装するか | 計装方法の選定時 |
-| Runtime / host / accelerator Metrics | 外部構成と、必要な集計・比較・監視を定める時 |
+| Runtime / host / accelerator Metrics | 外部構成と、必要な集約・比較・監視を定める時 |
 | Collector / backend側のaggregation / retention | 外部構成設計時 |
 
 ## 参考
