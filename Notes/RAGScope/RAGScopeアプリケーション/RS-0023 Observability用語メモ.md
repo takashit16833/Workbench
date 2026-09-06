@@ -45,8 +45,6 @@ created: 2026-09-06
 
 ### Logs
 
-OpenTelemetryでは`Event`という語がLogsとTracesの両方に出てくる。このRS-0023ドラフトでは混同を避けるため、**Logs側は`EventRecord`、Trace側はSpan Eventと書き、単独の「Event」は原則使わない**。
-
 | 用語 | この設計メモでの意味 |
 |---|---|
 | `LogRecord` | OpenTelemetry Logsで1件のログを表すデータ |
@@ -61,17 +59,7 @@ OpenTelemetryでは`Event`という語がLogsとTracesの両方に出てくる�
 | Span Event | Spanの中で、ある時点に起きた出来事を記録するTrace側のEvent。Logsの`LogRecord` / `EventRecord`とは別のTraceデータである |
 | requirement level | Semantic Conventionが属性を`Required`、`Conditionally Required`、`Recommended`などで示す区分 |
 
-関係は次のとおりである。
-
-```text
-RAGScopeのTelemetry
-├─ Traces → Tempo
-│  └─ Span
-│     └─ Span Event
-└─ Logs → Loki
-   └─ LogRecord
-      └─ EventNameがある場合 = EventRecord
-```
+RAGScopeがEventをどのsignalへ記録するかという設計方針は[[RS-0023 Logs設計メモ]]を参照する。
 
 ### Metrics
 
