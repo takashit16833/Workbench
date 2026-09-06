@@ -28,17 +28,15 @@ Trace / Logs / Metrics固有の判断は、それぞれの設計メモでレビ�
 
 ## まず結論
 
-| 項目 | 状態 | 要点 |
-|---|---|---|
-| Trace | RS-0023で決定 | 1 Invocation = 1独立Trace。entry Spanをrootとし、外部から受信したTrace Contextはparentにせず、現在要求のないLinkも設けない。Application → AI推論サービスでは通常のTrace Context propagationで同一Traceを継続する。詳細は[[RS-0023 Trace設計メモ]] |
-| Failure | RS-0023で決定 | feature / UseCase固有のtyped failureを失敗意味の正本とし、interface / persistence / Telemetryで各境界の表現へmappingする。RAGScope全体で共有する独立した`error_type` taxonomyは設けない |
-| Logs | RS-0023で決定 | OTel Logs / Eventを土台にし、Spanと重複させない。RAGScope独自のnon-OTLPログJSON契約 / SQLiteログ表現は維持しない。詳細は[[RS-0023 Logs設計メモ]] |
-| Metrics | RS-0023で決定 | 性能値は実験結果へ保持し、集約観測には適用可能な標準Metricを使う。詳細は[[RS-0023 Metrics設計メモ]] |
-| OpenTelemetry採用可能性 | 主要能力を確認済み | Haskell / PythonともTrace / Logs / Context連携とexportに必要なSDK能力を確認した。RAGScope固有の依存解決は実装前に最小確認する |
+- **Trace — RS-0023で決定。** RAGScopeは、CLIまたはAPIから1回呼び出されて処理が完了するまでを1 Invocationとして扱い、Invocationごとに独立したTraceを開始する。APIへのリクエストにTrace Contextが含まれていても、そのContextをRAGScopeのentry Spanの親として使用しない。また、外部のTraceとRAGScopeのTraceを関連付けるSpan Linkも、現在はその関連付けを必要とする要求がないため作成しない。RAGScope ApplicationからAI推論サービスを呼び出すときはTrace Contextを引き継ぎ、同じTraceを継続する。詳細は[[RS-0023 Trace設計メモ]]を参照する。
+- **Failure — RS-0023で決定。** 各featureまたはUseCaseが定義するtyped failureを、RAGScopeにおける失敗理由の元情報とする。API / CLIへ返す失敗情報、実験・評価結果へ保存する失敗情報、Telemetryへ記録する失敗情報は、それぞれこのtyped failureから用途に応じて変換する。RAGScope全体で共有する独立した`error_type` taxonomyは設けない。
+- **Logs — RS-0023で決定。** OpenTelemetry Logsと適用可能なSemantic Conventionsをログ記録の基盤として使う。Spanですでに表現できる情報をLog Eventへ機械的に重複させない。OTLPとは別にRAGScopeが独自定義する共通ログJSON契約と、RAGScopeが所有するログ保存用SQLite表現は維持しない。詳細は[[RS-0023 Logs設計メモ]]を参照する。
+- **Metrics — RS-0023で決定。** 評価データごとの性能値は実験結果へ保存する。複数実行を集約して観測する用途では、対象処理へ適用できるOpenTelemetryの標準Metricを利用する。詳細は[[RS-0023 Metrics設計メモ]]を参照する。
+- **OpenTelemetry採用可能性 — 主要能力を確認済み。** RAGScope ApplicationとAI推論サービスの両方で、Trace / Logsの記録、Trace Contextの引き継ぎ、Telemetryのexportに必要なSDK能力を確認した。RAGScope固有のGHC / Cabal / Python環境で依存解決できるかは、実装着手前に最小構成で確認する。
 
 ## 全体像
 
-この図では、1 InvocationでRAGScope Applicationが外部のDB / AI推論サービスを利用する関係と、両コンポーネントがOpenTelemetryへTelemetryを記録する関係を俯瞰する。Composition Rootは実行に必要な部品を構築・接続する**構築時**の責務であり、1 Invocationの実行フローではないため、この図には含めない。
+この図では、1 InvocationでRAGScope Applicationが外部のDB / AI推論サービスを利用する関係と、RAGScope ApplicationとAI推論サービスがOpenTelemetryを通じてTelemetryを記録する関係を俯瞰する。Composition Rootは実行に必要な部品を構築・接続する**構築時**の責務であり、1 Invocationの実行フローではないため、この図には含めない。
 
 ```mermaid
 flowchart TB
@@ -47,9 +45,9 @@ flowchart TB
     APP --> DB[("PostgreSQL")]
     APP --> AIREQ["AI推論サービスへの依頼"]
     AIREQ --> AI["AI推論サービス"]
-    AIREQ -. "Trace Contextを伝播" .-> AI
+    AIREQ -. "Trace Contextを引き継ぐ" .-> AI
 
-    APP -. "Telemetryを利用" .-> TEL["RAGScope Application<br>Telemetry利用境界"]
+    APP -. "Telemetryを記録" .-> TEL["RAGScope Application<br>Telemetry利用境界"]
     TEL --> HADAPTER["OpenTelemetry Adapter"]
     HADAPTER --> HSDK["hs-opentelemetry SDK"]
 
@@ -63,7 +61,7 @@ flowchart TB
     PYSDK --> MT
 ```
 
-この図はApplication内部のhandler / UseCase境界やSpanの包含関係までは表さない。それらは後述の「RAGScopeへどう組み込むか」と[[RS-0023 Trace設計メモ]]で具体化する。自動計装 / 手動計装の選択、Application側Telemetry利用境界の具体API、AI推論サービス側でSDKを包む具体構造も、この図からは決めない。
+この図はApplication内部のhandler / UseCase境界やSpanの包含関係までは表さない。それらは後述の「RAGScopeへどう組み込むか」と[[RS-0023 Trace設計メモ]]で具体化する。自動計装 / 手動計装の選択、Application側のTelemetry利用境界が公開する具体API、AI推論サービス側でOpenTelemetry Python SDKをどのmoduleから利用するかも、この図では決めない。
 
 Collector / Tempo / Lokiなどのproduction向け外部構成は、このノートでは採用を決めない。
 
@@ -72,53 +70,53 @@ Collector / Tempo / Lokiなどのproduction向け外部構成は、このノー�
 このドラフトでは、OpenTelemetryで扱うTrace / Logs / Metricsをまとめて**signal**と呼ぶ。
 
 TelemetryはRAGScopeで実際に行われた処理を観測し、その結果をTrace / Logs / Metricsとして記録する。
-Applicationの処理内容や制御方針はTelemetryへ移さない。
+retry / timeout / fallbackなどApplicationの処理内容や制御方針そのものをTelemetryへ移さない。
 
 | 論点 | 決定 |
 |---|---|
 | Telemetryの責務 | RAGScopeで実際に行われた処理をTrace / Logs / Metricsとして観測する |
-| Application制御との関係 | retry / timeout / fallback / 処理順序はRAGScope Applicationが制御し、具体的な条件は対象処理の機能設計で定める。Telemetryはその実行結果を観測する |
+| Application制御との関係 | retry / timeout / fallback / 処理順序はRAGScope Applicationが制御し、具体的な条件は対象処理の機能設計で定める。Telemetryは、その制御の結果として実際に行われた処理を記録する |
 | Trace / Logs / Metricsの関係 | 同じ事実を機械的に重複させず、各signalで後から確認する内容に応じて使い分ける |
-| Telemetry runtime failure | Exporter / Processor / Collector送信失敗でApplication本体の結果を変更しない |
+| Telemetry基盤自身の失敗 | Exporter / Processor / Collectorへの送信が失敗しても、RAGScope Application本体の処理結果を変更しない |
 
 Trace / Logs / Metricsそれぞれの具体的な役割と表現は、各設計メモで定義する。
 
-## failureの意味と各boundaryへのmapping
+## 失敗情報をAPI・保存データ・Telemetryへどう変換するか
 
-RAGScopeの失敗意味は、failureが発生するfeature / UseCaseの設計とtyped failureが所有する。API / CLI、実験結果などへ保存するerror、Telemetryはそれぞれ別のboundary表現であり、同じ分類粒度を共有することを前提にしない。
+RAGScopeで処理の失敗理由を表す元情報は、その失敗が発生するfeatureまたはUseCaseが定義するtyped failureが持つ。API / CLIへ返す情報、実験・評価結果へ保存する情報、Telemetryへ記録する情報は用途が異なるため、必ずしも同じ分類名や同じ粒度にそろえない。
 
 ```text
-UseCase / feature固有 typed failure
-        ├─→ interface mapping
+UseCase / featureが定義するtyped failure
+        ├─→ API / CLI向けに変換
         │      └─ API response / CLI stderr・exit status
-        ├─→ persistence mapping
+        ├─→ 実験・評価結果へ保存する形に変換
         │      └─ 実験・評価データモデル上のerror
-        └─→ telemetry mapping
-               └─ 適用SemConv / RAGScope固有Span・Eventのerror.type
+        └─→ Telemetryへ記録する形に変換
+               └─ 適用するSemantic Convention / RAGScope固有Span・Eventのerror.type
 ```
 
-RAGScope全体で共有する独立した`error_type` taxonomyは設けない。現在要求には、この共通taxonomyを置かなければAPI / CLI、保存error、Telemetryを成立させられない制約を確認できない。一方で共通`error_type`を置くと、typed failureとの対応を追加で維持し、feature / interface / persistence / Observabilityを1つの分類体系へ不要に結合する。
+RAGScope全体で共有する独立した`error_type` taxonomyは設けない。現在要求では、typed failureと各出力先の間に共通taxonomyを置かなければAPI / CLI、保存error、Telemetryが成立しない制約を確認できない。一方で共通`error_type`を置くと、各featureのtyped failureから共通taxonomyへの変換と、共通taxonomyからAPI / CLI・保存error・Telemetryへの変換を別々に維持する必要が生じる。これはfeature / interface / persistence / Observabilityを1つの分類体系へ不要に結合する。
 
 Application / AI推論サービス間で共有するfailure codeが通信契約として実際に必要になった場合は、その通信方式を定義するContractで扱う。RAGScope全体の共通`error_type`として先に定義しない。
 
-OpenTelemetryの`error.type`はTelemetry boundaryでoperationがどのクラスのerrorで終了したかを表す属性であり、RAGScopeのfailure modelそのものではない。HTTP、Database、GenAIなど適用可能なSemantic Conventionが`error.type`の規則を定めるSpan / Metricではその規則を優先する。RAGScope固有Spanのfinal failureとRAGScope固有Eventの`error.type`の扱いは、それぞれ[[RS-0023 Trace設計メモ]]と[[RS-0023 Logs設計メモ]]で現在のGeneral Recording Errors / General Events guidanceに沿って定める。これらのguidanceはDevelopmentであるため、実装時に対象versionを再確認し、現在の細部をRAGScope独自の恒久契約として複製しない。
+OpenTelemetryの`error.type`は、Telemetryへ記録する「そのoperationがどの種類のerrorで失敗したか」を表す属性である。RAGScopeのtyped failureそのものを置き換える型ではない。HTTP、Database、GenAIなど、適用するSemantic ConventionがSpanやMetricの`error.type`を定めている場合はその規則に従う。RAGScope固有Spanが表すoperationの最終失敗については[[RS-0023 Trace設計メモ]]、RAGScope固有Eventの`error.type`については[[RS-0023 Logs設計メモ]]で、2026-09-06時点のGeneral Recording Errors / General Events guidanceに沿って定める。これらのguidanceはDevelopmentであるため、実装時に対象versionを再確認し、現在の細部をRAGScope独自の恒久契約として複製しない。
 
 ## OpenTelemetryをどう利用するか
 
-RAGScopeはOpenTelemetryをObservabilityの基盤として利用するが、OpenTelemetry SDKそのものをRAGScope固有の処理設計へ直接露出させない。
+RAGScopeはOpenTelemetryをObservabilityの基盤として利用する。ただし、UseCaseやfeatureのmoduleからOpenTelemetry SDKを直接importする構造にはしない。Application側はRAGScopeが定義するTelemetry利用境界を通じてTelemetryを記録する。
 
 | 論点 | 決定 |
 |---|---|
-| SDK境界 | RAGScope ApplicationのUseCaseへOpenTelemetry SDKを直接漏らさず、RAGScope側のTelemetry利用境界までを見せる。AI推論サービス側の具体境界はPython実装時に決める |
+| Application側のSDK境界 | UseCaseやfeatureのmoduleからOpenTelemetry SDKを直接importしない。RAGScope側コードはTelemetry利用境界を呼び出し、その外側のAdapterがOpenTelemetry SDKと接続する。AI推論サービス側の具体的なmodule境界はPython実装時に決める |
 | Haskell SDK | `hs-opentelemetry` 1.xを第一候補として採用する |
 | Python SDK | OpenTelemetry Python API / SDKを採用する。LogsはDevelopmentであることを前提にversionとSDK固有APIを実装境界内へ閉じる |
-| SDK固有型 | RAGScope固有の処理境界から外へ漏らさない |
-| OpenTelemetry基盤へ委ねる処理 | Trace Context propagationはPropagator / instrumentation等のOpenTelemetry基盤を利用し、Processor / Exporter、batching、flush / shutdown、送信などはSDKの機構を利用する。これらをRAGScopeで並行実装しない |
-| Semantic Conventions | 適用可能なConventionをRAGScope独自表現より優先する |
+| SDK固有型 | OpenTelemetry SDK固有の型を、UseCaseやfeatureが公開・受け渡しする型へ含めない |
+| OpenTelemetry基盤へ委ねる処理 | Trace Contextの引き継ぎにはPropagator / instrumentation等のOpenTelemetry基盤を利用する。Processor / Exporter、batching、flush / shutdown、送信にはSDKの機構を利用する。これらと同等の基盤処理をRAGScopeで別実装しない |
+| Semantic Conventions | 対象処理へ適用できるConventionがある場合は、そのSpan名・属性・Event・Metric等をRAGScope独自表現より優先する |
 
 ### Haskell / Python実装で必要な能力を利用できるか
 
-RS-0023で必要なのは、両コンポーネントでTrace / Logsを記録でき、Trace Contextをコンポーネント間で引き継ぎ、Processor / Exporter経由の送信失敗をApplication本体の結果から分離できることである。
+RS-0023で必要なのは、RAGScope ApplicationとAI推論サービスの両方でTrace / Logsを記録でき、ApplicationからAI推論サービスへTrace Contextを引き継げること、さらにProcessor / Exporter経由の送信失敗をApplication本体の処理結果から分離できることである。
 
 2026-09-06時点で確認した実装能力は次のとおりである。
 
@@ -142,13 +140,11 @@ OpenTelemetry SDK相当をRAGScopeで独自実装すると、Context管理、bat
 
 ### Semantic Conventionsを優先する
 
-Telemetry表現をRAGScope独自に定義する前に、対象へ適用可能なOpenTelemetry Semantic Conventionsが存在するか確認する。
+Span名、属性、Event、Metric名などのTelemetry表現をRAGScope独自に定義する前に、対象へ適用できるOpenTelemetry Semantic Conventionsが存在するか確認する。
 
-適用可能なConventionが存在する場合は、Span名、Span Kind、属性、Event、Metric名・instrument・unitなど、そのConventionで定義されている表現を優先する。
-HTTP、Database、CLI、Exceptionなどについて、既存Conventionと同じ意味を持つRAGScope独自表現を重複して作らない。
+適用できるConventionが存在する場合は、Span名、Span Kind、属性、Event、Metric名・instrument・unitなど、そのConventionで定義されている表現を優先する。HTTP、Database、CLI、Exceptionなどについて、既存Conventionと同じ意味を持つRAGScope独自表現を重複して作らない。
 
-RAGScope独自のTelemetry表現は、UseCase、Invocation、実験、評価データなど、既存Conventionだけでは表現できないRAGScope固有の意味に限定する。
-独自属性が必要な場合も、まず既存属性を再利用できないか確認し、OpenTelemetryが使用するnamespaceと衝突する属性は作らない。
+RAGScope独自のTelemetry表現は、UseCase、Invocation、実験、評価データなど、既存Conventionだけでは表現できないRAGScope固有の意味に限定する。独自属性が必要な場合も、まず既存属性を再利用できないか確認し、OpenTelemetryが使用するnamespaceと衝突する属性は作らない。
 
 Semantic Conventionごとにstabilityが異なるため、実装時には使用するOpenTelemetry / instrumentationのバージョンと対象Conventionのstabilityを確認する。
 
@@ -156,16 +152,16 @@ Semantic Conventionごとにstabilityが異なるため、実装時には使用�
 
 | 対象 | stability | このドラフトでの扱い |
 |---|---|---|
-| `error.type`属性 | Stable | Telemetry上の失敗分類として利用できる。RAGScopeのfailure model自体にはしない |
-| HTTP client / server Span | Stable | API / HTTP transportへ適用する |
+| `error.type`属性 | Stable | operationがどの種類のerrorで失敗したかをTelemetryへ記録する標準属性として使う。RAGScopeのtyped failureそのものにはしない |
+| HTTP client / server Span | Stable | API / HTTP通信へ適用する |
 | SQL / PostgreSQL database client Span | Stable | PostgreSQL operationへ適用する |
-| `http.client.request.duration` | Stable | HTTP transportの標準Metricとして利用する |
-| `db.client.operation.duration` | Stable | DB operationの標準Metricとして利用する |
+| `http.client.request.duration` | Stable | HTTP requestの所要時間を集約観測する標準Metricとして利用する |
+| `db.client.operation.duration` | Stable | DB operationの所要時間を集約観測する標準Metricとして利用する |
 | CLI Execution Span | Development | CLI entry Spanへ適用するが、現在の細部をRAGScope独自の恒久契約へコピーしない |
-| General Recording Errors | Development | RAGScope固有operationのerror記録を考える際のguidanceとして扱い、stabilityを明示する |
-| General Events | Development | RAGScope固有Event設計で利用するが、現在の細部を恒久契約へコピーしない |
+| General Recording Errors | Development | RAGScope固有operationが失敗したときのSpan Status / `error.type`を決める際のguidanceとして利用し、実装時に対象versionを再確認する |
+| General Events | Development | RAGScope固有Eventを定義する際のguidanceとして利用し、実装時に対象versionを再確認する |
 | Exceptions in Logs | Stable（個別節にDevelopmentあり） | Exception Logの基本表現に利用し、Developmentなevent name / severity等は実装時に再確認する |
-| GenAI Semantic Conventions | Development | logical GenAI operation / Metricへ適用可能な場合に使い、現在名をRAGScope独自契約として固定しない |
+| GenAI Semantic Conventions | Development | GenAIへの論理的な依頼を表すSpanやMetricへ適用できる場合に利用し、現在の名称や属性をRAGScope独自契約として固定しない |
 
 ## RAGScopeへどう組み込むか
 
@@ -175,10 +171,10 @@ Observabilityを組み込む位置を理解するため、**構築時**と**1 In
 | 概念 | 境界 |
 |---|---|
 | Composition Root | 実行に必要なUseCase、handler、Telemetry実装などの依存を構築・接続する |
-| handler | CLI / APIとUseCaseの間の境界処理 |
-| Invocation | RAGScopeが外部から1回呼び出され、その処理が完了するまでの実行範囲。Traceでは**1 Invocation = 1独立Trace**として追跡する |
+| handler | CLI / APIから受け取った入力をUseCaseへ渡す値へ変換し、UseCaseを呼び出し、その結果をCLI表示またはHTTP responseへ変換する1つの境界処理 |
+| Invocation | RAGScopeがCLI / APIなどを通じて外部から1回呼び出され、その処理が完了するまでの実行範囲。Traceでは**1 Invocation = 1独立Trace**として追跡する |
 | UseCase | RAGScope ApplicationがUseCaseを呼び出してから、Applicationへ制御が戻るまで |
-| Telemetry利用境界 | UseCase等のRAGScope側コードがOpenTelemetry SDKへ直接依存せずTelemetryを利用するための境界。具体APIはこのノートでは決めない |
+| Telemetry利用境界 | UseCaseやfeatureのmoduleがOpenTelemetry SDKを直接importせずにTelemetryを記録するために呼び出すRAGScope側の境界。具体APIはこのノートでは決めない |
 
 ### handler
 
@@ -202,10 +198,10 @@ flowchart TB
 ### 1 Invocationの実行時
 
 UseCaseから呼び出されるEmbedding生成、DB検索などはUseCaseを構成する内部処理である。
-AI推論サービス側の処理は同じTraceへ参加できるが、RAGScope Application側のUseCaseそのものではない。
+AI推論サービス側の処理はRAGScope Applicationから引き継いだTrace Contextを使って同じTraceに参加できるが、RAGScope Application側のUseCaseそのものではない。
 プロセス起動時の構築やTelemetry送信はInvocation / UseCaseとは別の処理である。
 
-Trace境界の具体理由とincoming Trace Contextの扱いは[[RS-0023 Trace設計メモ]]を正本反映前のレビュー結果として参照する。
+Trace境界をこの形にする理由と、APIへのリクエストにTrace Contextが含まれている場合の扱いは[[RS-0023 Trace設計メモ]]を参照する。
 
 ## ローカル実行でTelemetryをどう確認するか
 
@@ -221,13 +217,12 @@ console / handle exporterの出力形式はデバッグ用であり、RAGScope�
 
 ローカルCollectorは複数コンポーネントのTelemetryを同じ受信先で確認するための開発用手段であり、RAGScope ApplicationまたはAI推論サービスの機能責務には含めない。Tempo / Loki等のbackend、production Collector構成、retentionは別の外部構成設計で決める。
 
-## Telemetry自身が失敗したらどうするか
+## Telemetry基盤自身が失敗した場合
 
 Exporter、Processor、Collectorへの送信などTelemetry基盤自身の失敗は、Application本体の結果を変更しない。
 UseCaseが成功している場合、Telemetry exportに失敗してもUseCase成功のままとする。
 
-Telemetry基盤の診断には、まず採用するOpenTelemetry SDK自身のerror handling / internal diagnosticsを使用する。
-SDKの診断機能では満たせない具体的な診断要求が確認された場合だけ、RAGScope側の補助経路を検討する。
+Telemetry基盤の診断には、まず採用するOpenTelemetry SDKが提供するerror handling / internal diagnosticsを使用する。SDKの診断機能では満たせない具体的な診断要求が確認された場合だけ、RAGScope側の補助経路を検討する。
 
 Telemetryの欠落をApplication処理失敗として扱う要求が追加された場合は、この判断を見直す。
 
@@ -253,12 +248,21 @@ Workbenchには今回の検討結果、確認した根拠、実装前に再確�
 |---|---|
 | Trace / Logs / Metricsの利用境界を1つにまとめるか分けるか | Telemetry利用境界設計 |
 | Telemetry利用境界の名前と公開API | Telemetry利用境界設計 |
-| typed failure → Telemetry表現のHaskell module / package配置 | Telemetry利用境界 / package・module設計。feature / UseCase側へOpenTelemetry SDK依存を生じさせず、各module/packageの責務に従った静的依存方向とし、`build-depends`の循環を生じさせない。Telemetry AdapterがApplication側で定義されたPortやtyped failure型へ依存するかを含む具体的な依存方向は、この共通設計では先に固定しない |
 | SDK初期化設定エラー時に起動失敗するかTelemetryなしで起動するか | Telemetry初期化設計 |
 | package / module構成 | Telemetry利用境界の決定後に行うpackage / module設計 |
 | production Collector / Tempo / Loki等の外部構成 | 外部構成設計。現時点では候補であり採用を決めない |
 
-package / module構成はTelemetry利用境界を決めた後に定め、先にpackageを分割してから責務を割り当てない。現在`main`の`ragscope` main libraryがprivate sublibrary `ragscope-logging`へ依存する構造を、そのまま新しいTelemetry mapping配置の前提にはしない。
+### typed failureからTelemetry表現への変換をどこへ実装するか
+
+Haskellで、feature / UseCaseが定義するtyped failureをTelemetryへ記録する値へ変換するmodule / packageの配置は、この共通設計では決めない。Telemetry利用境界とpackage / moduleを設計する時点で、実際のimportとCabalの`build-depends`を確認して決定する。
+
+そのときは、次の条件を満たす必要がある。
+
+- feature / UseCaseのmoduleからOpenTelemetry SDKを直接importしない
+- 各module / packageの責務に従った静的依存方向とし、Cabalの`build-depends`を循環させない
+- Telemetry AdapterがApplication側で定義されたPortやtyped failure型へ依存するかどうかは、この共通設計では先に固定しない
+
+package / module構成はTelemetry利用境界を決めた後に定め、先にpackageを分割してから責務を割り当てない。現在`main`では`ragscope` main libraryがprivate sublibrary `ragscope-logging`へ依存しているが、この既存構造を新しいTelemetry変換処理の配置を決める前提にはしない。
 
 ## 参考
 
