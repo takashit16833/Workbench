@@ -12,6 +12,7 @@ created: 2026-09-05
 > これはRS-0023を正本へ反映する前にレビューするための**Workbench上の設計ドラフト**であり、RAGScopeの正本ではない。
 > 現在の正本にあるUseCase境界とRAGScope Application / AI推論サービス / DBの責務を前提に、RS-0023で検討したObservability設計を扱う。
 > このノートで「決定」とする内容はRS-0023の検討結果であり、現在仕様として有効になるのは正本リポジトリへ責務に応じて反映した後である。
+> このノートで使うOpenTelemetry用語とRAGScope / RS-0023側の用語は[[RS-0023 Observability用語メモ]]を参照する。
 
 ## このノートが答える問い
 
@@ -22,6 +23,7 @@ Trace / Logs / Metrics固有の判断は、それぞれの設計メモで扱う�
 
 | ノート | 答える問い |
 |---|---|
+| [[RS-0023 Observability用語メモ]] | OpenTelemetry用語とRAGScope / RS-0023側の用語をどう区別し、それぞれ何を意味するか |
 | このノート | OpenTelemetryを何に使い、Trace / Logs / Metricsをどう分担させるか |
 | [[RS-0023 Trace設計メモ]] | RAGScopeの1回の実行をTrace上でどう追うか |
 | [[RS-0023 Logs設計メモ]] | 何をLogに残し、何をSpanに任せるか |
@@ -76,8 +78,6 @@ Composition Rootは実行に必要な部品を構築・接続する**構築時**
 
 ## Trace / Logs / Metricsをどう使い分けるか
 
-このドラフトでは、OpenTelemetryで扱うTrace / Logs / Metricsをまとめて**signal**と呼ぶ。
-
 ### Trace
 
 Traceは、1 Invocationの処理のつながりを追うために使う。
@@ -109,8 +109,6 @@ retry、timeout、fallback、処理順序など、Applicationの振る舞いそ�
 同じように、Exporter / Processor / Collectorへの送信に失敗しても、RAGScope Application本体の処理結果は変更しない。UseCaseが成功しているなら、Telemetry exportの失敗だけを理由にUseCase失敗へ変えない。
 
 ## 失敗理由をAPI・保存データ・Telemetryへどう渡すか
-
-ここでいう`typed failure`は、その失敗が属するUseCaseまたは、そのUseCaseを構成する内部処理の契約上想定されるfailureを指す。
 
 失敗理由の元情報は、そのUseCaseまたは内部処理に対応するtyped failureで保持する。
 API / CLI、実験・評価結果、Telemetryは用途が違うため、同じ分類名・同じ粒度へ無理にそろえず、それぞれ必要な表現へ変換する。
@@ -206,7 +204,7 @@ flowchart TB
 `handler`はCLI / APIから受け取った入力をUseCaseへ渡す値へ変換し、UseCaseを呼び出し、その結果をCLI表示またはHTTP responseへ変換する1つの境界処理である。
 入力側handlerと出力側handlerが別々に存在するのではなく、1回のhandler実行の前後に入力変換と出力変換がある。UseCaseそのものはhandlerの責務には含めない。
 
-`Invocation`は、RAGScopeがCLI / APIなどを通じて外部から1回呼び出され、その処理が完了するまでの実行範囲である。Traceでは1 Invocationを1独立Traceとして追跡する。
+Traceでは1 Invocationを1独立Traceとして追跡する。
 
 UseCaseから呼び出されるEmbedding生成やDB検索などは、そのUseCaseを構成する内部処理である。AI推論サービス側の処理はApplicationから引き継いだTrace Contextを使って同じTraceへ参加できるが、Application側UseCaseそのものではない。
 
@@ -312,6 +310,7 @@ package / module構成はTelemetry利用境界を決めた後に定め、先にp
 
 ## 参考
 
+- [[RS-0023 Observability用語メモ]]
 - [OpenTelemetry — Error handling](https://opentelemetry.io/docs/specs/otel/error-handling/)
 - [OpenTelemetry — `error.type`](https://opentelemetry.io/docs/specs/semconv/registry/attributes/error/)
 - [OpenTelemetry — Recording errors](https://opentelemetry.io/docs/specs/semconv/general/recording-errors/)
