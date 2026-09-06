@@ -43,6 +43,8 @@ retry、timeout、fallback、処理順序などを決めるのはRAGScopeアプ�
 
 Trace / Logs / Metricsと失敗時の扱いはRS-0023で決定済みとして扱う。OpenTelemetry採用に必要な主要SDK能力も確認済みだが、RAGScope固有のGHC / Cabal / Python環境での依存解決とビルドはまだ実測していない。
 
+ローカル開発環境のObservability基盤には、**Tempo / Loki / Prometheus / Grafanaを採用する**。ローカル構築時からこの4つを起動し、TraceはTempo、LogsはLoki、MetricsはPrometheusへ保存し、Grafanaから横断して確認する。console / handle exporterは補助的な診断手段として利用してよいが、ローカルでの主な確認経路にはしない。
+
 ## 全体像
 
 1 InvocationでRAGScopeアプリケーションがDBやAI推論サービスを利用し、RAGScopeアプリケーションとAI推論サービスがそれぞれOpenTelemetryを通じてTelemetryを記録する。
@@ -74,7 +76,7 @@ Composition Rootは実行に必要な部品を構築・接続する**構築時**
 
 この図では、RAGScopeアプリケーション内部のhandler / UseCase境界やSpanの包含関係までは表さない。Trace上の具体的な構造は[[RS-0023 Trace設計メモ]]で扱う。
 
-自動計装 / 手動計装、Telemetry利用境界が公開する具体API、AI推論サービス側でOpenTelemetry Python SDKを利用するmoduleもここでは決めない。Collector / Tempo / Lokiなどの本番環境向けの外部構成も、このノートでは採用を決めない。
+自動計装 / 手動計装、Telemetry利用境界が公開する具体API、AI推論サービス側でOpenTelemetry Python SDKを利用するmoduleもここでは決めない。ローカルObservability基盤としてTempo / Loki / Prometheus / Grafanaを採用することは決定済みとし、Collectorを挟むか、各signalをどの送信経路で各backendへ届けるか、本番環境での配置・保持期間・冗長化などは構成を具体化するときに定める。
 
 ## Trace / Logs / Metricsをどう使い分けるか
 
@@ -253,17 +255,20 @@ RS-0023で必要なのは、RAGScopeアプリケーションとAI推論サービ
 
 ## ローカル実行でTelemetryをどう確認するか
 
-RAGScope本体のObservability設計と本番環境の保存・集約先の選定を分離するため、ローカル確認では永続的な保存・集約先を必須にしない。
+ローカル開発環境では、**Tempo / Loki / Prometheus / GrafanaをObservability基盤として常時利用する**。ローカル構築時からこの4つを起動し、Telemetryの主な確認経路を次のように固定する。
 
-| 確認したいこと | 方法 |
+| signal / 確認したいこと | 方法 |
 |---|---|
-| 単一コンポーネントのSpan / Log / Metricが生成されること | Haskellはhandle exporter、Pythonはconsole exporterでローカル出力を確認する |
-| RAGScopeアプリケーション → AI推論サービスのTrace Context伝播 | 両コンポーネントを同じOTLP endpointへ送り、必要ならローカルOpenTelemetry Collectorのdebug exporterでTraceId / 親子関係を確認する |
-| Processor / Exporter失敗時にRAGScopeアプリケーション結果が変わらないこと | テスト用または失敗するExporter / Processor境界で自動テストする |
+| Traces / Spanが生成されること | Tempoへ保存し、GrafanaからTraceとSpan階層を確認する |
+| Logs / Eventが生成されること | Lokiへ保存し、GrafanaからLogRecord / Eventの内容とTrace Contextを確認する |
+| Metricsが生成されること | Prometheusへ保存し、GrafanaからMetricを確認する |
+| RAGScopeアプリケーション → AI推論サービスのTrace Context伝播 | Tempoへ保存されたTraceをGrafanaから確認し、両コンポーネントのSpanが同じTraceに入り、期待する親子関係になっていることを確認する |
+| LogsとTraceの関連付け | Loki上のLogRecord / Eventに対応するTrace Contextが記録され、Tempo上のTraceと関連付けられることを確認する |
+| Processor / Exporter失敗時にRAGScopeアプリケーション結果が変わらないこと | backendまたは送信経路を意図的に失敗させるテスト用構成で自動テストする |
 
-console / handle exporterの出力形式はデバッグ用であり、RAGScopeの外部Contractとして扱わない。OpenTelemetry標準でもstdout exporterの具体出力形式は標準化されていない。
+console / handle exporterは、backendへ届かない場合の切り分けやSDK単体の診断に補助的に使ってよい。ただし、console / handle exporterだけでローカルObservability確認を完了したことにはしない。
 
-ローカルCollectorは複数コンポーネントのTelemetryを同じ受信先で確認するための開発用手段であり、RAGScopeアプリケーションやAI推論サービスの機能責務には含めない。Tempo / Lokiなどの保存・集約先、本番環境のCollector構成、保持期間は別の外部構成設計で決める。
+各signalをTempo / Loki / Prometheusへ送る具体的な経路は、採用するSDK / Exporterとローカル構成に合わせて実装する。Collectorを挟む場合でも直接送信する場合でも、**最終的にTempo / Loki / Prometheusへ保存され、Grafanaから確認できること**をローカル環境の完了条件とする。
 
 ## Telemetry基盤自身が失敗した場合
 
@@ -296,7 +301,7 @@ Workbenchには今回の検討結果、確認した根拠、実装前に再確�
 | Telemetry利用境界の名前と公開API | Telemetry利用境界設計 |
 | SDK初期化設定エラー時に起動失敗するかTelemetryなしで起動するか | Telemetry初期化設計 |
 | package / module構成 | Telemetry利用境界の決定後に行うpackage / module設計 |
-| 本番環境のCollector / Tempo / Loki等の外部構成 | 外部構成設計。現時点では候補であり採用を決めない |
+| 本番環境でのCollector有無、backend配置、保持期間、冗長化 | 本番環境構成を具体化するとき。Tempo / Loki / Prometheus / GrafanaをローカルObservability基盤として採用する判断は含まない |
 | エラー型の値をSpan / Eventの`error.type`などへ変換する場所 | Telemetry利用境界とpackage / moduleを設計する時 |
 
 Haskellでエラー型の値をTelemetry向けの値へ変換する位置を決めるときは、実際のimportとCabalの`build-depends`を確認する。少なくとも次を守る。
