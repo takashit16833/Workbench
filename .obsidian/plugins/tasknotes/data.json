@@ -541,11 +541,23 @@
   "enableDebugLogging": false,
   "lastSeenVersion": "4.12.3",
   "pomodoroState": {
-    "isRunning": false,
-    "timeRemaining": 1500,
-    "nextSessionType": "work"
+    "isRunning": true,
+    "timeRemaining": 1497,
+    "currentSession": {
+      "id": "1788654418520",
+      "taskPath": "Tasks/RS-0023 OpenTelemetry Logsを前提に実行追跡・構造化ログアーキテクチャを再設計する.md",
+      "startTime": "2026-09-06T09:26:58.520+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "completed": false,
+      "activePeriods": [
+        {
+          "startTime": "2026-09-06T09:26:58.520+09:00"
+        }
+      ]
+    }
   },
-  "lastPomodoroDate": "2026-09-04",
+  "lastPomodoroDate": "2026-09-05",
   "pomodoroHistory": [
     {
       "id": "1786413262882",
