@@ -23,14 +23,15 @@ created: 2026-09-06
 |---|---|
 | Metric | OpenTelemetry Metricsで複数の観測値を集約して扱うための計測データ |
 | TTFT | Time To First Token。最初のtokenが得られるまでの時間 |
-| GenAI operation | OpenTelemetry GenAI Semantic Conventionsが定義するclient / server側のoperation |
+| GenAI operation | OpenTelemetry GenAI Semantic Conventionsが定義する、モデルまたはGenAIサービスに対する論理operation |
 | high-cardinality属性 | 実行や対象ごとに値の種類が増えやすく、Metricの集約系列を増加させる属性 |
 
 ## まず結論
 
 - 正本が要求する評価データごとの性能値は実験結果へ保存し、OpenTelemetry Metricを個別実行値の保存先にしない。
 - 検索、reranking、回答生成の処理全体の時間は実験結果へ保存し、Trace / Spanで1実行の内訳を確認する。検索 / reranking用のRAGScope固有Metricは設けない。
-- DB / GenAIについて適用可能な標準Metricがある場合は利用する。
+- DB / HTTP / GenAIについて適用可能な標準Metricがある場合は利用する。
+- GenAI client operationの時間と、そのoperationを運ぶHTTP requestの時間は同一視しない。両方を計装する場合は論理operationとtransportとして別に観測する。
 - TTFTと生成token数は評価データごとの実行結果から取得できる形で保持し、適用可能な標準GenAI Metricを併用する。
 - RAGScope固有Metricはこの共通設計では0個とし、Metric attributesへ実験ID・評価データID・文書IDなどのhigh-cardinality値を入れない。
 
@@ -60,7 +61,7 @@ flowchart LR
 |---|---|---|---|
 | `REQ-NF-PERF-001` | 検索処理時間 | 実験結果 + Span | 独自Metricなし |
 | `REQ-NF-PERF-001` / `REQ-EVAL-004` | reranking処理時間 | 実験結果 + Span | 独自Metricなし |
-| `REQ-NF-PERF-001` / `REQ-NF-PERF-002` | 回答生成時間 | 実験結果 + Span | GenAI標準Metricを併用 |
+| `REQ-NF-PERF-001` / `REQ-NF-PERF-002` | 回答生成時間 | 実験結果 + Span | GenAI / HTTP標準Metricを内訳観測に併用 |
 | `REQ-NF-PERF-002` | TTFT | 実験結果 | `gen_ai.server.time_to_first_token` |
 | `REQ-NF-PERF-002` | 生成token数 | 実験結果 | `gen_ai.client.token.usage`を適用可能なら使用 |
 | `REQ-EVAL-007` | 処理時間 / 成功率 / timeout率等 | 実験結果を集計 | Telemetry側は適用SemConvがある値だけ利用 |
@@ -89,9 +90,12 @@ flowchart LR
 | 観測 | 方針 |
 |---|---|
 | 実験比較用の検索時間 | RAGScope Applicationが検索処理全体を計測し、実験結果へ保存する |
-| Embedding時間 | 適用可能なGenAI Span / Metricで観測する |
+| Embedding時間 | 適用可能なGenAI embeddings client Span / Metricで論理operationを観測する |
+| EmbeddingのHTTP通信時間 | HTTP計装を行う場合はHTTP client Span / `http.client.request.duration`でtransportを別に観測する |
 | PostgreSQL時間 | DB Spanと`db.client.operation.duration`で観測する |
 | `ragscope.search.duration` | 設けない |
+
+EmbeddingのGenAI client operationとHTTP requestは測定境界が異なる。両方を計装する場合のSpan関係は[[RS-0023 Trace設計メモ#RAGScopeの1回の実行はTrace上どう見えるか]]に従い、HTTP時間をEmbedding operation全体の時間とみなさない。
 
 ### reranking
 
@@ -104,27 +108,29 @@ RAGScope Applicationは検索候補をAI推論サービスへ渡し、並べ替�
 
 ### 回答生成
 
-回答生成では、Applicationから見た処理時間、GenAI client operation時間、AI推論サービス側request時間を区別する。
+回答生成では、Applicationから見た処理全体、GenAI client operation、HTTP transport、AI推論サービス側request処理を区別する。
 
 ```mermaid
 flowchart LR
-    APP["RAGScope Application"] -->|"回答生成依頼"| AI["AI推論サービス"]
+    WHOLE["Application<br>回答生成処理全体"] --> GENAI["GenAI client operation"]
+    GENAI --> HTTP["HTTP request"]
+    HTTP --> AI["AI推論サービス<br>request処理"]
     AI --> MODEL["Model"]
-    MODEL --> AI
-    AI -->|"回答結果"| APP
 
-    APP -. "Application: 回答生成処理全体" .-> APP
-    APP -. "gen_ai.client.operation.duration" .-> AI
-    AI -. "gen_ai.server.request.duration" .-> MODEL
+    WHOLE -. "実験結果" .-> RESULT["回答生成処理時間"]
+    GENAI -.-> GMC["gen_ai.client.operation.duration"]
+    HTTP -.-> HMC["http.client.request.duration"]
+    AI -.-> GMS["gen_ai.server.request.duration"]
 ```
 
 | 時間 | 意味 | 扱い |
 |---|---|---|
 | 回答生成処理時間 | Applicationが回答生成処理を開始してから結果を得るまでの時間 | 実験結果へ保存 |
-| `gen_ai.client.operation.duration` | GenAI client operationの所要時間 | 適用可能なら標準Metric |
-| `gen_ai.server.request.duration` | AI推論サービス側request処理時間 | 適用可能なら標準Metric |
+| `gen_ai.client.operation.duration` | Applicationから見た論理的なGenAI client operationの所要時間 | 適用可能なら標準Metric |
+| `http.client.request.duration` | AI推論サービスへ送るHTTP requestのtransport所要時間 | HTTP計装を行う場合の標準Metric |
+| `gen_ai.server.request.duration` | AI推論サービス側のGenAI request処理時間 | 適用可能なら標準Metric |
 
-これらは測定境界が異なるため、一方の値から他方の値を導出しない。
+これらは包含しうるが測定境界が異なる。`gen_ai.client.operation.duration`と`http.client.request.duration`を同じ時間の別名として扱わず、一方の値から他方の値を導出しない。AI推論サービス側のMetricもApplication側のMetricから導出しない。
 
 ## TTFTをどう扱うか
 
@@ -148,10 +154,10 @@ OpenTelemetry GenAI Semantic Conventionsには、AI serverが最初のtokenを�
 ## 生成token数をどう扱うか
 
 GenAI Semantic Conventionsには`gen_ai.client.token.usage`があり、input / output token数をHistogramで記録できる。
-正確なcountを取得できる場合に使用し、取得できない値をTelemetryのためだけに推定しない。
+client側で正確なcountを容易に取得できる場合に使用し、取得できない値をTelemetryのためだけに推定しない。
 
 RAGScopeでは生成token数を評価データ単位で比較するため、**正確なoutput token countを実験結果へ保持する経路が主**である。
-その上で、Application側のGenAI client計装から標準Metricを利用できる場合は`gen_ai.client.token.usage`を併用する。
+その上で、AI推論サービスから返されたcountをApplication側のGenAI client operationから取得できる場合は、標準Metricの`gen_ai.client.token.usage`を併用する。
 
 ```mermaid
 flowchart LR
@@ -181,7 +187,7 @@ Metricは複数の観測値を同じ属性集合で集約するため、実行�
 
 - 個別実行の性能値は実験結果へ保存できる
 - 1回の詳細な所要時間と内訳はSpanで確認できる
-- DB / GenAIには適用可能な標準Metricが存在する
+- DB / HTTP / GenAIには適用可能な標準Metricが存在する
 - 検索 / rerankingについて、独自Metricで集約しなければ成立しない要求を現在確認できない
 
 したがって、**RS-0023の共通設計ではRAGScope固有Metricを0個とする**。
@@ -206,6 +212,8 @@ Metricは複数の観測値を同じ属性集合で集約するため、実行�
 | `gen_ai.server.time_to_first_token` | Histogram | `s` | Development |
 | `gen_ai.server.time_per_output_token` | Histogram | `s` | Development |
 
+HTTPの`http.client.request.duration`とDatabaseの`db.client.operation.duration`はStableなSemantic Conventionとして利用する。GenAI Metricsとはstabilityが異なるため、同じ前提で固定しない。
+
 ## このMetrics共通設計では決めないこと
 
 | 論点 | 具体化する時点 |
@@ -225,5 +233,6 @@ Metricは複数の観測値を同じ属性集合で集約するため、実行�
 - [[RS-0023 Logs設計メモ]]
 - [OpenTelemetry Semantic Conventions](https://opentelemetry.io/docs/specs/semconv/)
 - [OpenTelemetry GenAI Semantic Conventions](https://github.com/open-telemetry/semantic-conventions-genai)
+- [OpenTelemetry HTTP metrics](https://opentelemetry.io/docs/specs/semconv/http/http-metrics/)
 - [OpenTelemetry Database metrics](https://opentelemetry.io/docs/specs/semconv/database/database-metrics/)
 - [hs-opentelemetry](https://github.com/iand675/hs-opentelemetry)
