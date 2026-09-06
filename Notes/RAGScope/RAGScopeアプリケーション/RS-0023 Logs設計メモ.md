@@ -58,21 +58,21 @@ retryやtimeoutという**種類だけ**を理由に共通Eventを作らない�
 - **ある時点で起きた出来事・状態変化**はEvent候補になる。
 - 適用できるSemantic Conventionがある場合は、そのEvent / attributes / severity等を優先する。
 
-RAGScope固有Eventが必要な場合は、event nameを持つOpenTelemetry `EventRecord`として記録する。
+RAGScope固有Eventが必要な場合は、`EventName`を持つOpenTelemetry `EventRecord`として記録する。
 
 RAGScope固有Eventは、その出来事を定義するUseCaseまたは内部処理の設計で定義する。その設計では、次を決める。
 
 - Eventが表す出来事または状態変化
 - Eventを記録する条件
-- event name
+- `EventName`
 - Eventの発生時刻が何の時点を指すか
 - 既定severity
 - Event固有attributes
 - 失敗、または処理の成功・失敗という結果を表すEventでは、`error.type`をどの条件で要求するかと、対応するエラー型の値からどの低カーディナリティ値へ変換するか
 
-RAGScope固有Eventのevent nameには`ragscope.*` namespaceを使う。ID、試行番号、対象名など実行ごとに変わる値はevent nameへ埋め込まず、attributesへ置く。
+RAGScope固有Eventの`EventName`には`ragscope.*` namespaceを使う。ID、試行番号、対象名など実行ごとに変わる値は`EventName`へ埋め込まず、attributesへ置く。
 
-全Eventを先に共通型へ列挙しない。複数のUseCaseまたは内部処理で、Eventが表す出来事、記録条件、event name、attributesを同じ定義として共有する必要が実際に生じた場合だけ共通化を検討する。
+全Eventを先に共通型へ列挙しない。複数のUseCaseまたは内部処理で、Eventが表す出来事、記録条件、`EventName`、attributesを同じ定義として共有する必要が実際に生じた場合だけ共通化を検討する。
 
 ## Trace / Spanとの関連付け
 
@@ -174,7 +174,7 @@ RAGScope側では、OpenTelemetryと同じ責務を持つ別のログ処理基�
 | OpenTelemetryとは別のログ送信経路 | 設けない | Log転送はOpenTelemetryのProcessor / Exporter経路へ委ねる |
 | `LogRecord`とは別のTrace Context管理 | 設けない | `LogRecord`自身が持つTrace Contextを使う |
 
-RAGScope側で定義するのは、RAGScope固有Eventが表す意味、記録条件、event name、attributes、severityと、必要な場合に対応するエラー型の値からEventの`error.type`へ変換する規則である。
+RAGScope側で定義するのは、RAGScope固有Eventが表す意味、記録条件、`EventName`、attributes、severityと、必要な場合に対応するエラー型の値からEventの`error.type`へ変換する規則である。
 
 ## Semantic Conventionsのstability
 
@@ -193,7 +193,7 @@ RAGScope側で定義するのは、RAGScope固有Eventが表す意味、記録�
 | 項目 | 具体化する時点 |
 |---|---|
 | `Body`の具体内容 | 個別Event / 適用SemConvを決める時 |
-| RAGScope固有Eventのevent name / attributes / severity | そのEventが表す出来事を定義するUseCaseまたは内部処理の設計で決める時 |
+| RAGScope固有Eventの`EventName` / attributes / severity | そのEventが表す出来事を定義するUseCaseまたは内部処理の設計で決める時 |
 | RAGScope固有Eventの`error.type`値とrequirement level | そのEventが表す出来事を定義するUseCaseまたは内部処理の設計で決める時。実装時に対象バージョンのSemConvを再確認する |
 | Exception attributesについてSemConvを超えて設けるRAGScope固有のデータ取扱規則 | その規則を必要とする要求・正本が具体化した時 |
 | API / CLIで利用者へ返す失敗表現 | API / CLI設計・Contract |
