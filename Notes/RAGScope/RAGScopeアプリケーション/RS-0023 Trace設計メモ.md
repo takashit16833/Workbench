@@ -79,33 +79,43 @@ flowchart TB
     subgraph TRACE["1 Invocation = 1 Trace"]
         direction TB
 
-        subgraph ENTRY["entry Span API: HTTP SERVER Span CLI: Execution (callee) Span"]
+        subgraph APP["RAGScope Application"]
             direction TB
 
-            subgraph HANDLER["handler（1つの境界処理 / Spanではない）"]
+            subgraph ENTRY["entry Span API: HTTP SERVER Span CLI: Execution (callee) Span"]
                 direction TB
-                HIN["入力をUseCaseへ渡す値へ変換"]
 
-                subgraph UCSPAN["UseCase Span"]
+                subgraph HANDLER["handler（1つの境界処理 / Spanではない）"]
                     direction TB
-                    UC["UseCase実行"]
-                    UC --> DB["DB client Span"]
-                    UC --> AI_REQ["AI通信 client Span"]
-                end
+                    HIN["入力をUseCaseへ渡す値へ変換"]
 
-                HIN -->|"UseCaseを呼び出す"| UC
-                UC --> HOUT["結果をCLI表示 / HTTP responseへ変換"]
+                    subgraph UCSPAN["UseCase Span"]
+                        direction TB
+                        UC["UseCase実行"]
+                        UC --> DB["DB client Span"]
+                        UC --> AI_REQ["HTTP client Span"]
+                    end
+
+                    HIN -->|"UseCaseを呼び出す"| UC
+                    UC --> HOUT["結果をCLI表示 / HTTP responseへ変換"]
+                end
             end
         end
 
-        AI_REQ -->|"Trace Context"| AI_SVC["AI推論サービス側 Span"]
+        subgraph AISVC["AI推論サービス"]
+            AI_SERVER["HTTP SERVER Span"]
+        end
+
+        AI_REQ -->|"Trace Contextを伝播<br>remote child"| AI_SERVER
     end
 
     INPUT --> HIN
     HOUT --> OUTPUT["CLI表示 / HTTP response"]
 ```
 
-図の`handler`は1つであり、その実行の中に「入力変換 → UseCase呼び出し → 結果変換」がある。`UseCase Span`をhandlerの内側に描いているのは、handlerがUseCaseを呼び出して制御が戻るまで待つ実行上の包含関係を示すためであり、UseCaseそのものをhandlerの責務に含めるという意味ではない。AI推論サービス側のSpanはRAGScope Application側のentry Spanの外側にあるが、Trace Contextを引き継いで同じTraceへ参加する。
+図の`handler`は1つであり、その実行の中に「入力変換 → UseCase呼び出し → 結果変換」がある。`UseCase Span`をhandlerの内側に描いているのは、handlerがUseCaseを呼び出して制御が戻るまで待つ実行上の包含関係を示すためであり、UseCaseそのものをhandlerの責務に含めるという意味ではない。
+
+AI推論サービス側のHTTP SERVER Spanは別コンポーネントで実行されるため、RAGScope Applicationのboxとは分けて描いている。ただしTrace上では、Application側のHTTP client SpanからTrace Contextを引き継ぐremote childであり、entry Spanの子孫として同じTraceに属する。図でコンポーネントのboxを分けていることは、Trace上の親子関係が切れることを意味しない。
 
 handlerの責務とUseCaseとの関係は[[RS-0023 Observability設計メモ#handler]]も参照する。
 UseCaseが呼ばれる前にhandlerで終了してもInvocationは発生するためTraceには残るが、UseCase Spanは発生しない。
@@ -122,7 +132,7 @@ Spanは、開始・終了、所要時間、失敗、親子関係を他のSpanと
 | handler | 原則Spanにしない | entry Spanの内部処理 |
 | UseCase | 1 UseCase実行 = 1 UseCase Span | RAGScope固有Span。必要な内部operationはchild Spanとして追跡する |
 | PostgreSQL | database client operation = DB client Span | Database / PostgreSQL Semantic Conventions |
-| AI推論サービスへの通信 | client / server処理をSpan化 | HTTP / RPC等の適用SemConv |
+| AI推論サービスへのHTTP通信 | Application側のHTTP client Span + AI推論サービス側のHTTP SERVER Span | HTTP Semantic Conventions。Trace Contextを伝播して同じTraceへ接続する |
 | Embedding / generation | 適用可能なGenAI Spanモデルを優先 | 同義のRAGScope固有Spanを重複させない |
 | RAGScope内部処理 | 開始・終了、所要時間、失敗、親子関係を他のSpanと分けて確認する必要がある場合だけ | 必要ならRAGScope固有Span |
 | retry attempt | 既存計装 / SemConvでattemptを追跡できる場合は追加しない | 追跡できない場合は対象retry設計で判断 |
@@ -206,5 +216,6 @@ Logを生成するかどうかはSpan Statusとは別に判断する。[[RS-0023
 
 - [OpenTelemetry — Trace API](https://opentelemetry.io/docs/specs/otel/trace/api/)
 - [OpenTelemetry — Recording errors](https://opentelemetry.io/docs/specs/semconv/general/recording-errors/)
+- [OpenTelemetry — Semantic conventions for HTTP spans](https://opentelemetry.io/docs/specs/semconv/http/http-spans/)
 - [OpenTelemetry — Semantic conventions for CLI programs](https://opentelemetry.io/docs/specs/semconv/cli/cli-spans/)
 - [hs-opentelemetry](https://github.com/iand675/hs-opentelemetry)
