@@ -110,11 +110,11 @@ retry、timeout、fallback、処理順序など、Applicationの振る舞いそ�
 
 ## 失敗理由をAPI・保存データ・Telemetryへどう渡すか
 
-失敗理由の元情報は、そのUseCaseまたは内部処理に対応するtyped failureで保持する。
+失敗理由の元情報は、そのUseCaseまたは内部処理に対応するエラー型で保持する。
 API / CLI、実験・評価結果、Telemetryは用途が違うため、同じ分類名・同じ粒度へ無理にそろえず、それぞれ必要な表現へ変換する。
 
 ```text
-UseCaseまたは内部処理に対応するtyped failure
+UseCaseまたは内部処理に対応するエラー型
         ├─→ API / CLI向けに変換
         │      └─ API応答 / CLI stderr・終了状態
         ├─→ 実験・評価結果へ保存する形に変換
@@ -127,12 +127,12 @@ UseCaseまたは内部処理に対応するtyped failure
 
 RAGScope全体で共有する独立した共通エラー分類は設けない。
 
-現在の要求では、typed failureと各出力先の間に共通のエラー分類を置かなくても、API / CLI、保存error、Telemetryはそれぞれ成立する。
-一方、共通のエラー分類を追加すると、typed failureから共通分類への変換と、そこから各出力先への変換を別々に維持する必要がある。これはUseCaseや内部処理ごとの失敗定義を、不要に1つの分類体系へ結合する。
+現在の要求では、各UseCaseや内部処理のエラー型と各出力先の間に共通のエラー分類を置かなくても、API / CLI、保存error、Telemetryはそれぞれ成立する。
+一方、共通のエラー分類を追加すると、各エラー型で表した失敗から共通分類への変換と、そこから各出力先への変換を別々に維持する必要がある。これはUseCaseや内部処理ごとの失敗定義を、不要に1つの分類体系へ結合する。
 
 Application / AI推論サービス間で共有する失敗コードが通信契約として実際に必要になった場合は、その通信方式を定義するContractで扱う。RAGScope全体の共通エラー分類として先に定義しない。
 
-OpenTelemetryの`error.type`は、Telemetry上で「そのoperationやEventがどの種類のerrorを表すか」を記録する属性であり、RAGScopeのtyped failureそのものを置き換える型ではない。
+OpenTelemetryの`error.type`は、Telemetry上で「そのoperationやEventがどの種類のerrorを表すか」を記録する属性であり、RAGScopeのエラー型そのものではない。
 HTTP、Database、GenAIなど、適用するSemantic Conventionが`error.type`を定めている場合はその規則に従う。RAGScope固有SpanとEventでの変換は、それぞれ[[RS-0023 Trace設計メモ]]と[[RS-0023 Logs設計メモ]]で扱う。
 
 ## OpenTelemetryをどう利用するか
@@ -280,13 +280,13 @@ Workbenchには今回の検討結果、確認した根拠、実装前に再確�
 | SDK初期化設定エラー時に起動失敗するかTelemetryなしで起動するか | Telemetry初期化設計 |
 | package / module構成 | Telemetry利用境界の決定後に行うpackage / module設計 |
 | 本番環境のCollector / Tempo / Loki等の外部構成 | 外部構成設計。現時点では候補であり採用を決めない |
-| typed failureからTelemetry表現への変換module / package | Telemetry利用境界とpackage / moduleを設計する時 |
+| エラー型で表した失敗からTelemetry表現への変換module / package | Telemetry利用境界とpackage / moduleを設計する時 |
 
-Haskellでtyped failureをTelemetry向けの値へ変換する位置を決めるときは、実際のimportとCabalの`build-depends`を確認する。少なくとも次を守る。
+Haskellでエラー型で表した失敗をTelemetry向けの値へ変換する位置を決めるときは、実際のimportとCabalの`build-depends`を確認する。少なくとも次を守る。
 
 - UseCaseまたは内部処理を実装するmoduleからOpenTelemetry SDKを直接importしない。
 - 各module / packageの責務に従った静的依存方向とし、Cabalの`build-depends`を循環させない。
-- Telemetry AdapterがApplication側で定義されたPortやtyped failure型へ依存するかどうかは、この共通設計で先に固定しない。
+- Telemetry AdapterがApplication側で定義されたPortやエラー型へ依存するかどうかは、この共通設計で先に固定しない。
 
 package / module構成はTelemetry利用境界を決めた後に定め、先にpackageを分割してから責務を割り当てない。
 
