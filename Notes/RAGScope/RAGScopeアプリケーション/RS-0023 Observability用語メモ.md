@@ -53,8 +53,8 @@ created: 2026-09-06
 | `Body` | `LogRecord`のbody。具体的な利用方法は個別Eventまたは適用するSemantic Conventionで決める |
 | `SeverityNumber` | OpenTelemetryが定義するseverityの数値体系 |
 | Exception Log | Exceptions in Logs Semantic Conventionに従ってExceptionを記録する`LogRecord` |
-| `exception.type` | Exception Logへ記録するruntime Exceptionの型 |
-| `exception.message` | Exception Logへ記録するException message。sensitive informationを含み得るため、記録可否はSemConvとは別にRAGScope側のデータ取扱規則に従う |
+| `exception.type` | Exception Logへ記録するExceptionの型 |
+| `exception.message` | Exception Logへ記録するException message。機密情報を含み得るため、記録可否はSemConvとは別にRAGScope側のデータ取扱規則に従う |
 | `exception.stacktrace` | Exception Logへ記録するstack trace |
 | Span Event | Spanの中で、ある時点に起きた出来事を記録するTrace側のEvent。Log Eventとは別の表現である |
 | requirement level | Semantic Conventionが属性を`Required`、`Conditionally Required`、`Recommended`などで示す区分 |
@@ -89,12 +89,12 @@ created: 2026-09-06
 | RAGScope固有Event | 適用できるSemantic Conventionや既存Spanだけでは後から識別できない、RAGScope固有の出来事または状態変化を表すLog Event |
 | Telemetry利用境界 | UseCaseや内部処理がOpenTelemetry SDKを直接importせずにTelemetryを記録するため、RAGScope側に置く利用境界。具体的な名前と公開APIはRS-0023の共通設計では未決定 |
 | OpenTelemetry Adapter | Telemetry利用境界の外側でOpenTelemetry SDKへ接続するAdapter。具体的なmodule / package配置や公開APIはRS-0023の共通設計では未決定 |
-| handler | CLI / API入力をUseCaseへ渡す値へ変換し、UseCaseを呼び出し、その結果をCLI表示またはHTTP responseへ変換するApplication上の境界処理 |
+| handler | CLI / API入力をUseCaseへ渡す値へ変換し、UseCaseを呼び出し、その結果をCLI表示またはHTTP応答へ変換するApplication上の境界処理 |
 | UseCase | RAGScope正本で定義されるUseCase。この用語メモではObservability固有の別定義を作らない |
 | 内部処理 | Embedding生成、Database検索、文書チャンク化など、UseCaseから呼び出され、そのUseCaseを構成する処理 |
-| typed failure | UseCaseまたは内部処理の契約上想定されるfailure。OpenTelemetryの`error.type`やruntime Exceptionそのものを指す語ではない |
-| unexpected同期Exception | typed failureとして扱われず、RAGScopeが追跡するoperationの境界から同期的に外へ投げられるException |
-| async interruption / cancellation | 実行中の処理を外部・非同期要因から中断するケースの総称。特定のException constructorや一律のSpan Statusを意味する語ではない |
+| typed failure | UseCaseまたは内部処理の契約上想定されるfailure。OpenTelemetryの`error.type`や実行時に発生したExceptionそのものを指す語ではない |
+| 想定外の同期Exception | typed failureとして扱われず、RAGScopeが追跡するoperationの境界から同期的に外へ投げられるException |
+| 非同期中断 / キャンセル | 実行中の処理を外部・非同期要因から中断するケースの総称。特定のException constructorや一律のSpan Statusを意味する語ではない |
 | TTFT | Time To First Token。RS-0023では、AI推論サービスが生成を開始してから最初のtokenを生成するまでの時間を指す。clientが最初のresponse chunkを受信するまでの時間とは区別する |
 
 ## `entry Span` / Invocation / UseCase Spanの関係
@@ -123,9 +123,9 @@ UseCaseを呼ぶ前にhandlerで処理が終了した場合でもInvocationは�
 |---|---|---|
 | typed failure | RAGScope / UseCase・内部処理 | 契約上想定されるfailureの元情報 |
 | `error.type` | OpenTelemetry | operationまたはEventがどの種類のerrorで失敗・終了したか |
-| `exception.type` | OpenTelemetry Exceptions in Logs | 実際に記録したruntime Exceptionの型 |
+| `exception.type` | OpenTelemetry Exceptions in Logs | 実際に記録したExceptionの型 |
 
-RAGScope固有Span / Eventで必要な`error.type`はtyped failureから変換するが、typed failure自体を`error.type`へ置き換えない。unexpected同期ExceptionをException Logへ記録する場合は、実際のruntime Exception型を`exception.type`へ記録する。具体的な変換規則は[[RS-0023 Trace設計メモ]]と[[RS-0023 Logs設計メモ]]で扱う。
+RAGScope固有Span / Eventで必要な`error.type`はtyped failureから変換するが、typed failure自体を`error.type`へ置き換えない。想定外の同期ExceptionをException Logへ記録する場合は、実際に発生したExceptionの型を`exception.type`へ記録する。具体的な変換規則は[[RS-0023 Trace設計メモ]]と[[RS-0023 Logs設計メモ]]で扱う。
 
 ## 正本へ反映するとき
 
