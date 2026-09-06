@@ -17,7 +17,7 @@ created: 2026-09-06
 
 > **RAGScopeでは何をLogに残し、何をSpanに任せるか？**
 
-このノートでは、OpenTelemetry Logsの`LogRecord` / `EventRecord`と、TraceのSpan / Span Eventをどう使い分けるかを整理したうえで、RAGScopeがどの出来事をLogsへ記録するかをレビューする。
+このノートでは、OpenTelemetry Logsの`LogRecord` / `EventRecord`とTraceのSpanの役割を整理したうえで、RAGScopeがどの出来事をLogsへ記録するかをレビューする。
 
 エラー型で表す失敗、想定外の同期Exception、retry / fallback時に`EventRecord`を記録する条件も扱う。
 
@@ -33,6 +33,10 @@ OpenTelemetryでは、**`Event`という同じ語がLogsとTraceの両方に出�
 | Span Event | Traces | Spanに付属するtimestamp付きのSpan Event | Tempo / Grafana |
 
 このノートでは混同を避けるため、**Logs側は`EventRecord`、Trace側はSpan Eventと書き、単独の「Event」は原則使わない**。OpenTelemetry仕様の名称を引用するときだけ、必要に応じて「Event」という原語を併記する。
+
+> [!important] RAGScopeのEvent記録方針
+> **RAGScopeが新規に記録するEventはOpenTelemetry Logsの`EventRecord`として記録し、RAGScope固有のSpan Eventは定義・記録しない。**
+> OpenTelemetryがSpan Event APIを非推奨化し、新しいコードではEventを現在のSpanに関連付けたLogsとして記録することを推奨しているためである。SDKや既存instrumentationが互換性のためSpan Eventを生成すること自体は、この方針の対象外とする。同じ出来事を`EventRecord`とSpan Eventへ重複記録しない。
 
 RAGScopeでは、観測したい情報を次の順で考える。
 
@@ -69,8 +73,6 @@ Grafana
 `EventRecord`は`LogRecord`とは別の第4のsignalではない。OpenTelemetry Logsのデータモデル上、**`EventName`が入った`LogRecord`をEventとして扱う**。Semantic conventions for eventsでは、この形を`EventRecord`と呼ぶ。すべての`LogRecord`が`EventRecord`になるわけではない。
 
 一方、Span EventはTraceのSpanに直接ぶら下がる。Trace API上、Spanはtimestamp付きEventのリストを持つことができる。これはLogs signalへ送る`LogRecord` / `EventRecord`ではない。
-
-このドラフトでは、RAGScope固有の構造化された出来事はLogsの`EventRecord`を主表現とする。したがって、同じ出来事を`EventRecord`とSpan Eventの両方へ機械的に重複記録しない。後述する想定外の同期ExceptionについてもLogs側のException `EventRecord`を主表現とし、同じExceptionをSpan Eventへ重ねて記録しない。
 
 ## Semantic Conventionは何を決めるものか
 
@@ -211,7 +213,7 @@ Semantic Conventionを超えて「どの値を記録してよいか」というR
 ### `hs-opentelemetry`の既定Exception記録との重複
 
 `hs-opentelemetry`の`inSpan`は、既定ではoperation境界から外へ投げられたExceptionをSpan EventとしてSpanに記録する。
-このドラフトではLogs側のException `EventRecord`を主表現とするため、RAGScopeが手動計装したSpanでSDK既定のExceptionを表すSpan EventとLogs側のException `EventRecord`が同じExceptionを重複記録する場合は、OpenTelemetry AdapterでSDK既定のException記録を抑える。
+RAGScopeが手動計装したSpanでSDK既定のExceptionを表すSpan EventとLogs側のException `EventRecord`が同じExceptionを重複記録する場合は、OpenTelemetry AdapterでSDK既定のException記録を抑える。
 
 具体的に`ExceptionHandler`を使うか、Spanの開始・終了処理を別の方法で扱うかはAdapter実装時に決める。Adapterでの補正は、採用するSDKの既定挙動とこのLogs設計が一致しない場合だけ行う。
 
@@ -279,6 +281,7 @@ RAGScope側で定義するのは、RAGScope固有`EventRecord`が表す意味、
 - [OpenTelemetry — Logs Data Model](https://opentelemetry.io/docs/specs/otel/logs/data-model/)
 - [OpenTelemetry — Logs API](https://opentelemetry.io/docs/specs/otel/logs/api/)
 - [OpenTelemetry — Trace API](https://opentelemetry.io/docs/specs/otel/trace/api/)
+- [OpenTelemetry — Deprecating Span Events API](https://opentelemetry.io/blog/2026/deprecating-span-events/)
 - [OpenTelemetry — Semantic conventions for events](https://opentelemetry.io/docs/specs/semconv/general/events/)
 - [OpenTelemetry — General semantic conventions](https://opentelemetry.io/docs/specs/semconv/general/)
 - [OpenTelemetry — Naming](https://opentelemetry.io/docs/specs/semconv/general/naming/)
