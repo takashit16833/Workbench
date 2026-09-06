@@ -19,7 +19,7 @@ RAGScopeがどの出来事をLog Eventとして記録し、そのEventをOpenTel
 
 ## このノートで使う用語
 
-Trace、Span、operation、Span Status、Trace Context、typed failure、unexpected同期Exceptionは[[RS-0023 Trace設計メモ]]の定義に従う。
+Trace、Span、operation、Span Status、Trace Context、UseCase、内部処理、typed failure、unexpected同期Exceptionは[[RS-0023 Trace設計メモ]]の定義に従う。
 
 | 用語 | 意味 |
 |---|---|
@@ -37,7 +37,7 @@ Trace、Span、operation、Span Status、Trace Context、typed failure、unexpec
 - Logsの基盤にはOpenTelemetry Logsと、対象のEventへ適用できるSemantic Conventionsを使う。
 - RAGScope固有Eventは、適用できるSemantic Conventionと、既存Spanの開始・終了・attributes・Statusだけでは、後から必要な出来事または状態変化を識別できない場合にだけ定義する。
 - typed failureが発生したという事実だけではLogを自動生成しない。RAGScopeが追跡するoperationの境界からunexpected同期Exceptionが外へ投げられる場合はException Logを1件記録し、同じExceptionを複数の層で重複記録しない。
-- RAGScope全体のfailure modelは[[RS-0023 Observability設計メモ#失敗情報をAPI・保存データ・Telemetryへどう変換するか]]に従う。Logs設計では、RAGScope固有Eventに失敗情報が必要な場合に、対象feature / UseCaseのtyped failureを`error.type`へどう変換するかだけを扱う。RAGScope全体で共有する独立した`error_type` taxonomyは設けない。
+- RAGScope全体のfailure modelは[[RS-0023 Observability設計メモ#失敗情報をAPI・保存データ・Telemetryへどう変換するか]]に従う。Logs設計では、RAGScope固有Eventに失敗情報が必要な場合に、そのEventが表すUseCaseまたは内部処理に対応するtyped failureを`error.type`へどう変換するかだけを扱う。RAGScope全体で共有する独立した`error_type` taxonomyは設けない。
 - 失敗を表すEvent、または処理の成功・失敗という結果を表すEventをRAGScope独自に定義する場合は、2026-09-06時点のGeneral Events guidanceに従って`error.type`をEvent定義へ含める。さらに、そのEventについて`error.type`を`Required`、`Conditionally Required`、`Recommended`のどれとして扱うかを定める。General EventsはDevelopmentなので、実装時に対象versionを再確認する。
 - `error.type`は「そのoperationまたはEventがどの種類のerrorを表すか」をTelemetryへ記録する属性である。Exception Logの`exception.type`は、実際に発生したruntime Exceptionの型を表す。2つは別の契約として扱う。
 - RAGScope独自の`LogRecord`、Logging Runtime、Sink、Logging専用Context、OpenTelemetryと並行してLogを転送する別基盤は設けない。
@@ -68,7 +68,7 @@ retryやtimeoutという**種類だけ**を理由に共通Eventを作らない�
 | operation全体を説明する値 | Span attributesへ記録する |
 | ある時点の出来事・状態変化 | Eventで表す |
 | Event表現 | `EventName`を持つOpenTelemetry `LogRecord`を使う |
-| Event定義 | その出来事が属するUseCaseまたは対象処理を定義する設計で決める |
+| Event定義 | そのEventが表す出来事を定義するUseCaseまたは内部処理の設計で決める |
 | EventName namespace | RAGScope固有Eventは`ragscope.*`を使う |
 | 実行ごとに変化する値 | EventNameへ埋め込まずattributesへ記録する |
 | 失敗、または処理の成功・失敗という結果を表すEvent | 適用できるSemantic Conventionを優先する。RAGScope固有Eventを定義する場合は、2026-09-06時点のGeneral Events guidanceに従って`error.type`をEvent定義へ含め、そのEventでのrequirement levelを決める |
@@ -92,13 +92,13 @@ RAGScope固有Eventを定義する設計では、次を決める。
 
 General EventsはDevelopmentなので、Event定義を実装する時点で対象versionのguidanceを再確認する。2026-09-06時点の細部をRAGScope独自の恒久契約として固定しない。
 
-全Eventを先に共通型へ列挙しない。複数の対象機能で、Eventが表す出来事、記録条件、`EventName`、attributesを同じ定義として共有する必要が実際に生じた場合だけ共通化を検討する。
+全Eventを先に共通型へ列挙しない。複数のUseCaseまたは内部処理で、Eventが表す出来事、記録条件、`EventName`、attributesを同じ定義として共有する必要が実際に生じた場合だけ共通化を検討する。
 
 ## typed failureをLog向けの`error.type`へどう変換するか
 
 RAGScope全体でのfailureの意味、API / CLI向けの変換、実験・評価結果へ保存するための変換は[[RS-0023 Observability設計メモ#失敗情報をAPI・保存データ・Telemetryへどう変換するか]]で扱う。このLogs設計は、それらを再定義しない。
 
-Logs設計が担当するのは、RAGScope固有Eventに失敗情報が必要な場合に、対象feature / UseCaseが定義するtyped failureから、そのEventの`error.type`へ変換する規則である。OpenTelemetryに`error.type`が存在すること自体を理由にRAGScope共通`error_type`を廃止するわけではない。共通taxonomyを置かなければ成立しない現在要求を確認できず、共通taxonomyを追加するとtyped failureとの対応規則を別に維持する必要が生じるため、RAGScope全体で共有する独立した`error_type` taxonomyは設けない。
+Logs設計が担当するのは、RAGScope固有Eventに失敗情報が必要な場合に、そのEventが表すUseCaseまたは内部処理に対応するtyped failureから、そのEventの`error.type`へ変換する規則である。OpenTelemetryに`error.type`が存在すること自体を理由にRAGScope共通`error_type`を廃止するわけではない。共通taxonomyを置かなければ成立しない現在要求を確認できず、共通taxonomyを追加するとtyped failureとの対応規則を別に維持する必要が生じるため、RAGScope全体で共有する独立した`error_type` taxonomyは設けない。
 
 Application / AI推論サービス間で共有するfailure codeが通信契約として必要になった場合は、その通信Contractで定義する。Logs用の共通`error_type`として先に定義しない。
 
@@ -108,7 +108,7 @@ Application / AI推論サービス間で共有するfailure codeが通信契約�
 |---|---|
 | typed failureが発生 | failureが発生したという事実だけでは`LogRecord`を生成しない |
 | retry / fallbackで最終的に回復 | 途中でfailureが発生したという事実だけではEventを生成しない |
-| Spanから識別できない出来事・状態変化がある | その出来事が属するUseCaseまたは対象処理の設計でEventを定義する。失敗、または処理の成功・失敗という結果を表すRAGScope固有Eventなら、2026-09-06時点のGeneral Events guidanceに従って`error.type`をEvent定義へ含め、そのEventでのrequirement levelを決める |
+| Spanから識別できない出来事・状態変化がある | そのEventが表す出来事を定義するUseCaseまたは内部処理の設計でEventを定義する。失敗、または処理の成功・失敗という結果を表すRAGScope固有Eventなら、2026-09-06時点のGeneral Events guidanceに従って`error.type`をEvent定義へ含め、そのEventでのrequirement levelを決める |
 | unexpected同期Exceptionがoperation境界から外へ投げられる | Exceptions in Logs Semantic Conventionに従ってException Logを1件記録する |
 | 同じExceptionが下位の計装ですでに記録されている | RAGScope上位層では同じException Logを追加しない |
 
@@ -173,7 +173,7 @@ RS-0023の正本反映では、次を少なくとも確認対象とする。こ�
 | AI推論サービスの後続logging実装 | 独自共通JSON / Sinkを実装する前提を外し、OpenTelemetry Python SDKを前提に再編する |
 | v0.0 Milestone / error-logging Epic | `error_type`、独自JSON Contract等を成果物としている現在計画を新しいObservability設計へ整合させる |
 | RS-0022を含む関連する未完了Ticket | `error_type`、独自JSON / Sink / Schema等を前提とする完了条件を再評価する |
-| `error_type`を現在契約として参照するその他の機能設計・正本 | feature / UseCase固有typed failureと、各出力先への変換へ整合させる。具体的なfailure意味は対象機能側に残す |
+| `error_type`を現在契約として参照するその他の機能設計・正本 | UseCaseまたはそのUseCaseを構成する内部処理に対応するtyped failureと、各出力先への変換へ整合させる。具体的なfailureの意味は、そのUseCaseまたは内部処理を定義する設計に残す |
 | 完了済みTicket / JSON・SQLite投影Experiment | 当時の作業・検証履歴として書き換えず、現在仕様の正本としては参照しない |
 
 この変更は複数の現在設計・Contract・Milestoneへ影響し、旧設計からObservabilityの責務分担を変える重要判断である。Workbenchでは検討結果と影響範囲を保持し、正本では現在設計を`design/`、重要判断の背景・選択肢・影響をADR、移行作業をTicketへ分けて反映する。
@@ -183,9 +183,9 @@ RS-0023の正本反映では、次を少なくとも確認対象とする。こ�
 | 項目 | 方針 | 理由 |
 |---|---|---|
 | typed failureが発生したら自動的にLogを作る共通変換 | 設けない | Span Statusを決める規則と、Eventを記録する規則は別に判断する |
-| RAGScope共通`error_type` taxonomy | 設けない | feature / UseCase固有typed failureを失敗理由の元情報とし、各出力先で必要な表現へ変換できるため。共通taxonomyを置かなければ成立しない現在要求を確認できず、置くとtyped failureとの二重管理になる |
+| RAGScope共通`error_type` taxonomy | 設けない | UseCaseまたはそのUseCaseを構成する内部処理に対応するtyped failureを失敗理由の元情報とし、各出力先で必要な表現へ変換できるため。共通taxonomyを置かなければ成立しない現在要求を確認できず、置くとtyped failureとの二重管理になる |
 | Exception Span EventをExceptionの主表現にする規則 | 設けない | このドラフトではExceptions in Logs Semantic Conventionに従うException Logを主表現として使う |
-| 全RAGScope Eventを列挙する共通`LogSpec` | 設けない | Eventは対象のUseCaseまたは処理を定義する設計で必要なものだけ定義する |
+| 全RAGScope Eventを列挙する共通`LogSpec` | 設けない | Eventは、そのEventが表す出来事を定義するUseCaseまたは内部処理の設計で必要なものだけ定義する |
 | 共通`payload` | 設けない | Event固有の機械可読情報はattributesで表現する |
 
 ## このLogs共通設計では決めないこと
@@ -193,11 +193,11 @@ RS-0023の正本反映では、次を少なくとも確認対象とする。こ�
 | 項目 | 具体化する時点 |
 |---|---|
 | `Body`の具体内容 | 個別Event / 適用SemConvを決める時 |
-| 対象機能固有EventName / attributes / severity | 対象機能の設計時 |
-| 対象機能固有の`error.type`値と、そのEventで`error.type`をどのrequirement levelにするか | 対象operation / Eventの設計時。実装時に対象versionのSemConvを再確認する |
+| RAGScope固有EventのEventName / attributes / severity | そのEventを定義する時 |
+| RAGScope固有Eventの`error.type`値と、そのEventで`error.type`をどのrequirement levelにするか | そのEventを定義する時。実装時に対象versionのSemConvを再確認する |
 | Exception attributesについてSemConvを超えて設けるRAGScope固有のデータ取扱規則 | その規則を必要とする要求・正本が具体化した時 |
-| API / CLIで利用者へ返すfailure表現 | 各interface設計 / Contract |
-| 実験・評価データモデルへ保存するerror | 実験・評価機能設計 / データモデル |
+| API / CLIで利用者へ返すfailure表現 | API / CLI設計・Contract |
+| 実験・評価データモデルへ保存するerror | 実験・評価の設計 / データモデル |
 | Application / AI推論サービス間のfailure response / code | AI通信方式・Contract設計時 |
 | ExperimentとTelemetryの関連付け | 実験実行境界が具体化した時 |
 | AdapterのException処理実装 | Adapter実装時 |
@@ -234,7 +234,7 @@ typed failureはruntime Exceptionとは限らないため、typed failureを表�
 ## 判断理由・実装上の注意
 
 > [!info]- Semantic Conventions / EventName
-> 対象の出来事に適用できるOpenTelemetry Semantic Conventionが存在する場合は、そのEventName、attributes、severity等の定義を優先する。同じ意味のRAGScope独自Eventや独自attributeを重複して定義しない。
+> Eventが表す出来事に適用できるOpenTelemetry Semantic Conventionが存在する場合は、そのEventName、attributes、severity等の定義を優先する。同じ意味のRAGScope独自Eventや独自attributeを重複して定義しない。
 >
 > RAGScope固有Eventが必要な場合は、OpenTelemetryのnamespaceと衝突しない`ragscope.*`をEventNameのnamespaceとして使用する。ID、attempt番号、対象名など実行ごとに変化する値をEventNameへ埋め込まず、attributesとして持たせる。
 >
@@ -248,7 +248,7 @@ typed failureはruntime Exceptionとは限らないため、typed failureを表�
 > [!info]- severity
 > RAGScope独自のLog Level契約は設けず、Eventの重要度はOpenTelemetry `SeverityNumber`の意味体系に従う。各Eventの既定severityは、そのEventを定義する設計で決める。
 >
-> OpenTelemetryのseverity体系を使うことは、UseCaseや対象機能へ`hs-opentelemetry`固有型を直接渡すことを意味しない。UseCaseやfeatureが受け渡す型へSDK固有型を含めるかどうかと、Telemetryへ記録するseverityの意味体系をOpenTelemetryへ合わせることは別の問題である。
+> OpenTelemetryのseverity体系を使うことは、UseCaseまたは内部処理を実装するコードへ`hs-opentelemetry`固有型を直接渡すことを意味しない。UseCaseまたは内部処理が公開・受け渡しする型へSDK固有型を含めるかどうかと、Telemetryへ記録するseverityの意味体系をOpenTelemetryへ合わせることは別の問題である。
 >
 > severityからSpan Status、Applicationの最終結果、保存状態を導出しない。
 
