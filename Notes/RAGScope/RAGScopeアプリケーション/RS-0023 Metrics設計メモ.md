@@ -105,7 +105,7 @@ RAGScope Applicationは検索候補をAI推論サービスへ渡し、並べ替�
 
 現時点で確認したGenAI Semantic Conventionsには、RAGScopeのreranking処理全体へそのまま適用できる専用Metricを確認できていない。
 このため、実験比較に必要なreranking処理時間は実験結果へ保存し、`ragscope.reranking.duration`のような独自Metricは設けない。
-対象機能を実装する時点で、その時点のGenAI Semantic Conventionsを再確認する。
+rerankingを実装する時点で、その時点のGenAI Semantic Conventionsを再確認する。
 
 ### 回答生成
 
@@ -199,7 +199,7 @@ Metricは複数の観測値を同じ属性集合で集約するため、実行�
 - 検索 / rerankingについて、独自Metricで集約しなければ成立しない要求を現在確認できない
 
 したがって、**RS-0023の共通設計ではRAGScope独自Metricを新たに定義しない（0個）**。
-対象機能で必要な集約・比較・監視が具体化し、Trace / 実験結果 / 標準Metricではその用途を満たせないことが確認された場合だけ、対象機能の設計で独自Metricを定義する。
+UseCaseまたはそのUseCaseを構成する内部処理について、必要な集約・比較・監視が具体化し、Trace / 実験結果 / 標準Metricではその用途を満たせないことが確認された場合だけ、そのUseCaseまたは内部処理を定義する設計で独自Metricを定義する。
 
 ## Semantic Conventionsのstability
 
@@ -227,9 +227,9 @@ HTTP / Databaseの文書全体にはMixedなstabilityの項目も存在するた
 
 | 論点 | 具体化する時点 |
 |---|---|
-| 回答生成処理時間の厳密な開始・終了点 | 対象機能の設計時 |
+| 回答生成処理時間の厳密な開始・終了点 | 回答生成を定義する設計時 |
 | TTFT / output token countをAI推論サービスから返すContract | AI通信方式・Contract設計時 |
-| rerankingのSemConv対応 | 対象機能の実装時に現行SemConvを再確認 |
+| rerankingのSemConv対応 | reranking実装時に現行SemConvを再確認 |
 | Metricsの具体的な計装方法 | Telemetry利用境界 / Adapter設計時 |
 | standard Metricsをどこまで自動計装するか | 計装方法の選定時 |
 | Runtime / host / accelerator Metrics | 外部構成と、必要な集約・比較・監視を定める時 |
