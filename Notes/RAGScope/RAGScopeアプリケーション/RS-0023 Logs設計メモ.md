@@ -177,48 +177,6 @@ RAGScope側では、OpenTelemetryと同じ責務を持つ別Logging基盤を作�
 
 RAGScope側で定義するのは、RAGScope固有Eventが表す意味、記録条件、`EventName`、attributes、severityと、必要な場合にtyped failureからEventの`error.type`へ変換する規則である。
 
-## JSON / SQLiteの旧設計をどう扱うか
-
-現在の正本には、RAGScope独自`LogEvent`を、OTLPとは別にRAGScopeが定義した共通ログ出力形式へ変換する設計がある。その外部表現としてJSON、JSON Schema、SQLite表現も定義されている。
-
-RS-0023ではLogの記録単位をOpenTelemetry `LogRecord`へ置き換え、Processor / Exporterと外部転送をOpenTelemetryへ委ねる。そのため、次は現在設計として維持しない。
-
-- OTLPとは別にRAGScopeが定義する共通ログ外部表現
-- 共通ログJSON表現 / JSON Schema
-- RAGScopeが所有する共通ログSQLite表現
-
-外部転送にはOTLPなどOpenTelemetryの経路を使う。console / handle exporterの表示形式も新しいRAGScope JSON契約にはしない。
-ログの保存・検索・retentionは、採用するTelemetry backend側の責務として扱う。
-
-ただし、JSONやSQLiteという形式自体を禁止するわけではない。将来、RAGScopeが安定したログファイル形式を外部提供する要求や、RAGScope自身がSQLiteへ保存したログをqueryする要求が追加された場合は、その具体要求を基準に設計する。
-
-この判断は、実験結果、評価データ、ドメインデータなど**ログ以外のJSON / SQLite利用を変更しない**。
-既存のJSON / SQLite投影Experimentも当時の検証記録として残す。RS-0023反映後の現在設計の根拠や必須Contractとしては使用しない。
-
-## 正本へ反映するときの影響
-
-RS-0023を正本へ反映するときは、少なくとも次を確認する。
-
-| 対象 | 必要な扱い |
-|---|---|
-| `システムアーキテクチャ.md` | 共通`error_type`とObservability責務を新しいfailure modelへ整合させる |
-| `design/README.md` | `error_type`を共通契約として案内する索引を新しい設計構成へ整合させる |
-| `design/logging/README.md` | `error_type`と独自外部表現を前提にしたlogging設計索引を更新する |
-| `実行追跡・構造化ログ契約設計.md` | OpenTelemetry `LogRecord` / Trace Contextとtyped failureからTelemetry表現への変換を前提とする設計へ置き換える |
-| `構造化ログ外部表現共通設計.md` | OTLPとは別の共通ログ外部表現を現在設計から外す |
-| `構造化ログJSON表現設計.md` | 共通ログJSON契約を現在設計から外す |
-| `構造化ログSQLite表現設計.md` | RAGScope所有のログSQLite表現を現在設計から外す |
-| ADR-0005 / 後続ADR | 1 Invocation = 1独立Trace、共通`error_type`廃止、独自JSON / SQLiteログ契約廃止などの重要判断を記録する。RS-0023全体を1つの後続ADRとしてADR-0005をsupersedeするか、判断を分けるかは正本反映時に文書管理規約に従って決める |
-| `contracts/logging/v1/log-event.schema.json`とfixture | 共通ログJSON Contractを現在Contractから外す |
-| 現在のHaskell logging実装とSchema適合テスト | OpenTelemetry利用境界 / Adapterへ移行する後続実装で置き換える |
-| AI推論サービスの後続logging実装 | 独自共通JSON / Sink前提を外し、OpenTelemetry Python SDKを前提に再編する |
-| v0.0 Milestone / error-logging Epic | `error_type`、独自JSON Contract等を成果物としている現在計画を整合させる |
-| RS-0022を含む関連する未完了Ticket | `error_type`、独自JSON / Sink / Schema等を前提とする完了条件を再評価する |
-| `error_type`を現在契約として参照するその他の正本 | UseCase / 内部処理ごとのtyped failureと、各出力先への変換へ整合させる |
-| 完了済みTicket / JSON・SQLite投影Experiment | 当時の履歴として書き換えず、現在仕様の正本としては参照しない |
-
-この変更は複数の現在設計・Contract・Milestoneへ影響する。Workbenchでは検討結果と影響範囲を保持し、正本では現在設計を`design/`、重要判断の背景・選択肢・影響をADR、移行作業をTicketへ分けて反映する。
-
 ## Semantic Conventionsのstability
 
 2026-09-06時点では、このLogs設計が参照する規約のstabilityは次のように異なる。
