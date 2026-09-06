@@ -17,46 +17,108 @@ created: 2026-09-06
 
 > **RAGScopeでは何をLogに残し、何をSpanに任せるか？**
 
-このノートでは、RAGScopeがどの出来事をEventとして記録し、そのEventをOpenTelemetry `EventRecord`でどう表すかをレビューする。エラー型で表す失敗、想定外の同期Exception、retry / fallback時にEventを出す条件も扱う。
+このノートでは、OpenTelemetry Logsの`LogRecord`とEvent、TraceのSpanをどう使い分けるかを整理したうえで、RAGScopeがどの出来事をEventとして記録し、そのEventをOpenTelemetry `EventRecord`でどう表すかをレビューする。
+
+エラー型で表す失敗、想定外の同期Exception、retry / fallback時にEventを出す条件も扱う。
 
 ## 要するに
 
 Logsの基盤にはOpenTelemetry Logsを使う。
 
-RAGScope固有Eventを作るのは、**適用できるSemantic Conventionや既存Spanだけでは、後から必要な出来事・状態変化を識別できない場合**である。
+この設計でいう**Eventは、OpenTelemetry Logs側のEvent**である。OpenTelemetry Logsでは1件のログを`LogRecord`で表し、そのうち`EventName`を持つものを`EventRecord`として扱う。すべての`LogRecord`がEventである必要はない。
 
-したがって、期間を持つ処理や最終結果をSpanですでに表現できるなら、同じ事実をEventへ重複させない。
+OpenTelemetry TraceにもSpanへ時点情報を追加する**Span Event**があるが、これはLogsの`EventRecord`とは別の表現である。このノートで単に「Event」と書く場合はLogsの`EventRecord`を指し、Trace側のEventを指す場合は「Span Event」と明記する。
 
-エラー型で表す失敗が発生したという事実だけでもEventは自動生成しない。一方、想定外の同期Exceptionがoperation境界から外へ投げられる場合は、Semantic conventions for exceptions in logsに従うException Eventを1件記録する。
+RAGScopeでは、観測したい情報を次の順で考える。
 
-## いつEventを出すか
+- **開始と終了を持つ処理そのもの**はSpanで表す。
+- **operation全体を説明する値**はSpan attributesへ置く。
+- **ある時点で起きた、名前を付けて後から識別したい出来事・状態変化**はEvent候補になる。
+- **名前付きEventとして検索することを意図しない非構造の診断メッセージ**は、OpenTelemetry上は通常の`LogRecord`で表す。この共通設計では個別の診断メッセージまでは定義しない。
+
+Event候補についてOpenTelemetryが標準EventのSemantic Conventionを定義している場合は、その定義を使う。標準Eventがなく、既存Spanからも必要な出来事を識別できない場合に、RAGScope固有Eventを定義する。
+
+エラー型で表す失敗が発生したという事実だけではEventを自動生成しない。一方、想定外の同期Exceptionがoperation境界から外へ投げられる場合は、Semantic conventions for exceptions in logsに従うException Eventを1件記録する。
+
+## LogRecord / Event / Span Eventの関係
+
+OpenTelemetryには`Event`という語がTraceとLogsの両方に出てくるため、このノートでは最初に区別する。
+
+```text
+OpenTelemetry Logs
+└─ LogRecord
+   ├─ 通常のLogRecord
+   └─ EventRecord
+      └─ EventNameを持つLogRecord
+
+OpenTelemetry Traces
+└─ Span
+   └─ Span Event
+      └─ Spanの中で時点情報を記録するTrace側のEvent
+```
+
+このLogs設計で設計対象にしているのは、上図の**Logs側の`EventRecord`**である。
+
+Span Eventも「ある時点の出来事」を表せるが、このドラフトではRAGScope固有の構造化された出来事をLogsの`EventRecord`として扱う。後述する想定外の同期ExceptionについてもLogsのException Eventを主表現とし、同じExceptionをSpan EventとLogs Eventの両方へ重複記録しない。
+
+## Semantic Conventionは何を決めるものか
+
+Semantic Conventionは、Span、Metric、Log、Eventなどについて、OpenTelemetryが標準の名前、attributes、記録条件などを定める規約である。**Semantic ConventionそのものがSpanやEventの代わりになるわけではない。**
+
+そのため、このノートでは「SemConvで表現できるか」という曖昧な言い方を使わず、対象を分けて判断する。
+
+- 処理そのものを観測する場合は、その処理に適用できるSpanのSemantic Conventionがあるか確認する。
+- Event候補を記録する場合は、その出来事に適用できるEventのSemantic Conventionがあるか確認する。
+- 適用できる標準定義がある場合は、RAGScope独自の同義表現を重ねない。
+
+例えば、HTTP requestという処理はHTTP SpanのSemantic Conventionで観測する。一方、ExceptionをLogsのEventとして記録する場合はSemantic conventions for exceptions in logsに従う。この2つはどちらもSemantic Conventionを使っているが、片方はSpan、もう片方はEventである。
+
+## Span / Event / 通常LogRecordをどう分担するか
 
 判断軸は次のとおりである。
 
 ```mermaid
 flowchart TD
-    A["記録候補の出来事・状態変化"] --> B{"適用できるSemConvですでに表現できる?"}
-    B -->|Yes| C["既存のSemConv表現を使う"]
-    B -->|No| D{"既存Spanの開始・終了・attributes・Statusから識別できる?"}
-    D -->|Yes| E["Eventを追加しない"]
-    D -->|No| F["RAGScope固有Eventを定義"]
+    A["観測したい情報"] --> B{"開始と終了を持つ処理そのもの?"}
+    B -->|Yes| C["Spanで表す<br>適用できるSpan SemConvがあれば使う"]
+    B -->|No| D{"operation全体を説明する情報?<br>独立した時刻が不要?"}
+    D -->|Yes| E["Span attributesへ置く"]
+    D -->|No| F{"ある時点の名前付きの出来事・状態変化として<br>後から識別したい?"}
+    F -->|No| G["通常LogRecordの候補<br>個別メッセージはこの共通設計では定義しない"]
+    F -->|Yes| H{"適用できる標準Event SemConvがある?"}
+    H -->|Yes| I["標準Eventを使う"]
+    H -->|No| J{"既存Spanからその出来事を<br>必要な粒度で識別できる?"}
+    J -->|Yes| K["Eventを追加しない"]
+    J -->|No| L["RAGScope固有Eventを定義"]
 ```
 
+したがって、**「SemConvもSpanも使えないという判定が続いたら、自動的にEventを出す」という設計ではない。**
+
+まず、その情報が処理なのか、operation全体の情報なのか、ある時点の名前付きの出来事なのかを分ける。Eventに向く種類の情報であることを確認したうえで、標準EventのSemantic Conventionがあるか、既存Spanからすでに識別できるかを確認し、それでも必要な場合だけRAGScope固有Eventを定義する。
+
+つまり、Logsは「処理があったこと」を何でも記録する場所ではない。Spanと重複する情報を増やすのではなく、**Spanでは残らない、ある時点の意味ある出来事を必要な場合に残す**。
+
+## retry / timeoutと「共通Event」
+
 retryやtimeoutという**種類だけ**を理由に共通Eventを作らない。
-試行、所要時間、最終的な失敗などをSpanや既存Semantic Conventionから確認できるなら、同じ情報をEventへ重複して記録しない。
 
-一方、retryを選択した、fallbackへ切り替えた、これ以上retryしないと決定した、などの状態変化をSpanから後で識別できない場合は、その状態変化をEventとして記録する候補になる。
+ここでいう「共通Event」はOpenTelemetryの正式用語ではない。例えば`ragscope.retry`や`ragscope.timeout`のような1つの`EventName`を、複数のUseCaseや内部処理で横断して使うRAGScope側の共通Event定義を指す。
 
-つまり、Logsは「処理があったこと」を何でも記録する場所ではない。**Spanでは残らない、ある時点の意味ある出来事を残す**ために使う。
+共通Eventを作れば、同じ`EventName`で横断検索・集計しやすくなり、同じ意味・記録条件・attributesを1つの定義として共有できる。しかし、OpenTelemetryでは同じEvent名を使うなら、その名前で記録されるすべてのEventに同じEvent定義が適用できる必要がある。
 
-## SpanとEventをどう分担するか
+そのため、「retryである」「timeoutである」という分類だけでは共通化の理由にならない。例えば、retryについても次は別の出来事である。
 
-まず、何をSpanに置き、何をEventに置くかを分ける。
+- retryを選択した
+- 次の試行を開始した
+- これ以上retryしないと決定した
 
-- **期間を持つ処理**はSpanで表す。
-- **operation全体を説明する値**はSpan attributesへ記録する。
-- **ある時点で起きた出来事・状態変化**はEvent候補になる。
-- 適用できるSemantic Conventionがある場合は、そのEvent / attributes / severity等を優先する。
+試行、所要時間、最終的な失敗などをSpanや適用するSemantic Conventionから確認できるなら、同じ情報をEventへ重複して記録しない。
+
+一方、retryを選択した、fallbackへ切り替えた、これ以上retryしないと決定した、などの**ある時点の状態変化**を後から識別する必要があり、既存Spanからはその状態変化を必要な粒度で識別できない場合は、その状態変化をEventとして記録する候補になる。
+
+全Eventを先に共通型へ列挙しない。複数のUseCaseまたは内部処理で、Eventが表す出来事、記録条件、`EventName`、attributesを同じ定義として共有する必要が実際に生じた場合だけ共通化を検討する。
+
+## RAGScope固有Eventをどう定義するか
 
 RAGScope固有Eventが必要な場合は、`EventName`を持つOpenTelemetry `EventRecord`として記録する。
 
@@ -71,8 +133,6 @@ RAGScope固有Eventは、その出来事を定義するUseCaseまたは内部処
 - 失敗、または処理の成功・失敗という結果を表すEventでは、`error.type`をどの条件で要求するかと、対応するエラー型の値からどの低カーディナリティ値へ変換するか
 
 RAGScope固有Eventの`EventName`には`ragscope.*` namespaceを使う。ID、試行番号、対象名など実行ごとに変わる値は`EventName`へ埋め込まず、attributesへ置く。
-
-全Eventを先に共通型へ列挙しない。複数のUseCaseまたは内部処理で、Eventが表す出来事、記録条件、`EventName`、attributesを同じ定義として共有する必要が実際に生じた場合だけ共通化を検討する。
 
 ## Trace / Spanとの関連付け
 
@@ -206,7 +266,10 @@ RAGScope側で定義するのは、RAGScope固有Eventが表す意味、記録�
 
 - [[RS-0023 Observability用語メモ]]
 - [OpenTelemetry — Logs Data Model](https://opentelemetry.io/docs/specs/otel/logs/data-model/)
+- [OpenTelemetry — Logs API](https://opentelemetry.io/docs/specs/otel/logs/api/)
+- [OpenTelemetry — Trace API](https://opentelemetry.io/docs/specs/otel/trace/api/)
 - [OpenTelemetry — Semantic conventions for events](https://opentelemetry.io/docs/specs/semconv/general/events/)
+- [OpenTelemetry — General semantic conventions](https://opentelemetry.io/docs/specs/semconv/general/)
 - [OpenTelemetry — Naming](https://opentelemetry.io/docs/specs/semconv/general/naming/)
 - [OpenTelemetry — Recording errors](https://opentelemetry.io/docs/specs/semconv/general/recording-errors/)
 - [OpenTelemetry — `error.type`](https://opentelemetry.io/docs/specs/semconv/registry/attributes/error/)
