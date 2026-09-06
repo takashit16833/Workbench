@@ -40,7 +40,7 @@ RAGScopeの1回の実行をどのようなTrace / Spanとして追跡し、成�
 | 用語 | 出自 | 意味 |
 |---|---|---|
 | Invocation | RS-0023 Observability設計 | RAGScopeがCLI / APIなどを通じて外部から1回呼び出され、その処理が完了するまでの実行範囲。RS-0023 Trace設計では**1 Invocation = 1 Trace**として追跡する |
-| entry Span | RS-0023 Trace設計 | **1 Invocation = 1 Trace**において、RAGScope側の処理をTrace上で追跡し始めるSpanの役割名。Invocation専用Spanは別に作らず、APIではHTTP SERVER Span、CLIではCLI SemConvのExecution (callee) Spanがこの役割を担う |
+| entry Span | RS-0023 Trace設計 | **1 Invocation = 1 Trace**において、RAGScope側のTraceを開始するroot Spanの役割名。Invocation専用Spanは別に作らず、APIではHTTP SERVER Span、CLIではCLI SemConvのExecution (callee) Spanがこの役割を担う |
 | UseCase | RAGScope正本 | 利用者がRAGScopeへ依頼するトップレベルな操作。実行境界と成功条件は正本のユースケース設計に従う |
 | UseCase Span | RS-0023 Trace設計 | **1 UseCase実行につき1つ作り**、UseCase実行全体を表すRAGScope固有Span。DBアクセス、AI通信などUseCase内部のoperationを表すchild Spanを持ちうる |
 | RAGScope固有Span | RS-0023 Trace設計 | 適用可能なSemantic Conventionだけでは表せないRAGScope固有のoperationを追跡するSpan。適用可能なSemConvで同じoperationを表現できる場合は同義のRAGScope固有Spanを重ねない。UseCase SpanはRAGScope固有Spanの1つ |
@@ -55,7 +55,7 @@ RAGScopeの1回の実行をどのようなTrace / Spanとして追跡し、成�
 
 ## まず結論
 
-- **1 Invocation = 1 Trace**とする。Invocation専用Spanは作らず、API / CLIに対応するentry SpanをTraceの入口として使う。
+- **1 Invocation = 1 Trace**とする。Invocation専用Spanは作らず、API / CLIに対応するentry Spanをroot SpanとしてTraceの入口に使う。APIが外部から受け取ったTrace Contextはentry Spanのparentにはしない。
 - 1 UseCase実行につきUseCase Spanを1つ作る。DBアクセス、AI通信など、開始・終了・所要時間・失敗・親子関係をUseCase Spanと分けて確認する必要がある内部operationはchild Spanとして表現する。
 - handlerは原則として独立Spanにしない。
 - DB / HTTP / GenAIなど適用可能なSemantic Conventionsがある領域では、その表現を優先する。
@@ -67,10 +67,14 @@ RAGScopeの1回の実行をどのようなTrace / Spanとして追跡し、成�
 `handler`と`entry Span`は同じ種類の概念ではない。
 
 - `handler`は、CLI / APIとUseCaseの間で、入力変換・UseCase呼び出し・結果変換を行うApplication上の**1つの境界処理**である。
-- `entry Span`は、その1 InvocationをTrace上で観測するためのOpenTelemetryのSpanである。APIではHTTP SERVER Span、CLIではExecution (callee) Spanがこの役割を担う。
+- `entry Span`は、その1 InvocationをTrace上で観測するためのOpenTelemetryのroot Spanである。APIではHTTP SERVER Span、CLIではExecution (callee) Spanがこの役割を担う。
 - `UseCase Span`は、そのhandlerが呼び出したUseCase実行を観測するchild Spanである。
 
 つまり、entry Spanがhandlerの代わりに処理を行うわけではない。**1つのhandler実行がentry Spanの計測範囲の中で動き、その途中でUseCase Spanが開始・終了する**。
+
+`1 Invocation = 1 Trace`を保つため、RAGScope APIのentry Spanは外部から受信したTrace Contextをparentにせず、新しいTraceのroot Spanとして開始する。RAGScope ApplicationからAI推論サービスを呼び出すときは、このTrace内のHTTP client SpanのTrace Contextを伝播し、AI推論サービス側のHTTP SERVER Spanへ同じTraceを継続する。
+
+RAGScope API自体を上流システムの分散Traceへ参加させる要求が追加された場合は、受信したTrace Contextの扱いと`1 Invocation = 1 Trace`を一緒に見直す。
 
 ```mermaid
 flowchart TB
@@ -82,7 +86,7 @@ flowchart TB
         subgraph APP["RAGScope Application"]
             direction TB
 
-            subgraph ENTRY["entry Span API: HTTP SERVER Span CLI: Execution (callee) Span"]
+            subgraph ENTRY["entry Span（root） API: HTTP SERVER Span CLI: Execution (callee) Span"]
                 direction TB
 
                 subgraph HANDLER["handler（1つの境界処理 / Spanではない）"]
@@ -126,9 +130,9 @@ Spanは、開始・終了、所要時間、失敗、親子関係を他のSpanと
 
 | 対象 | Span境界 | 表現方針 |
 |---|---|---|
-| Invocation | 専用Spanは作らない | entry SpanをTraceの入口として使う |
-| API | 1 HTTP request = SERVER Span | HTTP Semantic Conventions。entry Spanの役割を担う |
-| CLI | 1 CLI program execution = Execution (callee) Span | CLI Semantic Conventions。entry Spanの役割を担う |
+| Invocation | 専用Spanは作らない | rootのentry SpanをTraceの入口として使う |
+| API | 1 HTTP request = SERVER Span | HTTP Semantic Conventions。rootのentry Spanとして新しいTraceを開始する |
+| CLI | 1 CLI program execution = Execution (callee) Span | CLI Semantic Conventions。rootのentry Spanとして新しいTraceを開始する |
 | handler | 原則Spanにしない | entry Spanの内部処理 |
 | UseCase | 1 UseCase実行 = 1 UseCase Span | RAGScope固有Span。必要な内部operationはchild Spanとして追跡する |
 | PostgreSQL | database client operation = DB client Span | Database / PostgreSQL Semantic Conventions |
@@ -215,6 +219,7 @@ Logを生成するかどうかはSpan Statusとは別に判断する。[[RS-0023
 ## 参考
 
 - [OpenTelemetry — Trace API](https://opentelemetry.io/docs/specs/otel/trace/api/)
+- [OpenTelemetry — Context propagation](https://opentelemetry.io/docs/concepts/context-propagation/)
 - [OpenTelemetry — Recording errors](https://opentelemetry.io/docs/specs/semconv/general/recording-errors/)
 - [OpenTelemetry — Semantic conventions for HTTP spans](https://opentelemetry.io/docs/specs/semconv/http/http-spans/)
 - [OpenTelemetry — Semantic conventions for CLI programs](https://opentelemetry.io/docs/specs/semconv/cli/cli-spans/)
