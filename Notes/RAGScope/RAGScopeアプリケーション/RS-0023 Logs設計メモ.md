@@ -37,6 +37,7 @@ Trace、Span、operation、Span Status、Trace Context、typed failure、unexpec
 - RAGScope固有Eventは、適用SemConvとSpanの開始・終了・attributes・Statusだけでは、後から必要な出来事または状態変化を識別できない場合に定義する。
 - typed failureが発生したことだけではLogを自動生成しない。unexpected同期Exceptionがoperation境界からescapeする場合はException Logを1件記録し、同じExceptionを重複記録しない。
 - feature / UseCase固有のtyped failureをRAGScopeの失敗意味の正本とし、Telemetryでは対象operation / Eventの規則に従って`error.type`へmappingする。RAGScope全体で共有する独立した`error_type` taxonomyは設けない。
+- failureまたはsuccess / failure outcomeを表すRAGScope固有Eventを定義する場合は、current General Events guidanceに従って`error.type`をEvent定義へ含め、そのEventでrequirement levelを定める。General EventsはDevelopmentなので、実装時に対象versionを再確認する。
 - `error.type`はTelemetry boundaryの失敗分類、Exception Logの`exception.type`はruntime Exceptionの型であり、同じ契約として扱わない。
 - RAGScope独自の`LogRecord`、Logging Runtime、Sink、Logging専用Context、OTelと並行するログ転送基盤は設けない。
 - Trace / Spanとの関連付けにはOpenTelemetry `LogRecord`自身のTrace Contextを使い、RAGScope独自の`trace_id` / `span_id`属性を追加しない。
@@ -70,7 +71,7 @@ attempt、duration、最終失敗などをSpanや既存SemConvから確認でき
 | Event定義 | その出来事が属するUseCaseまたは対象処理を定義する設計で決める |
 | EventName namespace | RAGScope固有Eventは`ragscope.*` |
 | dynamic値 | EventNameへ埋め込まずattributesへ置く |
-| failureを表すEvent | 適用SemConvに従い、RAGScope固有Eventで必要な場合はtyped failureから`error.type`へmappingする |
+| failure / outcomeを表すEvent | 適用SemConvを優先する。RAGScope固有Eventがfailureまたはsuccess / failure outcomeを表す場合は、current General Events guidanceに従って`error.type`をEvent定義へ含め、そのEventでrequirement levelを定める |
 | Trace / Span correlation | OTel `LogRecord`自身のTrace Contextを使う |
 | TraceId / SpanId | RAGScope独自属性として追加しない |
 | severity | OTel `SeverityNumber`の意味体系を使う |
@@ -87,7 +88,9 @@ RAGScope固有Eventを定義する設計では、次を決める。
 - 発生時刻が指す時点
 - 既定severity
 - Event固有attributes
-- Eventがfailureまたは成功/失敗を持つoperation outcomeを表す場合は、`error.type`を付ける条件と安定した低カーディナリティの値
+- Eventがfailureまたはsuccess / failure outcomeを表す場合は、current General Events guidanceに従い`error.type`をEvent定義へ含め、そのEventにおけるrequirement levelと、typed failureから予測可能で低カーディナリティな値へのmappingを定める
+
+General EventsはDevelopmentなので、Event定義を実装する時点で対象versionのguidanceを再確認し、現在の細部をRAGScope独自の恒久契約として固定しない。
 
 全Eventを先に共通型へ列挙しない。
 複数の対象機能でEventが表す出来事、記録条件、`EventName`、attributesを同じ定義として共有する必要が生じた場合だけ共通化を検討する。
@@ -116,11 +119,11 @@ Application / AI推論サービス間で共有するfailure codeが通信契約�
 |---|---|
 | typed failure | failure発生だけではLogRecordを生成しない |
 | retry / fallback後に回復 | failure発生だけではEventを生成しない |
-| Spanから識別できない出来事・状態変化 | その出来事が属するUseCaseまたは対象処理の設計でEventを定義する。failureを表すRAGScope固有Eventで必要な場合はtyped failureから`error.type`へmappingする |
+| Spanから識別できない出来事・状態変化 | その出来事が属するUseCaseまたは対象処理の設計でEventを定義する。failureまたはsuccess / failure outcomeを表すRAGScope固有Eventなら、current General Events guidanceに従って`error.type`をEvent定義へ含め、そのEventでrequirement levelを定める |
 | unexpected同期Exceptionがescape | Exception Logs SemConvでException Logを1件記録 |
 | 同じExceptionが下位の計装で記録済み | RAGScope上位層では重複記録しない |
 
-Exception Logでは`exception.type`、`exception.message`、取得できる場合は`exception.stacktrace`を記録する。
+Exception Logのattributesは、実装時に適用するExceptions in Logs Semantic Conventionのrequirement levelに従う。2026-09-06時点では`exception.type`と`exception.message`はいずれもConditionally Requiredで、一方が存在する場合の他方はRecommended、`exception.stacktrace`はRecommendedである。`exception.message`はsensitive informationを含み得るため、SemConv以上にどの値を記録してよいかというRAGScope固有のデータ取扱規則はこの共通Logs設計で補完せず、正本で具体化された規則がある場合はそれに従う。
 Span側のStatus / `error.type` / rethrowは[[RS-0023 Trace設計メモ]]を参照する。
 
 ## RAGScopeで独自に設けないLogging機構
@@ -192,7 +195,8 @@ RS-0023の正本反映では、次を少なくとも確認対象とする。こ�
 |---|---|
 | `Body`の具体内容 | 個別Event / 適用SemConvを決める時 |
 | 対象機能固有EventName / attributes / severity | 対象機能の設計時 |
-| 対象機能固有の`error.type`値 | 対象operation / Eventの設計時 |
+| 対象機能固有の`error.type`値とEventでのrequirement level | 対象operation / Eventの設計時。実装時に対象versionのSemConvを再確認する |
+| Exception attributesについてSemConvを超えて設けるRAGScope固有のデータ取扱規則 | その規則を必要とする要求・正本が具体化した時 |
 | API / CLIで利用者へ返すfailure表現 | 各interface設計 / Contract |
 | 実験・評価データモデルへ保存するerror | 実験・評価機能設計 / データモデル |
 | Application / AI推論サービス間のfailure response / code | AI通信方式・Contract設計時 |
@@ -206,11 +210,11 @@ RS-0023の正本反映では、次を少なくとも確認対象とする。こ�
 | 対象 | 属性 | 意味 |
 |---|---|---|
 | 失敗したRAGScope固有Span | `error.type` | operationが最終的にどのクラスのエラーで終了したか |
-| failureを表すRAGScope固有Event | `error.type` | Eventが表すfailureのクラス |
+| failure / outcomeを表すRAGScope固有Event | `error.type` | Eventが表すfailureのクラス。current General Events guidanceに従いEvent定義へ含め、そのEventでrequirement levelを定める |
 | Exception Log | `exception.type` | 記録したruntime Exceptionの型 |
 
 HTTP、Database、GenAIなど適用するSemantic Conventionが`error.type`の値を定める場合は、その規則を優先する。
-RAGScope固有Span / Eventで`error.type`を定義する場合は、対象operationまたはEventの設計でtyped failureから予測可能かつ低カーディナリティの値へのmappingを定める。
+RAGScope固有Spanがfinal failureで終了する場合はcurrent General Recording Errors guidanceに従い、対象operationのtyped failureから予測可能かつ低カーディナリティの`error.type`へmappingする。RAGScope固有Eventがfailureまたはsuccess / failure outcomeを表す場合はcurrent General Events guidanceに従って`error.type`をEvent定義へ含め、そのEventでrequirement levelとmappingを定める。
 
 同じtyped failureをRAGScope固有Spanとfailure Eventの両方で表す必要がある場合は、同じ失敗意味から矛盾するTelemetry分類を生成しない。typed failureの詳細値や原因情報そのものを`error.type`へ押し込まず、元のfailureが保持する情報は失わない。
 
@@ -224,9 +228,9 @@ unexpected同期Exceptionによってoperationが失敗した場合は、Excepti
 | 対象 | stability | 扱い |
 |---|---|---|
 | `error.type`属性 | Stable | Telemetry上の失敗分類に利用する。RAGScopeのfailure modelそのものにはしない |
-| General Events | Development | RAGScope固有Eventを設計する際に利用するが、現在のEvent細部をRAGScope独自の恒久契約へコピーしない |
-| General Recording Errors | Development | Span / Metricのerror記録guidanceとして利用し、stabilityを明示する |
-| Exceptions in Logs | Stable（個別節にDevelopmentあり） | Exception Logの基本表現に利用する。event name / severity等のDevelopment部分は実装時に再確認する |
+| General Events | Development | RAGScope固有Eventを設計する際にcurrent guidanceとして利用し、実装時に対象versionを再確認する。現在のEvent細部をRAGScope独自の恒久契約へコピーしない |
+| General Recording Errors | Development | RAGScope固有Span / Metricのerror記録guidanceとして利用し、実装時に対象versionを再確認する |
+| Exceptions in Logs | Stable（個別節にDevelopmentあり） | Exception Logの基本表現と各attributeのrequirement levelに従う。event name / severity等のDevelopment部分は実装時に再確認する |
 | GenAI Semantic Conventions | Development | 適用可能なGenAI Event / attributesがある場合に優先するが、現在仕様をRAGScope独自契約へ固定しない |
 
 ## 判断理由・実装上の注意
@@ -237,6 +241,8 @@ unexpected同期Exceptionによってoperationが失敗した場合は、Excepti
 >
 > RAGScope固有Eventが必要な場合は、OpenTelemetryのnamespaceと衝突しない`ragscope.*`をEventNameのnamespaceとして使用する。
 > ID、attempt番号、対象名など実行ごとに変化する値をEventNameへ埋め込まず、attributesとして持たせる。
+>
+> failureまたはsuccess / failure outcomeを表すRAGScope固有Eventを定義する場合は、current General Events guidanceに従って`error.type`をEvent定義へ含め、そのEventでrequirement levelを定める。General EventsはDevelopmentなので、この規則の細部は実装時に対象versionを再確認する。
 >
 > Semantic Conventionごとにstabilityが異なるため、Developmentの規約を含む現在仕様の細部をRAGScope独自の恒久契約として固定しない。
 > 実装時に採用するOpenTelemetry / instrumentation versionと対象Conventionのstabilityを確認する。
@@ -259,6 +265,8 @@ unexpected同期Exceptionによってoperationが失敗した場合は、Excepti
 >
 > 同じExceptionをUseCase / handler / entry Spanなど伝播経路の各層で重複記録しない。
 > 下位のHTTP / DB / GenAI計装などが同じExceptionをすでに記録している場合は、RAGScope上位層が同じException Logを追加しない。
+>
+> Exception attributesは、実装時に適用するExceptions in Logs SemConvのrequirement levelに従う。`exception.message`はsensitive informationを含み得るため、SemConvを超えるRAGScope固有の記録可否をこのノートで先に決めない。
 >
 > `hs-opentelemetry`の`inSpan`は、既定ではescapeしたExceptionをSpanのException Eventとして記録する。
 > このドラフトではException Logを主表現とするため、RAGScopeが作成するmanual SpanでSDK既定のException EventとException Logが重複する場合は、OpenTelemetry Adapterで既定のException記録を抑える。
