@@ -124,7 +124,7 @@ Observabilityを組み込む位置を理解するため、**構築時**と**1 In
 |---|---|
 | Composition Root | 実行に必要なUseCase、handler、Telemetry実装などの依存を構築・接続する |
 | handler | CLI / API固有表現とUseCaseの入力・結果の間を仲介する |
-| Invocation | RAGScopeが外部から1回呼び出され、その処理が完了するまでの実行範囲 |
+| Invocation | RAGScopeが外部から1回呼び出され、その処理が完了するまでの実行範囲。Traceでは**1 Invocation = 1 Trace**として追跡する |
 | UseCase | RAGScope ApplicationがUseCaseを呼び出してから、Applicationへ制御が戻るまで |
 | Telemetry利用境界 | UseCase等のRAGScope側コードがOpenTelemetry SDKへ直接依存せずTelemetryを利用するための境界。具体APIはこのノートでは決めない |
 
