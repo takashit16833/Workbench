@@ -26,7 +26,7 @@ created: 2026-09-06
 | Span Link | 親子関係とは別に、あるSpanから別のSpan Contextとの関連を記録する仕組み |
 | Span Status | Spanが表すoperationの最終状態。この設計では主に`Unset` / `Error`を扱う |
 | attributes | Span、LogRecord、Metricなどへ付与する機械可読なkey-valueの情報 |
-| `error.type` | operationまたはEventがどの種類のerrorで失敗・終了したかを表すOpenTelemetry Semantic Conventionsの属性 |
+| `error.type` | operationまたはLogsの`EventRecord`がどの種類のerrorで失敗・終了したかを表すOpenTelemetry Semantic Conventionsの属性 |
 | Semantic Conventions（SemConv） | Span名、Span Kind、attributes、Event、Metric名、instrument、unitなど、対象領域ごとのTelemetry表現を定めるOpenTelemetryの規約 |
 | instrumentation | ApplicationやライブラリのoperationをOpenTelemetryで観測できるようにする計装 |
 | automatic instrumentation / manual instrumentation | 計装をライブラリ / フレームワーク等により自動で行うか、Application側で明示的に行うかの区分 |
@@ -45,19 +45,33 @@ created: 2026-09-06
 
 ### Logs
 
+OpenTelemetryでは`Event`という語がLogsとTracesの両方に出てくる。このRS-0023ドラフトでは混同を避けるため、**Logs側は`EventRecord`、Trace側はSpan Eventと書き、単独の「Event」は原則使わない**。
+
 | 用語 | この設計メモでの意味 |
 |---|---|
 | `LogRecord` | OpenTelemetry Logsで1件のログを表すデータ |
-| Event / `EventRecord` | ある時点で発生した意味のある出来事または状態変化を表すもの。Semantic conventions for eventsでは、event nameを持つ`LogRecord`を`EventRecord`として扱う |
-| `EventName` | Eventの種類を識別する名前。実行ごとに変わる値は含めない |
-| `Body` | `LogRecord`のbody。具体的な利用方法は個別Eventまたは適用するSemantic Conventionで決める |
+| `EventRecord` | Logs側の名前付きの出来事。OpenTelemetry Logsのデータモデルでは、非空の`EventName`を持つ`LogRecord`をEventとして扱い、Semantic conventions for eventsではこの形を`EventRecord`と呼ぶ |
+| `EventName` | `EventRecord`の種類を識別する名前。実行ごとに変わる値は含めない |
+| `Body` | `LogRecord`のbody。具体的な利用方法は個別`EventRecord`または適用するSemantic Conventionで決める |
 | `SeverityNumber` | OpenTelemetryが定義するseverityの数値体系 |
-| Exception Event | Semantic conventions for exceptions in logsに従ってExceptionを記録するEvent |
-| `exception.type` | Exception Eventへ記録するExceptionの型 |
-| `exception.message` | Exception Eventへ記録するExceptionのメッセージ。機密情報を含み得るため、記録可否はSemConvとは別にRAGScope側のデータ取扱規則に従う |
-| `exception.stacktrace` | Exception Eventへ記録するスタックトレース |
-| Span Event | Spanの中で、ある時点に起きた出来事を記録するTrace側のEvent。LogsのEventとは別の表現である |
+| Logs側Exception `EventRecord` | Semantic conventions for exceptions in logsに従ってExceptionをLogsへ記録する`EventRecord` |
+| `exception.type` | Logs側Exception `EventRecord`へ記録するExceptionの型 |
+| `exception.message` | Logs側Exception `EventRecord`へ記録するExceptionのメッセージ。機密情報を含み得るため、記録可否はSemConvとは別にRAGScope側のデータ取扱規則に従う |
+| `exception.stacktrace` | Logs側Exception `EventRecord`へ記録するスタックトレース |
+| Span Event | Spanの中で、ある時点に起きた出来事を記録するTrace側のEvent。Logsの`LogRecord` / `EventRecord`とは別のTraceデータである |
 | requirement level | Semantic Conventionが属性を`Required`、`Conditionally Required`、`Recommended`などで示す区分 |
+
+関係は次のとおりである。
+
+```text
+RAGScopeのTelemetry
+├─ Traces → Tempo
+│  └─ Span
+│     └─ Span Event
+└─ Logs → Loki
+   └─ LogRecord
+      └─ EventNameがある場合 = EventRecord
+```
 
 ### Metrics
 
@@ -86,7 +100,7 @@ created: 2026-09-06
 | `entry Span` | 1 Invocation全体をTrace上で観測するroot Spanの**役割名**。OpenTelemetryのSpan種別ではない。APIではHTTP SERVER Span、CLIではExecution (callee) Spanがこの役割を担い、Invocation専用Spanは別に作らない |
 | UseCase Span | 1 UseCase実行全体を観測するRAGScope固有Span |
 | RAGScope固有Span | 適用可能なSemantic Conventionだけでは表せないRAGScope固有operationを追跡するSpan |
-| RAGScope固有Event | 適用できるSemantic Conventionや既存Spanだけでは後から識別できない、RAGScope固有の出来事または状態変化を表すEvent |
+| RAGScope固有`EventRecord` | 適用できるEvent Semantic Conventionや既存Spanだけでは後から識別できない、RAGScope固有の出来事または状態変化をLogsへ記録する`EventRecord` |
 | Telemetry利用境界 | UseCaseや内部処理がOpenTelemetry SDKを直接importせずにTelemetryを記録するため、RAGScope側に置く利用境界。具体的な名前と公開APIはRS-0023の共通設計では未決定 |
 | OpenTelemetry Adapter | Telemetry利用境界の外側でOpenTelemetry SDKへ接続するAdapter。具体的なmodule / package配置や公開APIはRS-0023の共通設計では未決定 |
 | handler | CLI / API入力をUseCaseへ渡す値へ変換し、UseCaseを呼び出し、その結果をCLI表示またはHTTP応答へ変換するRAGScopeアプリケーション上の境界処理 |
@@ -122,10 +136,10 @@ UseCaseを呼ぶ前にhandlerで処理が終了した場合でもInvocationは�
 | 用語 | 属する側 | 表すもの |
 |---|---|---|
 | エラー型 | RAGScopeアプリケーション / UseCase・内部処理 | 契約上想定される失敗を表すHaskellの型 |
-| `error.type` | OpenTelemetry | operationまたはEventがどの種類のerrorで失敗・終了したか |
+| `error.type` | OpenTelemetry | operationまたはLogsの`EventRecord`がどの種類のerrorで失敗・終了したか |
 | `exception.type` | OpenTelemetry Semantic conventions for exceptions in logs | 実際に記録したExceptionの型 |
 
-RAGScope固有Span / Eventで必要な`error.type`は、対応するエラー型の値から変換するが、エラー型自体を`error.type`へ置き換えない。想定外の同期ExceptionをException Eventへ記録する場合は、実際に発生したExceptionの型を`exception.type`へ記録する。具体的な変換規則は[[RS-0023 Trace設計メモ]]と[[RS-0023 Logs設計メモ]]で扱う。
+RAGScope固有Span / `EventRecord`で必要な`error.type`は、対応するエラー型の値から変換するが、エラー型自体を`error.type`へ置き換えない。想定外の同期ExceptionをLogs側Exception `EventRecord`へ記録する場合は、実際に発生したExceptionの型を`exception.type`へ記録する。具体的な変換規則は[[RS-0023 Trace設計メモ]]と[[RS-0023 Logs設計メモ]]で扱う。
 
 ## 正本へ反映するとき
 
