@@ -158,10 +158,11 @@ HTTP、Database、GenAIなど、適用するSemantic Conventionが`error.type`�
 
 複数のUseCaseや内部処理をまたいで、共通のエラー分類がないと必要な集計やContractを成立させられない具体的な要求が追加された場合に、共通分類の必要性を再評価する。
 
-## OpenTelemetryをどう利用するか
+## OpenTelemetry SDKとの依存境界
 
-RAGScopeはOpenTelemetryをObservabilityの基盤として使うが、UseCaseや内部処理を実装するmoduleからOpenTelemetry SDKを直接importする構造にはしない。
-Application側はRAGScopeが定義するTelemetry利用境界を呼び、その外側のAdapterがOpenTelemetry SDKと接続する。
+RAGScope Applicationでは、UseCaseや内部処理を実装するmoduleからOpenTelemetry SDKを直接importしない。
+UseCaseや内部処理はRAGScopeが定義するTelemetry利用境界を呼び、その外側のOpenTelemetry AdapterがOpenTelemetry SDKへ接続する。
+AI推論サービスではOpenTelemetry Python API / SDKを使うが、SDKを利用する具体的なmodule境界はPython実装時に決める。
 
 この境界で守ることは次のとおりである。
 
@@ -169,13 +170,10 @@ Application側はRAGScopeが定義するTelemetry利用境界を呼び、その�
 - OpenTelemetry SDK固有の型を、UseCaseや内部処理が公開・受け渡しする型へ含めない。
 - Trace Contextの引き継ぎにはPropagator / instrumentationなどOpenTelemetryの機構を使う。
 - Processor / Exporter、batching、flush / shutdown、送信にはSDKの機構を使い、同等の基盤処理をRAGScopeで別実装しない。
-- 観測する処理に適用できるSemantic Conventionがある場合は、そのSpan名・Span Kind・attributes・Event・Metric名・instrument・unitなどをRAGScope独自表現より優先する。
 
 OpenTelemetry SDK相当をRAGScopeで独自実装すると、Context管理、batching、Processor / Exporter、flush / shutdown、送信失敗時の処理までRAGScope側の保守対象になる。これらはRAGScope固有の責務ではないためSDKへ委ねる。
 
 Haskell SDKは`hs-opentelemetry` 1.xを第一候補とする。AI推論サービスではOpenTelemetry Python API / SDKを使う。Python LogsはDevelopmentであるため、利用するバージョンとSDK固有APIは実装境界内へ閉じる。
-
-AI推論サービス側の具体的なmodule境界はPython実装時に決める。
 
 ## Semantic Conventionsをどう扱うか
 
@@ -202,15 +200,15 @@ Semantic Conventionごとにstabilityが異なるため、実装時には採用�
 | Semantic conventions for exceptions in logs | Stable（個別節にDevelopmentあり） | Exception Eventの基本表現へ利用する |
 | GenAI Semantic Conventions | Development | 適用できるSpan / Event / Metricへ利用し、現在の名称やattributesをRAGScope独自契約へ固定しない |
 
-## RAGScopeへどう組み込むか
+## 構築時とInvocation実行時を分ける
 
-Composition Root、handler、Invocation、UseCaseは同じ階層の処理ステップではない。
-Observabilityを組み込む位置を理解するため、**構築時**と**1 Invocationの実行時**を分ける。
+Observabilityを組み込む位置は、プロセス起動時の構築と1 Invocationの実行時で分けて考える。
+Composition RootはTelemetry実装を他の依存と一緒に構築・接続し、1 Invocationの実行時は構築済みのhandler / UseCase / Telemetry実装を使って処理する。
 
 ### 構築時
 
 Composition Rootは、実行に必要なUseCase、handler、Telemetry実装などの依存を構築・接続する。
-APIサーバーのような長時間動作するプロセスでは、ここで一度構築したhandlerやUseCaseを複数のInvocationから利用できる。
+APIサーバーのような長時間動作するプロセスでは、ここで一度構築したhandler、UseCase、Telemetry実装を複数のInvocationから利用できる。
 
 ```mermaid
 flowchart TB
@@ -224,16 +222,12 @@ flowchart TB
 
 ### 1 Invocationの実行時
 
-`handler`はCLI / APIから受け取った入力をUseCaseへ渡す値へ変換し、UseCaseを呼び出し、その結果をCLI表示またはHTTP応答へ変換する1つの境界処理である。
-入力側handlerと出力側handlerが別々に存在するのではなく、1回のhandler実行の前後に入力変換と出力変換がある。UseCaseそのものはhandlerの責務には含めない。
+1 Invocationでは、構築済みのhandler / UseCase / Telemetry実装を使う。
+Traceは1 Invocationごとに独立したTraceを開始し、handler / UseCase / 内部処理をどのSpanで観測するかは[[RS-0023 Trace設計メモ]]に従う。
 
-Traceでは1 Invocationごとに独立したTraceを開始する。
+ApplicationからAI推論サービスを呼び出す場合はTrace Contextを引き継ぎ、AI推論サービス側の処理も同じTraceへ参加させる。
 
-UseCaseから呼び出されるEmbedding生成やDB検索などは、そのUseCaseを構成する内部処理である。AI推論サービス側の処理はApplicationから引き継いだTrace Contextを使って同じTraceへ参加できるが、Application側UseCaseそのものではない。
-
-プロセス起動時の構築やTelemetry送信はInvocation / UseCaseとは別の処理である。
-
-Trace上でhandler、entry Span、UseCase Spanをどう対応させるかは[[RS-0023 Trace設計メモ]]で扱う。
+プロセス起動時の依存構築やProcessor / ExporterによるTelemetry送信は、1 Invocation内のUseCase処理そのものではない。
 
 ## SDKで必要な能力を利用できるか
 
