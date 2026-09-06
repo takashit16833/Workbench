@@ -66,28 +66,19 @@ RAGScopeの1回の実行をどのようなTrace / Spanとして追跡し、成�
 
 ```mermaid
 flowchart TB
-    USER["利用者"]
+    USER["利用者"] --> ENTRY["entry Span<br>API: HTTP SERVER Span<br>CLI: Execution (callee) Span"]
 
     subgraph TRACE["1 Invocation = 1 Trace"]
-        subgraph ENTRY["entry Span<br>API: HTTP SERVER Span<br>CLI: Execution (callee) Span"]
-            H_IN["handler<br>入力受付・UseCase入力への変換<br>（独立Spanではない）"]
-            UC["UseCase Span"]
-            H_OUT["handler<br>UseCase結果→CLI / API出力への変換<br>（独立Spanではない）"]
-
-            H_IN --> UC --> H_OUT
-            UC --> DB["DB client Span"]
-            UC --> AI_REQ["AI通信 client Span"]
-        end
-
-        AI_SVC["AI推論サービス側 Span"]
+        ENTRY --> UC["UseCase Span"]
+        UC --> DB["DB client Span"]
+        UC --> AI_REQ["AI通信 client Span"]
+        AI_REQ --> AI_SVC["AI推論サービス側 Span"]
     end
 
-    USER --> H_IN
-    AI_REQ --> AI_SVC
     AI_REQ -. "Trace Context" .-> AI_SVC
 ```
 
-図中のhandlerはSpanを表すノードではなく、entry Span内で実行される処理を示す。
+この図はTrace上のSpan構造を示すため、独立SpanにしないhandlerはSpanノードとして描いていない。handlerの責務とUseCaseとの関係は[[RS-0023 Observability設計メモ#handler]]を参照する。handler側の処理はentry Spanの内部で追跡される。
 UseCaseが呼ばれる前にhandlerで終了してもInvocationは発生するためTraceには残るが、UseCase Spanは発生しない。
 
 ## Spanをどこに切るか
