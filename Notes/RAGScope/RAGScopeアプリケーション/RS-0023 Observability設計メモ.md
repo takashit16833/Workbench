@@ -10,7 +10,8 @@ created: 2026-09-05
 
 > [!note]
 > これはRS-0023を正本へ反映する前にレビューするための**Workbench上の設計ドラフト**であり、RAGScopeの正本ではない。
-> 現在の正本にあるUseCase境界とRAGScope Application / AI推論サービス / DBの責務を前提に、RS-0023で検討するObservability設計を扱う。
+> 現在の正本にあるUseCase境界とRAGScope Application / AI推論サービス / DBの責務を前提に、RS-0023で検討したObservability設計を扱う。
+> このノートで「決定」とする内容はRS-0023の検討結果であり、現在仕様として有効になるのは正本リポジトリへ責務に応じて反映した後である。
 
 ## このノートでレビューすること
 
@@ -29,9 +30,10 @@ Trace / Logs / Metrics固有の判断は、それぞれの設計メモでレビ�
 
 | 項目 | 状態 | 要点 |
 |---|---|---|
-| Trace | ドラフト内で決定 | 1 Invocation = 1 Trace。詳細は[[RS-0023 Trace設計メモ]] |
-| Logs | ドラフト内で決定 | OTel Logs / Eventを土台にし、Spanと重複させない。詳細は[[RS-0023 Logs設計メモ]] |
-| Metrics | ドラフト内で決定 | 性能値は実験結果へ保持し、集約観測には適用可能な標準Metricを使う。詳細は[[RS-0023 Metrics設計メモ]] |
+| Trace | RS-0023で決定 | 1 Invocation = 1独立Trace。entry Spanをrootとし、外部から受信したTrace Contextはparentにせず、現在要求のないLinkも設けない。Application → AI推論サービスでは通常のTrace Context propagationで同一Traceを継続する。詳細は[[RS-0023 Trace設計メモ]] |
+| Failure | RS-0023で決定 | feature / UseCase固有のtyped failureを失敗意味の正本とし、interface / persistence / Telemetryで各境界の表現へmappingする。RAGScope全体で共有する独立した`error_type` taxonomyは設けない |
+| Logs | RS-0023で決定 | OTel Logs / Eventを土台にし、Spanと重複させない。RAGScope独自のnon-OTLPログJSON契約 / SQLiteログ表現は維持しない。詳細は[[RS-0023 Logs設計メモ]] |
+| Metrics | RS-0023で決定 | 性能値は実験結果へ保持し、集約観測には適用可能な標準Metricを使う。詳細は[[RS-0023 Metrics設計メモ]] |
 | OpenTelemetry採用可能性 | 主要能力を確認済み | Haskell / PythonともTrace / Logs / Context連携とexportに必要なSDK能力を確認した。RAGScope固有の依存解決は実装前に最小確認する |
 
 ## 全体像
@@ -81,6 +83,26 @@ Applicationの処理内容や制御方針はTelemetryへ移さない。
 
 Trace / Logs / Metricsそれぞれの具体的な役割と表現は、各設計メモで定義する。
 
+## failureの意味と各boundaryへのmapping
+
+RAGScopeの失敗意味は、failureが発生するfeature / UseCaseの設計とtyped failureが所有する。API / CLI、実験結果などへ保存するerror、Telemetryはそれぞれ別のboundary表現であり、同じ分類粒度を共有することを前提にしない。
+
+```text
+UseCase / feature固有 typed failure
+        ├─→ interface mapping
+        │      └─ API response / CLI stderr・exit status
+        ├─→ persistence mapping
+        │      └─ 実験・評価データモデル上のerror
+        └─→ telemetry mapping
+               └─ 適用SemConv / RAGScope固有Span・Eventのerror.type
+```
+
+RAGScope全体で共有する独立した`error_type` taxonomyは設けない。現在要求には、この共通taxonomyを置かなければAPI / CLI、保存error、Telemetryを成立させられない制約を確認できない。一方で共通`error_type`を置くと、typed failureとの対応を追加で維持し、feature / interface / persistence / Observabilityを1つの分類体系へ不要に結合する。
+
+Application / AI推論サービス間で共有するfailure codeが通信契約として実際に必要になった場合は、その通信方式を定義するContractで扱う。RAGScope全体の共通`error_type`として先に定義しない。
+
+OpenTelemetryの`error.type`はTelemetry boundaryでoperationがどのクラスのerrorで終了したかを表す属性であり、RAGScopeのfailure modelそのものではない。HTTP、Database、GenAIなど適用可能なSemantic Conventionが`error.type`の規則を定めるSpan / Metricではその規則を優先する。RAGScope固有Span / Eventで必要な場合だけ、対象のtyped failureから予測可能で低カーディナリティな`error.type`へmappingする。
+
 ## OpenTelemetryをどう利用するか
 
 RAGScopeはOpenTelemetryをObservabilityの基盤として利用するが、OpenTelemetry SDKそのものをRAGScope固有の処理設計へ直接露出させない。
@@ -114,6 +136,8 @@ RS-0023で必要なのは、両コンポーネントでTrace / Logsを記録で�
 
 これらは採用前提を覆す事実がまだ見つかっていないという意味であり、**RAGScope環境でビルド確認済みという意味ではない**。解消できない依存衝突または必要動作の不足が実測された場合は、SDK採用判断を見直す。
 
+このHaskell / Python固有の採用可能性調査はWorkbenchでは検討材料として保持する。正本へ反映する際は、複数コンポーネントに共通するObservability設計へGHC / Cabal / Python packageなどの実装固有情報をそのまま移さず、各コンポーネントの設計・Ticket・コード・テストなど責務に応じた正本へ分離する。
+
 OpenTelemetry SDK相当をRAGScopeで独自実装すると、Context管理、batching、Processor / Exporter、flush / shutdown、export失敗処理など、RAGScope固有ではない責務までRAGScopeが保守することになるため採用しない。
 
 ### Semantic Conventionsを優先する
@@ -128,6 +152,21 @@ RAGScope独自のTelemetry表現は、UseCase、Invocation、実験、評価デ�
 
 Semantic Conventionごとにstabilityが異なるため、実装時には使用するOpenTelemetry / instrumentationのバージョンと対象Conventionのstabilityを確認する。
 
+2026-09-06時点で、このドラフトが直接参照する主な規約のstabilityは次のとおりである。
+
+| 対象 | stability | このドラフトでの扱い |
+|---|---|---|
+| `error.type`属性 | Stable | Telemetry上の失敗分類として利用できる。RAGScopeのfailure model自体にはしない |
+| HTTP client / server Span | Stable | API / HTTP transportへ適用する |
+| SQL / PostgreSQL database client Span | Stable | PostgreSQL operationへ適用する |
+| `http.client.request.duration` | Stable | HTTP transportの標準Metricとして利用する |
+| `db.client.operation.duration` | Stable | DB operationの標準Metricとして利用する |
+| CLI Execution Span | Development | CLI entry Spanへ適用するが、現在の細部をRAGScope独自の恒久契約へコピーしない |
+| General Recording Errors | Development | RAGScope固有operationのerror記録を考える際のguidanceとして扱い、stabilityを明示する |
+| General Events | Development | RAGScope固有Event設計で利用するが、現在の細部を恒久契約へコピーしない |
+| Exceptions in Logs | Stable（個別節にDevelopmentあり） | Exception Logの基本表現に利用し、Developmentなevent name / severity等は実装時に再確認する |
+| GenAI Semantic Conventions | Development | logical GenAI operation / Metricへ適用可能な場合に使い、現在名をRAGScope独自契約として固定しない |
+
 ## RAGScopeへどう組み込むか
 
 Composition Root・handler・Invocation・UseCaseは同じ階層の処理ステップではない。
@@ -137,7 +176,7 @@ Observabilityを組み込む位置を理解するため、**構築時**と**1 In
 |---|---|
 | Composition Root | 実行に必要なUseCase、handler、Telemetry実装などの依存を構築・接続する |
 | handler | CLI / APIとUseCaseの間の境界処理 |
-| Invocation | RAGScopeが外部から1回呼び出され、その処理が完了するまでの実行範囲。Traceでは**1 Invocation = 1 Trace**として追跡する |
+| Invocation | RAGScopeが外部から1回呼び出され、その処理が完了するまでの実行範囲。Traceでは**1 Invocation = 1独立Trace**として追跡する |
 | UseCase | RAGScope ApplicationがUseCaseを呼び出してから、Applicationへ制御が戻るまで |
 | Telemetry利用境界 | UseCase等のRAGScope側コードがOpenTelemetry SDKへ直接依存せずTelemetryを利用するための境界。具体APIはこのノートでは決めない |
 
@@ -166,6 +205,8 @@ UseCaseから呼び出されるEmbedding生成、DB検索などはUseCaseを構�
 AI推論サービス側の処理は同じTraceへ参加できるが、RAGScope Application側のUseCaseそのものではない。
 プロセス起動時の構築やTelemetry送信はInvocation / UseCaseとは別の処理である。
 
+Trace境界の具体理由とincoming Trace Contextの扱いは[[RS-0023 Trace設計メモ]]を正本反映前のレビュー結果として参照する。
+
 ## ローカル実行でTelemetryをどう確認するか
 
 RAGScope本体のObservability設計とproduction backend選定を分離するため、ローカル確認では永続backendを必須にしない。
@@ -190,6 +231,20 @@ SDKの診断機能では満たせない具体的な診断要求が確認され�
 
 Telemetryの欠落をApplication処理失敗として扱う要求が追加された場合は、この判断を見直す。
 
+## 正本へ反映するときの責務分離
+
+Workbenchには今回の検討結果、確認した根拠、実装前に再確認する事項を残す。正本へ反映するときは、WorkbenchのNoteをそのまま正本化せず、情報の責務を次のように分ける。
+
+| 情報 | 正本反映時の配置 |
+|---|---|
+| 現在採用するTrace / Logs / Metricsの責務・境界・契約と、理解に必要な最小限の理由 | `design/`の関係する設計書 |
+| 1 Invocation = 1独立Trace、共通`error_type`廃止、独自JSON / SQLiteログ契約廃止など、複数案比較と変更影響を伴う重要判断 | ADR。RS-0023全体を1つの後続ADRとしてADR-0005をsupersedeするか、判断を分けるかは正本反映作業で文書管理規約に従って決める |
+| 正本の更新・削除、既存実装移行、Contract更新などの作業範囲と完了条件 | RS-0023と後続Ticket |
+| GHC / Cabal / `hs-opentelemetry`、Python SDK versionなどコンポーネント固有の採用可能性・実装詳細 | 各コンポーネントの設計、Ticket、コード、設定、テスト |
+| 実際に行ったSDK / exporter / projection等の検証結果 | 必要ならExperiment |
+
+正本反映時には、現在`error_type`、独自ログ外部表現、JSON Schema / SQLite表現を現在契約として参照する設計索引、システムアーキテクチャ、logging設計、Milestone / Epic / 未完了Ticket、Contract / fixtureを横断して更新する。完了済みTicketや過去のExperimentは当時の作業・検証履歴として書き換えない。
+
 ## このドラフトでは扱わないこと
 
 以下はObservabilityの全体像・共通方針とは分けて具体化する。
@@ -207,6 +262,10 @@ package / module構成はTelemetry利用境界を決めた後に定め、先にp
 ## 参考
 
 - [OpenTelemetry — Error handling](https://opentelemetry.io/docs/specs/otel/error-handling/)
+- [OpenTelemetry — `error.type`](https://opentelemetry.io/docs/specs/semconv/registry/attributes/error/)
+- [OpenTelemetry — Recording errors](https://opentelemetry.io/docs/specs/semconv/general/recording-errors/)
+- [OpenTelemetry — Events](https://opentelemetry.io/docs/specs/semconv/general/events/)
+- [OpenTelemetry — Exceptions in Logs](https://opentelemetry.io/docs/specs/semconv/exceptions/exceptions-logs/)
 - [OpenTelemetry — Python](https://opentelemetry.io/docs/languages/python/)
 - [OpenTelemetry — Python instrumentation](https://opentelemetry.io/docs/languages/python/instrumentation/)
 - [OpenTelemetry — stdout LogRecord exporter](https://opentelemetry.io/docs/specs/otel/logs/sdk_exporters/stdout/)
