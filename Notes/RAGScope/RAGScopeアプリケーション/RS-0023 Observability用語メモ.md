@@ -28,8 +28,8 @@ created: 2026-09-06
 | attributes | Span、LogRecord、Metricなどへ付与する機械可読なkey-valueの情報 |
 | `error.type` | operationまたはEventがどの種類のerrorで失敗・終了したかを表すOpenTelemetry Semantic Conventionsの属性 |
 | Semantic Conventions（SemConv） | Span名、Span Kind、attributes、Event、Metric名、instrument、unitなど、対象領域ごとのTelemetry表現を定めるOpenTelemetryの規約 |
-| instrumentation | ApplicationやlibraryのoperationをOpenTelemetryで観測できるようにする計装 |
-| automatic instrumentation / manual instrumentation | 計装をlibrary / framework等により自動で行うか、Application側で明示的に行うかの区分 |
+| instrumentation | ApplicationやライブラリのoperationをOpenTelemetryで観測できるようにする計装 |
+| automatic instrumentation / manual instrumentation | 計装をライブラリ / フレームワーク等により自動で行うか、Application側で明示的に行うかの区分 |
 | Propagator | Trace Contextなどをプロセス・通信境界を越えて注入・抽出するOpenTelemetryの仕組み |
 
 ### この設計で利用する主なSpan
@@ -47,16 +47,16 @@ created: 2026-09-06
 
 | 用語 | この設計メモでの意味 |
 |---|---|
-| `LogRecord` | OpenTelemetry Logsで1件のlogを表すデータ |
-| Log Event / Event | ある時点で発生した出来事または状態変化をOpenTelemetry Logsで表すもの。Logs設計メモで単にEventと書く場合は原則としてこのLog Eventを指す |
+| `LogRecord` | OpenTelemetry Logsで1件のログを表すデータ |
+| Event / `EventRecord` | ある時点で発生した意味のある出来事または状態変化を表すもの。Semantic conventions for eventsでは、event nameを持つ`LogRecord`を`EventRecord`として扱う |
 | `EventName` | Eventの種類を識別する名前。実行ごとに変わる値は含めない |
 | `Body` | `LogRecord`のbody。具体的な利用方法は個別Eventまたは適用するSemantic Conventionで決める |
 | `SeverityNumber` | OpenTelemetryが定義するseverityの数値体系 |
-| Exception Log | Exceptions in Logs Semantic Conventionに従ってExceptionを記録する`LogRecord` |
-| `exception.type` | Exception Logへ記録するExceptionの型 |
-| `exception.message` | Exception Logへ記録するException message。機密情報を含み得るため、記録可否はSemConvとは別にRAGScope側のデータ取扱規則に従う |
-| `exception.stacktrace` | Exception Logへ記録するstack trace |
-| Span Event | Spanの中で、ある時点に起きた出来事を記録するTrace側のEvent。Log Eventとは別の表現である |
+| Exception Event | Semantic conventions for exceptions in logsに従ってExceptionを記録するEvent |
+| `exception.type` | Exception Eventへ記録するExceptionの型 |
+| `exception.message` | Exception Eventへ記録するExceptionのメッセージ。機密情報を含み得るため、記録可否はSemConvとは別にRAGScope側のデータ取扱規則に従う |
+| `exception.stacktrace` | Exception Eventへ記録するスタックトレース |
+| Span Event | Spanの中で、ある時点に起きた出来事を記録するTrace側のEvent。LogsのEventとは別の表現である |
 | requirement level | Semantic Conventionが属性を`Required`、`Conditionally Required`、`Recommended`などで示す区分 |
 
 ### Metrics
@@ -74,27 +74,27 @@ created: 2026-09-06
 |---|---|
 | OpenTelemetry SDK | Trace / Logs / Metricsの生成、処理、exportなどを実装するOpenTelemetryのSDK |
 | Processor | 生成されたSpan / LogRecordなどをExporterへ渡す前に処理するSDKの仕組み |
-| Exporter | Telemetryを外部endpointやconsole等へ送るSDKの仕組み |
+| Exporter | Telemetryを外部エンドポイントやコンソール等へ送るSDKの仕組み |
 | Collector | 複数コンポーネントなどからTelemetryを受信し、処理・転送できるOpenTelemetryの外部コンポーネント |
-| OTLP | OpenTelemetry Protocol。TelemetryをOpenTelemetry対応component間で送るためのprotocol |
+| OTLP | OpenTelemetry Protocol。TelemetryをOpenTelemetry対応コンポーネント間で送るためのプロトコル |
 
 ## RAGScope / RS-0023側の用語
 
 | 用語 | 意味 |
 |---|---|
-| Invocation | RAGScopeがCLI / APIなどを通じて外部から1回呼び出され、その処理が完了するまでの実行範囲。RS-0023では1 Invocationを1独立Traceとして追跡する |
+| Invocation | RAGScopeがCLI / APIなどを通じて外部から1回呼び出され、その処理が完了するまでの実行範囲。RS-0023では1 Invocationごとに独立したTraceを開始する |
 | `entry Span` | 1 Invocation全体をTrace上で観測するroot Spanの**役割名**。OpenTelemetryのSpan種別ではない。APIではHTTP SERVER Span、CLIではExecution (callee) Spanがこの役割を担い、Invocation専用Spanは別に作らない |
 | UseCase Span | 1 UseCase実行全体を観測するRAGScope固有Span |
 | RAGScope固有Span | 適用可能なSemantic Conventionだけでは表せないRAGScope固有operationを追跡するSpan |
-| RAGScope固有Event | 適用できるSemantic Conventionや既存Spanだけでは後から識別できない、RAGScope固有の出来事または状態変化を表すLog Event |
+| RAGScope固有Event | 適用できるSemantic Conventionや既存Spanだけでは後から識別できない、RAGScope固有の出来事または状態変化を表すEvent |
 | Telemetry利用境界 | UseCaseや内部処理がOpenTelemetry SDKを直接importせずにTelemetryを記録するため、RAGScope側に置く利用境界。具体的な名前と公開APIはRS-0023の共通設計では未決定 |
 | OpenTelemetry Adapter | Telemetry利用境界の外側でOpenTelemetry SDKへ接続するAdapter。具体的なmodule / package配置や公開APIはRS-0023の共通設計では未決定 |
 | handler | CLI / API入力をUseCaseへ渡す値へ変換し、UseCaseを呼び出し、その結果をCLI表示またはHTTP応答へ変換するApplication上の境界処理 |
 | UseCase | RAGScope正本で定義されるUseCase。この用語メモではObservability固有の別定義を作らない |
 | 内部処理 | Embedding生成、Database検索、文書チャンク化など、UseCaseから呼び出され、そのUseCaseを構成する処理 |
-| エラー型 | RAGScope Applicationで、UseCaseまたは内部処理の契約上想定される失敗を表すHaskellの型。具体的な型名・constructorや、`Either` / `ExceptT`などをどこで使うかは各設計・実装で定める。OpenTelemetryの`error.type`や、実行時に発生したExceptionそのものを指す語ではない |
+| エラー型 | RAGScope Applicationで、UseCaseまたは内部処理の契約上想定される失敗を表すHaskellの型。具体的な型名・データコンストラクタや、`Either` / `ExceptT`などをどこで使うかは各設計・実装で定める。OpenTelemetryの`error.type`や、実行時に発生したExceptionそのものを指す語ではない |
 | 想定外の同期Exception | エラー型で表す契約上の失敗として扱われず、RAGScopeが追跡するoperationの境界から同期的に外へ投げられるException |
-| 非同期中断 / キャンセル | 実行中の処理を外部・非同期要因から中断するケースの総称。特定のException constructorや一律のSpan Statusを意味する語ではない |
+| 非同期中断 / キャンセル | 実行中の処理を外部・非同期要因から中断するケースの総称。特定のExceptionのデータコンストラクタや一律のSpan Statusを意味する語ではない |
 | TTFT | Time To First Token。RS-0023では、AI推論サービスが生成を開始してから最初のtokenを生成するまでの時間を指す。clientが最初のresponse chunkを受信するまでの時間とは区別する |
 
 ## `entry Span` / Invocation / UseCase Spanの関係
@@ -123,14 +123,14 @@ UseCaseを呼ぶ前にhandlerで処理が終了した場合でもInvocationは�
 |---|---|---|
 | エラー型 | RAGScope Application / UseCase・内部処理 | 契約上想定される失敗を表すHaskellの型 |
 | `error.type` | OpenTelemetry | operationまたはEventがどの種類のerrorで失敗・終了したか |
-| `exception.type` | OpenTelemetry Exceptions in Logs | 実際に記録したExceptionの型 |
+| `exception.type` | OpenTelemetry Semantic conventions for exceptions in logs | 実際に記録したExceptionの型 |
 
-RAGScope固有Span / Eventで必要な`error.type`は、対応するエラー型の値から変換するが、エラー型自体を`error.type`へ置き換えない。想定外の同期ExceptionをException Logへ記録する場合は、実際に発生したExceptionの型を`exception.type`へ記録する。具体的な変換規則は[[RS-0023 Trace設計メモ]]と[[RS-0023 Logs設計メモ]]で扱う。
+RAGScope固有Span / Eventで必要な`error.type`は、対応するエラー型の値から変換するが、エラー型自体を`error.type`へ置き換えない。想定外の同期ExceptionをException Eventへ記録する場合は、実際に発生したExceptionの型を`exception.type`へ記録する。具体的な変換規則は[[RS-0023 Trace設計メモ]]と[[RS-0023 Logs設計メモ]]で扱う。
 
 ## 正本へ反映するとき
 
 この用語メモ自体を正本の用語集として扱わない。
-RS-0023の判断を正本へ反映するときは、採用するRAGScope固有用語だけを正本の責務に応じた設計書・用語集へ移す。OpenTelemetry用語はOpenTelemetry specification / Semantic Conventionsの意味を変えず、RAGScope独自の同義語として再定義しない。
+RS-0023の判断を正本へ反映するときは、採用するRAGScope固有用語だけを正本の責務に応じた設計書・用語集へ移す。OpenTelemetry用語はOpenTelemetry Specification / Semantic Conventionsの意味を変えず、RAGScope独自の同義語として再定義しない。
 
 ## 参考
 
