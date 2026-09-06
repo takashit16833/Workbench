@@ -10,7 +10,7 @@ created: 2026-09-05
 
 > [!note]
 > これはRS-0023を正本へ反映する前にレビューするための**Workbench上の設計ドラフト**であり、RAGScopeの正本ではない。
-> 現在の正本にあるUseCase境界とRAGScope Application / AI推論サービス / DBの責務を前提に、RS-0023で新しく決めるObservability設計だけを扱う。
+> 現在の正本にあるUseCase境界とRAGScope Application / AI推論サービス / DBの責務を前提に、RS-0023で検討するObservability設計を扱う。
 
 ## このノートでレビューすること
 
@@ -29,11 +29,9 @@ Trace / Logs / Metrics固有の判断は、それぞれの設計メモでレビ�
 
 | 項目 | 状態 | 要点 |
 |---|---|---|
-| Trace | ✅ 共通設計決定 | 1 Invocation = 1 Trace。詳細は[[RS-0023 Trace設計メモ]] |
-| Logs | ✅ 共通設計決定 | OTel Logs / Eventを土台にし、Spanと重複させない。詳細は[[RS-0023 Logs設計メモ]] |
-| Metrics | ✅ 共通設計決定 | 性能値は実験結果へ保持し、集約観測には適用可能な標準Metricを使う。詳細は[[RS-0023 Metrics設計メモ]] |
-
-**Trace / Logs / Metricsの共通設計は一通り揃った。次は、その設計をHaskellへ落とすためのTelemetry利用境界を決める。**
+| Trace | ドラフト内で決定 | 1 Invocation = 1 Trace。詳細は[[RS-0023 Trace設計メモ]] |
+| Logs | ドラフト内で決定 | OTel Logs / Eventを土台にし、Spanと重複させない。詳細は[[RS-0023 Logs設計メモ]] |
+| Metrics | ドラフト内で決定 | 性能値は実験結果へ保持し、集約観測には適用可能な標準Metricを使う。詳細は[[RS-0023 Metrics設計メモ]] |
 
 ## 全体像
 
@@ -53,30 +51,25 @@ flowchart TB
     AIREQ -. "Trace Contextを伝播" .-> AI
 
     UC -. "観測" .-> TEL
-    OTEL["hs-opentelemetry\nAdapter / SDK"] --> TEL
+    OTEL["hs-opentelemetry<br>Adapter / SDK"] --> TEL
 
     OTEL --> TR["Traces"]
     OTEL --> LG["Logs"]
     OTEL --> MT["Metrics"]
-
-    OTEL --> COL["Collector候補"]
-    COL --> TEMPO["Tempo候補"]
-    COL --> LOKI["Loki候補"]
 ```
 
-> [!warning]
-> Collector / Tempo / Lokiはまだ候補であり、採用決定ではない。
+Collector / Tempo / Lokiなどの外部構成は、このノートでは採用を決めない。
 
 ## Observabilityの基本方針
 
-TelemetryはRAGScopeの処理を**観測する責務**を持つ。
-Applicationの処理内容や制御方針そのものをTelemetryへ移さない。
+TelemetryはRAGScopeで実際に行われた処理を観測し、その結果をTrace / Logs / Metricsとして記録する。
+Applicationの処理内容や制御方針はTelemetryへ移さない。
 
 | 論点 | 決定 |
 |---|---|
 | Telemetryの責務 | RAGScopeで実際に行われた処理をTrace / Logs / Metricsとして観測する |
-| Application制御との関係 | retry / timeout / fallback / 処理順序などの制御方針はTelemetryでは決めない。必要な制御のownerは対象処理の設計で決める |
-| signal間の役割 | Trace / Logs / Metricsは同じ情報を機械的に重複させず、それぞれの役割に応じて使い分ける |
+| Application制御との関係 | retry / timeout / fallback / 処理順序はRAGScope Applicationが制御し、具体的な条件は対象処理の機能設計で定める。Telemetryはその実行結果を観測する |
+| Trace / Logs / Metricsの関係 | 同じ事実を機械的に重複させず、各signalで後から確認する内容に応じて使い分ける |
 | Telemetry runtime failure | Exporter / Processor / Collector送信失敗でApplication本体の結果を変更しない |
 
 Trace / Logs / Metricsそれぞれの具体的な役割と表現は、各設計メモで定義する。
@@ -95,16 +88,18 @@ RAGScopeはOpenTelemetryをObservabilityの基盤として利用するが、Open
 
 ### `hs-opentelemetry`を採用する理由と見直し条件
 
-採用理由:
+`hs-opentelemetry` 1.xは、RAGScopeで必要となるTrace、Logs、Context / Propagator、Processor、OTLP Exporterの主要能力を提供する。
+SDK固有型をAdapter内へ閉じ込められるため、UseCaseをSDK固有型へ依存させずに利用できる。
 
-- RAGScopeが必要とするTrace、Logs、Context / Propagator、Processor、OTLP Exporterの主要能力が揃っている。
-- HaskellでTrace + Logs + Context + Processor + OTLPまで一式を提供する実用的な候補として最も適合しており、同等の別SDKを探し続ける具体的な理由がない。
-- OpenTelemetry SDK相当をRAGScopeで自作すると、Context管理、batching、Processor / Exporter、flush / shutdown、export失敗処理などRAGScope固有ではない責務まで保守することになる。
-- SDK固有型をAdapter内へ閉じ込められるため、SDK採用がUseCase設計を固定する理由にはならない。
+OpenTelemetry SDK相当をRAGScopeで実装すると、Context管理、batching、Processor / Exporter、flush / shutdown、export失敗処理など、RAGScope固有ではない責務までRAGScopeが保守することになるため採用しない。
 
-採用前の大規模PoCを必須条件にはしない。実装時にRAGScopeのGHC / dependency構成との互換性や、必要なAdapter動作を確認する。
+採用前の大規模PoCを必須条件にはしない。実装時にRAGScopeのGHC / dependency構成との互換性と、必要なAdapter動作を確認する。
 
-見直すのは、`hs-opentelemetry` 1.xではRAGScopeの必須能力を薄いAdapterでも成立させられない、採用GHC / dependency構成で実用上解消できない問題がある、またはSDKのruntime挙動がApplicationの正しさを損なう具体的事実が確認された場合とする。
+次のいずれかが確認された場合は採用を見直す。
+
+- `hs-opentelemetry` 1.xの提供APIでは、RAGScopeが必要とするTrace / Logs / Context / Processor / Exporterの動作をAdapterから成立させられない
+- 採用するGHC / dependency構成で解消できない互換性問題がある
+- SDKのruntime挙動によってApplication本体の正しさを維持できない
 
 ### Semantic Conventionsを優先する
 
@@ -129,11 +124,11 @@ Observabilityを組み込む位置を理解するため、**構築時**と**1 In
 | handler | CLI / API固有表現とUseCaseの入力・結果の間を仲介する |
 | Invocation | RAGScopeが外部から1回呼び出され、その処理が完了するまでの実行範囲 |
 | UseCase | RAGScope ApplicationがUseCaseを呼び出してから、Applicationへ制御が戻るまで |
-| Telemetry利用境界 | UseCase等のRAGScope側コードがOpenTelemetry SDKへ直接依存せずTelemetryを利用するための境界。具体APIは後続で決める |
+| Telemetry利用境界 | UseCase等のRAGScope側コードがOpenTelemetry SDKへ直接依存せずTelemetryを利用するための境界。具体APIはこのノートでは決めない |
 
 ### 構築時
 
-Composition Rootは1回の利用者処理を構成する実行ステップではなく、実行に必要な部品を構築・接続する責務を持つ。
+Composition Rootは1回の利用者処理を構成する実行ステップではなく、実行に必要な部品を構築・接続する。
 APIサーバーのような長時間動作するプロセスでは、Composition Rootで一度構築したhandlerやUseCaseを複数のInvocationから利用できる。
 
 ```mermaid
@@ -157,7 +152,7 @@ flowchart TB
 ```
 
 handlerはUseCaseの外側にあり、UseCase呼び出し前の入力受付・変換と、UseCase終了後の出力変換を担当する。
-CLI parserやHTTP routingのどこまでをhandlerに含めるかという実装上の詳細境界は、必要になった時点で決める。
+CLI parserやHTTP routingのどこまでをhandlerに含めるかという実装上の詳細境界は、このノートでは決めない。
 
 UseCaseから呼び出されるEmbedding生成、DB検索などはUseCaseを構成する内部処理である。
 AI推論サービス側の処理は同じTraceへ参加できるが、RAGScope Application側のUseCaseそのものではない。
@@ -168,26 +163,24 @@ AI推論サービス側の処理は同じTraceへ参加できるが、RAGScope A
 Exporter、Processor、Collectorへの送信などTelemetry基盤自身の失敗は、Application本体の結果を変更しない。
 UseCaseが成功している場合、Telemetry exportに失敗してもUseCase成功のままとする。
 
-Telemetry基盤の診断は、まず`hs-opentelemetry` SDK自身のerror handling / internal diagnosticsを使用する。
-旧RS-0022のような別の診断・転送経路を先に再構築せず、SDKで具体的に不足する診断要求が判明した場合だけRAGScope側の補助経路を追加検討する。
+Telemetry基盤の診断には、まず`hs-opentelemetry` SDK自身のerror handling / internal diagnosticsを使用する。
+SDKの診断機能では満たせない具体的な診断要求が確認された場合だけ、RAGScope側の補助経路を検討する。
 
-見直すのは、Telemetryの欠落をApplication処理失敗として扱わなければならない明示的なRAGScope要求が追加された場合に限る。
+Telemetryの欠落をApplication処理失敗として扱う要求が追加された場合は、この判断を見直す。
 
 ## このドラフトでは扱わないこと
 
-以下はObservabilityの全体像・共通方針とは分けて扱う。
-ここに記載している項目を省略したわけではなく、後続の設計で具体化する。
+以下はObservabilityの全体像・共通方針とは分けて具体化する。
 
-| 論点 | 扱う時点 |
+| 論点 | 具体化する設計 |
 |---|---|
-| Trace / Logs / Metricsの利用境界を1つにまとめるか分けるか | 次のTelemetry利用境界設計で決める |
-| Telemetry利用境界の名前と公開API | 次のTelemetry利用境界設計で決める |
-| SDK初期化設定エラー時に起動失敗するかTelemetryなしで起動するか | Telemetry初期化設計で決める |
-| package / module構成 | Telemetry利用境界の決定後に決める |
-| Collector / Tempo / Lokiなどの外部構成 | 後続の外部構成設計で決める |
+| Trace / Logs / Metricsの利用境界を1つにまとめるか分けるか | Telemetry利用境界設計 |
+| Telemetry利用境界の名前と公開API | Telemetry利用境界設計 |
+| SDK初期化設定エラー時に起動失敗するかTelemetryなしで起動するか | Telemetry初期化設計 |
+| package / module構成 | Telemetry利用境界の決定後に行うpackage / module設計 |
+| Collector / Tempo / Lokiなどの外部構成 | 外部構成設計。現時点では候補であり採用を決めない |
 
-設計順序は、**Telemetry利用境界 → package / module → 外部構成**とする。
-packageを先に切って、あとから責務を当てはめない。
+package / module構成はTelemetry利用境界を決めた後に定め、先にpackageを分割してから責務を割り当てない。
 
 ## 参考
 
