@@ -64,15 +64,46 @@ RAGScopeの1回の実行をどのようなTrace / Spanとして追跡し、成�
 
 ## RAGScopeの1回の実行はTrace上どう見えるか
 
-`handler`と`entry Span`は同じ種類の概念ではない。`handler`はCLI / APIとUseCaseの間で入力変換・UseCase呼び出し・結果変換を行うApplication上の境界処理であり、`entry Span`は1 InvocationをTrace上で追跡し始めるOpenTelemetryのSpanである。APIではHTTP SERVER Span、CLIではExecution (callee) Spanがentry Spanとなり、その実行範囲の中でhandlerの処理が行われる。
+`handler`と`entry Span`は同じ種類の概念ではない。
 
-実行上の関係とTrace上のSpan構造を分けると、次のようになる。
+- `handler`は、CLI / APIとUseCaseの間で、入力変換・UseCase呼び出し・結果変換を行うApplication上の境界処理である。
+- `entry Span`は、その1 InvocationをTrace上で観測するためのOpenTelemetryのSpanである。APIではHTTP SERVER Span、CLIではExecution (callee) Spanがこの役割を担う。
+- `UseCase Span`は、handlerから呼び出されたUseCase実行を観測するchild Spanである。
+
+つまり、entry Spanがhandlerの代わりに処理を行うわけではない。**handlerという実際の処理がentry Spanの計測範囲の中で動き、その途中でUseCase Spanが開始・終了する**。
+
+実行と観測範囲を重ねて見ると、次のようになる。
 
 ```text
-実行上:  CLI / API → handler（入力変換 → UseCase呼び出し → 結果変換） → CLI / API
-Trace上: entry Span
-             └─ UseCase Span
+                     entry Span
+            ┌────────────────────────────────────┐
+CLI / API   │                                    │
+入力        │  handler                           │
+   ────────▶│  入力をUseCaseへ渡す値へ変換      │
+            │          │                         │
+            │          │ UseCaseを呼び出す       │
+            │          ▼                         │
+            │   ┌────────────────────────────┐   │
+            │   │ UseCase Span               │   │
+            │   │                            │   │
+            │   │ UseCase実行                │   │
+            │   │  ├─ DB client Span         │   │
+            │   │  └─ AI通信 client Span     │   │
+            │   └────────────────────────────┘   │
+            │          │                         │
+            │          ▼                         │
+            │  handler                           │
+            │  結果をCLI表示 / HTTP response    │
+            │  へ変換                            │
+            │                                    │
+出力        │                                    │
+   ◀────────│                                    │
+            └────────────────────────────────────┘
 ```
+
+図でhandlerをUseCase呼び出しの前後に分けて描いているのは、handlerがUseCaseの前後で境界処理を行うためである。UseCaseそのものをhandlerに含めているわけではない。
+
+以下のMermaid図は、上の実行から**Spanだけを抜き出したTrace上の構造**を示す。そのため、独立Spanにしないhandlerはノードとして描かれない。
 
 ```mermaid
 flowchart TB
@@ -88,7 +119,7 @@ flowchart TB
     AI_REQ -. "Trace Context" .-> AI_SVC
 ```
 
-この図はTrace上のSpan構造だけを示しているため、独立SpanにしないhandlerはSpanノードとして描いていない。handlerの責務とUseCaseとの関係は[[RS-0023 Observability設計メモ#handler]]を参照する。
+handlerの責務とUseCaseとの関係は[[RS-0023 Observability設計メモ#handler]]も参照する。
 UseCaseが呼ばれる前にhandlerで終了してもInvocationは発生するためTraceには残るが、UseCase Spanは発生しない。
 
 ## Spanをどこに切るか
