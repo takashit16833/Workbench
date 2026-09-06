@@ -19,7 +19,7 @@ created: 2026-09-06
 | Trace | 複数のSpanを親子関係などで結び、1つながりの処理として追跡するもの |
 | Span | Trace内の1つのoperationを表す。開始・終了、所要時間、attributes、Status、親子関係などを持つ |
 | operation | Spanが表す1つの処理 |
-| root Span | Trace内でparentを持たないSpan。この設計ではRAGScopeの1回の実行を観測する`entry Span`がrootになる |
+| root Span | Trace内でparentを持たないSpan。この設計では1 Invocationの`entry Span`がrootになる |
 | parent / child Span | Span同士の親子関係。あるoperationの内部で別のoperationを追跡する場合、後者をchild Spanとして表現できる |
 | Span Kind | Spanが表すoperationの役割を示すOpenTelemetryの区分。SERVER / CLIENTなどがある |
 | Trace Context | Traceをコンポーネント間で継続するために引き継ぐTrace / SpanのContext |
@@ -82,7 +82,8 @@ created: 2026-09-06
 
 | 用語 | 意味 |
 |---|---|
-| `entry Span` | RAGScopeがCLI / APIなどを通じて外部から1回呼び出され、その処理が完了するまでの実行全体をTrace上で観測するroot Spanの**役割名**。OpenTelemetryのSpan種別ではない。APIではHTTP SERVER Span、CLIではExecution (callee) Spanがこの役割を担い、実行全体を表す専用Spanは別に作らない |
+| Invocation | RAGScopeがCLI / APIなどを通じて外部から1回呼び出され、その処理が完了するまでの実行範囲。RS-0023では1 Invocationごとに独立したTraceを開始する |
+| `entry Span` | 1 Invocation全体をTrace上で観測するroot Spanの**役割名**。OpenTelemetryのSpan種別ではない。APIではHTTP SERVER Span、CLIではExecution (callee) Spanがこの役割を担い、Invocation専用Spanは別に作らない |
 | UseCase Span | 1 UseCase実行全体を観測するRAGScope固有Span |
 | RAGScope固有Span | 適用可能なSemantic Conventionだけでは表せないRAGScope固有operationを追跡するSpan |
 | RAGScope固有Event | 適用できるSemantic Conventionや既存Spanだけでは後から識別できない、RAGScope固有の出来事または状態変化を表すEvent |
@@ -96,23 +97,23 @@ created: 2026-09-06
 | 非同期中断 / キャンセル | 実行中の処理を外部・非同期要因から中断するケースの総称。特定のExceptionのデータコンストラクタや一律のSpan Statusを意味する語ではない |
 | TTFT | Time To First Token。RS-0023では、AI推論サービスが生成を開始してから最初のtokenを生成するまでの時間を指す。clientが最初のresponse chunkを受信するまでの時間とは区別する |
 
-## `entry Span` / UseCase Spanの関係
+## `entry Span` / Invocation / UseCase Spanの関係
 
-RAGScopeがCLI / APIなどを通じて外部から1回呼び出され、その処理が完了するまでの実行全体は、Spanそのものではない。
-`entry Span`は、その実行全体をTrace上で観測する**root Spanの役割名**である。
-`UseCase Span`は、その実行の途中でUseCaseが実行された場合に、そのUseCase実行だけを観測するchild Spanである。
+`Invocation`はRAGScopeの**実行範囲**であり、Spanそのものではない。
+`entry Span`は、そのInvocation全体をTrace上で観測する**root Spanの役割名**である。
+`UseCase Span`は、Invocationの途中でUseCaseが実行された場合に、そのUseCase実行だけを観測するchild Spanである。
 
 ```text
-RAGScopeの1回の実行                        ← CLI / APIから処理完了までの実行範囲
-└─ entry Span                              ← Trace上のroot Spanの役割
-   ├─ handlerの入力変換                   ← entry Spanの計測範囲内
-   ├─ UseCase Span                         ← UseCaseを呼んだ場合だけ作る
+Invocation                                   ← RAGScopeの実行範囲
+└─ entry Span                                ← Trace上のroot Spanの役割
+   ├─ handlerの入力変換                     ← entry Spanの計測範囲内
+   ├─ UseCase Span                           ← UseCaseを呼んだ場合だけ作る
    │  ├─ DB client Span
    │  └─ GenAI client Span / HTTP client Span
-   └─ handlerの出力変換                   ← entry Spanの計測範囲内
+   └─ handlerの出力変換                     ← entry Spanの計測範囲内
 ```
 
-UseCaseを呼ぶ前にhandlerで処理が終了した場合でもRAGScopeの1回の実行は始まっているため`entry Span`は残るが、UseCaseを実行していないのでUseCase Spanは作らない。詳細なTrace境界は[[RS-0023 Trace設計メモ]]で扱う。
+UseCaseを呼ぶ前にhandlerで処理が終了した場合でもInvocationは発生しているため`entry Span`は残るが、UseCaseを実行していないのでUseCase Spanは作らない。詳細なTrace境界は[[RS-0023 Trace設計メモ]]で扱う。
 
 ## `error.type` / エラー型 / `exception.type`の関係
 

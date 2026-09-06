@@ -45,7 +45,7 @@ Trace / Logs / Metricsと失敗時の扱いはRS-0023で決定済みとして扱
 
 ## 全体像
 
-RAGScopeの1回の実行でApplicationがDBやAI推論サービスを利用し、ApplicationとAI推論サービスがそれぞれOpenTelemetryを通じてTelemetryを記録する。
+1 InvocationでRAGScope ApplicationがDBやAI推論サービスを利用し、ApplicationとAI推論サービスがそれぞれOpenTelemetryを通じてTelemetryを記録する。
 
 ```mermaid
 flowchart TB
@@ -70,7 +70,7 @@ flowchart TB
     PYSDK --> MT
 ```
 
-Composition Rootは実行に必要な部品を構築・接続する**構築時**の責務であり、RAGScopeの1回の実行フローではないため、この図には含めない。
+Composition Rootは実行に必要な部品を構築・接続する**構築時**の責務であり、1 Invocationの実行フローではないため、この図には含めない。
 
 この図では、Application内部のhandler / UseCase境界やSpanの包含関係までは表さない。Trace上の具体的な構造は[[RS-0023 Trace設計メモ]]で扱う。
 
@@ -80,8 +80,8 @@ Composition Rootは実行に必要な部品を構築・接続する**構築時**
 
 ### Trace
 
-Traceは、RAGScopeの1回の実行に含まれる処理のつながりを追うために使う。
-RS-0023では**1回の実行ごとに独立したTraceを開始する**。RAGScope ApplicationからAI推論サービスを呼び出すときはTrace Contextを引き継ぎ、同じTraceを継続する。
+Traceは、1 Invocationの処理のつながりを追うために使う。
+RS-0023では**1 Invocationごとに独立したTraceを開始する**。RAGScope ApplicationからAI推論サービスを呼び出すときはTrace Contextを引き継ぎ、同じTraceを継続する。
 
 APIへ外部Trace Contextが届いた場合の扱い、entry Span、UseCase Span、Span Statusなどの詳細は[[RS-0023 Trace設計メモ]]で扱う。
 
@@ -181,7 +181,7 @@ Span名、Span Kind、attributes、Event、Metric名、instrument、unitなど�
 
 適用できるConventionがある場合は、その定義を優先する。HTTP、Database、CLI、Exceptionなどについて、同じ意味を持つRAGScope独自表現を重ねない。
 
-RAGScope独自のTelemetry表現は、UseCase、RAGScopeの1回の実行、実験、評価データなど、既存Conventionだけでは表現できないRAGScope固有の意味に限定する。独自attributeが必要な場合も、まず既存attributeを再利用できないか確認し、OpenTelemetryが使用するnamespaceと衝突する名前は作らない。
+RAGScope独自のTelemetry表現は、UseCase、Invocation、実験、評価データなど、既存Conventionだけでは表現できないRAGScope固有の意味に限定する。独自attributeが必要な場合も、まず既存attributeを再利用できないか確認し、OpenTelemetryが使用するnamespaceと衝突する名前は作らない。
 
 Semantic Conventionごとにstabilityが異なるため、実装時には採用するOpenTelemetry / instrumentationバージョンと対象Conventionのstabilityを確認する。
 
@@ -200,15 +200,15 @@ Semantic Conventionごとにstabilityが異なるため、実装時には採用�
 | Semantic conventions for exceptions in logs | Stable（個別節にDevelopmentあり） | Exception Eventの基本表現へ利用する |
 | GenAI Semantic Conventions | Development | 適用できるSpan / Event / Metricへ利用し、現在の名称やattributesをRAGScope独自契約へ固定しない |
 
-## 構築時と1回の実行時を分ける
+## 構築時とInvocation実行時を分ける
 
-Observabilityを組み込む位置は、プロセス起動時の構築とRAGScopeの1回の実行時で分けて考える。
-Composition RootはTelemetry実装を他の依存と一緒に構築・接続し、1回の実行時は構築済みのhandler / UseCase / Telemetry実装を使って処理する。
+Observabilityを組み込む位置は、プロセス起動時の構築と1 Invocationの実行時で分けて考える。
+Composition RootはTelemetry実装を他の依存と一緒に構築・接続し、1 Invocationの実行時は構築済みのhandler / UseCase / Telemetry実装を使って処理する。
 
 ### 構築時
 
 Composition Rootは、実行に必要なUseCase、handler、Telemetry実装などの依存を構築・接続する。
-APIサーバーのような長時間動作するプロセスでは、ここで一度構築したhandler、UseCase、Telemetry実装を複数回の実行から利用できる。
+APIサーバーのような長時間動作するプロセスでは、ここで一度構築したhandler、UseCase、Telemetry実装を複数のInvocationから利用できる。
 
 ```mermaid
 flowchart TB
@@ -220,14 +220,14 @@ flowchart TB
 
 実装上のmodule / function名として`Bootstrap`を使うかは、package / module設計時に決める。
 
-### 1回の実行時
+### 1 Invocationの実行時
 
-1回の実行では、構築済みのhandler / UseCase / Telemetry実装を使う。
-Traceは1回の実行ごとに独立したTraceを開始し、handler / UseCase / 内部処理をどのSpanで観測するかは[[RS-0023 Trace設計メモ]]に従う。
+1 Invocationでは、構築済みのhandler / UseCase / Telemetry実装を使う。
+Traceは1 Invocationごとに独立したTraceを開始し、handler / UseCase / 内部処理をどのSpanで観測するかは[[RS-0023 Trace設計メモ]]に従う。
 
 ApplicationからAI推論サービスを呼び出す場合はTrace Contextを引き継ぎ、AI推論サービス側の処理も同じTraceへ参加させる。
 
-プロセス起動時の依存構築やProcessor / ExporterによるTelemetry送信は、1回の実行内のUseCase処理そのものではない。
+プロセス起動時の依存構築やProcessor / ExporterによるTelemetry送信は、1 Invocation内のUseCase処理そのものではない。
 
 ## SDKで必要な能力を利用できるか
 
