@@ -43,6 +43,7 @@ RAGScopeの1回の実行をどのようなTrace / Spanとして追跡し、成�
 | Invocation | RS-0023 Observability設計 | RAGScopeがCLI / APIなどを通じて外部から1回呼び出され、その処理が完了するまでの実行範囲。RS-0023 Trace設計では**1 Invocation = 1独立Trace**として追跡する |
 | entry Span | RS-0023 Trace設計 | 1 Invocationを表すTraceを開始するroot Spanの役割名。Invocation専用Spanは別に作らず、APIではHTTP SERVER Span、CLIではCLI SemConvのExecution (callee) Spanがこの役割を担う |
 | UseCase | RAGScope正本 | 利用者がRAGScopeへ依頼するトップレベルな操作。実行境界と成功条件は正本のユースケース設計に従う |
+| 内部処理 | RAGScope正本 | Embedding生成、データベース検索、文書チャンク化など、UseCaseから呼び出され、そのUseCaseを構成する処理 |
 | UseCase Span | RS-0023 Trace設計 | **1 UseCase実行につき1つ作り**、UseCase実行全体を表すRAGScope固有Span。DBアクセス、AI通信などUseCase内部のoperationを表すchild Spanを持ちうる |
 | RAGScope固有Span | RS-0023 Trace設計 | 適用可能なSemantic Conventionだけでは表せないRAGScope固有のoperationを追跡するSpan。適用可能なSemConvで同じoperationを表現できる場合は同義のRAGScope固有Spanを重ねない。UseCase SpanはRAGScope固有Spanの1つ |
 
@@ -63,7 +64,7 @@ RAGScopeの1回の実行をどのようなTrace / Spanとして追跡し、成�
 - handler全体を表す専用Spanは作らない。handlerの実行はentry Spanの計測範囲に含め、handlerがUseCaseを呼び出した場合はそのUseCase実行だけをUseCase Spanとして記録する。
 - DB / HTTP / GenAIなど、その処理へ適用できるSemantic Conventionsがある場合は、そのConventionが定めるSpan名・Span Kind・attributes・Status・`error.type`を優先する。
 - 子Spanが表す処理が失敗しても、それだけを理由に親Spanを`Error`にはしない。RAGScope固有の親Spanは親Span自身が表すoperationの最終結果からStatusを決め、SemConv対象の親SpanはそのConventionの規則に従う。
-- feature / UseCase固有のtyped failureを失敗理由の元情報とする。RAGScope固有Spanが表すoperationが最終的に失敗した場合は、2026-09-06時点のGeneral Recording Errors guidanceに従い、typed failureからそのoperationに対応する`error.type`へ変換する。RAGScope全体で共有する独立した`error_type` taxonomyは設けない。
+- RAGScopeで契約上想定される失敗理由は、その失敗が属するUseCaseまたは内部処理に対応するtyped failureで表す。RAGScope固有Spanが表すoperationが最終的に失敗した場合は、2026-09-06時点のGeneral Recording Errors guidanceに従い、そのtyped failureからそのoperationに対応する`error.type`へ変換する。RAGScope全体で共有する独立した`error_type` taxonomyは設けない。
 - async interruption / cancellationは一律に`Error`やtyped failureへ分類しない。実際の中断源と、どのoperationが中断されたかが確定した時点でStatusを決める。
 
 ## Trace境界をどう決めるか
@@ -167,11 +168,11 @@ Spanは、開始・終了、所要時間、失敗、親子関係を他の処理�
 | PostgreSQL | database client operation = DB client Span | Database / PostgreSQL Semantic Conventionsに従う |
 | Embedding / generation | ApplicationからモデルまたはGenAIサービスへの1 logical client operation = GenAI client Span | 適用可能なGenAI Semantic Conventionsを優先する。HTTPも計装する場合、論理的な依頼全体を表すGenAI client SpanとHTTP requestだけを表すHTTP client Spanを分ける |
 | AI推論サービスへのHTTP通信 | HTTP request = Application側HTTP client Span + AI推論サービス側HTTP SERVER Span | HTTP Semantic Conventionsに従う。Application側HTTP client SpanのTrace ContextをAI推論サービスへ引き継ぎ、AI推論サービス側HTTP SERVER Spanをその子Spanとして同じTraceに記録する |
-| RAGScope内部処理 | 開始・終了、所要時間、失敗をUseCase Span等とは別に確認する必要がある処理 | その必要がある場合だけRAGScope固有Spanを作る |
-| retry attempt | 既存計装 / SemConvで各attemptを追跡できる場合は追加しない | 既存計装ではattemptを区別できず、その区別を必要とする要求がある場合に対象retry設計で判断する |
+| UseCaseを構成する内部処理 | 開始・終了、所要時間、失敗をUseCase Span等とは別に確認する必要がある処理 | その必要がある場合だけRAGScope固有Spanを作る |
+| retry attempt | 既存計装 / SemConvで各attemptを追跡できる場合は追加しない | 既存計装ではattemptを区別できず、その区別を必要とする要求がある場合に、そのretryを定義する設計で判断する |
 
 自動計装 / 手動計装のどちらでSpanを生成するかは別の実装論点であり、このノートでは決めない。
-Semantic Conventionで決まらない具体Span名・attributesは対象機能の設計で具体化する。
+Semantic Conventionで決まらない具体Span名・attributesは、そのSpanが表すUseCaseまたは内部処理の設計で具体化する。
 
 RAGScopeの実行追跡にはOpenTelemetryのSpanを使用し、Spanと同じ処理を別に識別するRAGScope独自の実行追跡概念は設けない。同じ処理を2つの識別体系で追跡しないためである。
 
@@ -190,7 +191,7 @@ RAGScope固有Spanは、そのSpanが表すoperationの最終結果を次のよ�
 | typed failureとして最終的に失敗 | `Error` | typed failureから、そのoperationに対応する予測可能で低カーディナリティな値へ変換する | typed failureが持つ詳細値や原因は失わない |
 | 内部処理が失敗したがretry / fallbackで回復して最終成功 | `Unset` | なし | 内部の失敗だけを理由に、このSpanを`Error`にはしない |
 | unexpected同期Exceptionがoperation境界から外へ投げられる | `Error` | exception class相当 | original Exceptionをrethrowする |
-| async interruption / cancellation | 対象operationでの中断の意味に従う | 一律規則なし | cleanup / Telemetry後もoriginal exceptionをrethrowする |
+| async interruption / cancellation | そのSpanが表すoperationにおける中断の意味に従う | 一律規則なし | cleanup / Telemetry後もoriginal exceptionをrethrowする |
 
 子Spanが表す処理が失敗しても、それだけを理由に親Spanを`Error`にはしない。親SpanがRAGScope固有Spanなら、親Span自身が表すoperationの最終結果からStatus / `error.type`を決める。親SpanがSemConv対象Spanなら、そのSemantic Conventionの規則に従う。
 
@@ -198,16 +199,16 @@ Logを生成するかどうかはSpan Statusとは別に判断する。[[RS-0023
 
 ## typed failureをSpanの`error.type`へどう変換するか
 
-RAGScope全体のfailure modelは[[RS-0023 Observability設計メモ#失敗情報をAPI・保存データ・Telemetryへどう変換するか]]に従う。各feature / UseCaseが定義するtyped failureを失敗理由の元情報とし、RAGScope全体で共有する独立した`ErrorType` / `error_type` taxonomyや、すべてのfailureを中央で分類する`ErrorClassifier`は設けない。
+RAGScope全体のfailure modelは[[RS-0023 Observability設計メモ#失敗情報をAPI・保存データ・Telemetryへどう変換するか]]に従う。UseCaseまたはそのUseCaseを構成する内部処理に対応するtyped failureを失敗理由の元情報とし、RAGScope全体で共有する独立した`ErrorType` / `error_type` taxonomyや、すべてのfailureを中央で分類する`ErrorClassifier`は設けない。
 
 このTrace設計が決めるのは、RAGScope固有Spanが表すoperationが最終的に失敗したときに、そのtyped failureをSpanの`error.type`へどう変換するかである。API / CLIで利用者へ返す失敗情報や、実験・評価データモデルへ保存するerrorは別の出力先であり、このTrace設計の`error.type`から決めない。
 
 | 項目 | 方針 | 理由 |
 |---|---|---|
-| feature / UseCase固有typed failure | 失敗理由の元情報とする | failureの意味・詳細値・原因を、その処理を所有する設計と型で保持する |
-| RAGScope共通`ErrorCategory` / `ErrorType` / `error_type` taxonomy | 設けない | typed failureと別の共通分類を置かなければ成立しない現在要求を確認できず、対応規則の二重管理とfeature間の不要な結合を作る |
+| UseCaseまたは内部処理に対応するtyped failure | 失敗理由の元情報とする | failureの意味・詳細値・原因を、そのUseCaseまたは内部処理を定義する設計と型で保持する |
+| RAGScope共通`ErrorCategory` / `ErrorType` / `error_type` taxonomy | 設けない | typed failureと別の共通分類を置かなければ成立しない現在要求を確認できず、対応規則の二重管理と、異なるUseCaseや内部処理の不要な結合を作る |
 | `ErrorClassifier failure` / 専用error package | 共通前提として設けない | 全operationを横断するtaxonomyを中央packageへ集約する要求がない |
-| RAGScope固有Spanの`error.type` | そのSpanが表すoperationが最終的に失敗した場合、2026-09-06時点のGeneral Recording Errors guidanceに従い、対象operationのtyped failureから`error.type`へ変換する | `error.type`はTelemetryへ記録する表現であり、RAGScopeのfailure modelそのものではない |
+| RAGScope固有Spanの`error.type` | そのSpanが表すoperationが最終的に失敗した場合、2026-09-06時点のGeneral Recording Errors guidanceに従い、そのoperationに対応するtyped failureから`error.type`へ変換する | `error.type`はTelemetryへ記録する表現であり、RAGScopeのfailure modelそのものではない |
 | SemConv対象Spanの`error.type` | 適用するSemantic Conventionに従う | HTTP / Database / GenAI等のoperation固有規則をRAGScope分類で上書きしない |
 | `OperationFailure`で分類を上位Spanまで伝播する仕組み | 設けない | 各Spanは、自身が表すoperationの最終結果と適用規則からStatus / `error.type`を決める |
 | `AsyncException`を一律にcancellation / Errorへ分類する規則 | 設けない | constructorだけでは中断の意味を特定できない |
@@ -231,21 +232,21 @@ Application / AI推論サービス間で共有するfailure codeが通信契約�
 
 | 論点 | 具体化する時点 |
 |---|---|
-| RAGScope固有Spanの具体名 / attributes | 対象機能の設計時 |
-| 対象機能固有failureの`error.type`値 | 対象operationの設計時 |
-| API / CLIで利用者へ返すfailure表現 | 各interface設計 / Contract |
-| 実験・評価データモデルへ保存するerror | 実験・評価機能設計 / データモデル |
+| RAGScope固有Spanの具体名 / attributes | そのSpanが表すUseCaseまたは内部処理を定義する時 |
+| RAGScope固有Spanの`error.type`値 | そのSpanが表すUseCaseまたは内部処理に対応するtyped failureを具体化する時 |
+| API / CLIで利用者へ返すfailure表現 | API / CLI設計・Contract |
+| 実験・評価データモデルへ保存するerror | 実験・評価の設計 / データモデル |
 | Application / AI推論サービス間のfailure response / code | AI通信方式・Contract設計時 |
-| cancellation / interruptのStatus | 実際の中断源と対象operationが確定した時 |
-| retry attemptのRAGScope固有Span要否 | 対象retry設計時 |
+| cancellation / interruptのStatus | 実際の中断源と、そのSpanが表すoperationが確定した時 |
+| retry attemptのRAGScope固有Span要否 | そのretryを定義する設計時 |
 | ExperimentとTraceの関係 | 実験実行境界が具体化した時 |
 | `hs-opentelemetry` AdapterのException処理 | Adapter実装時 |
 
 ## 判断理由・実装上の注意
 
 > [!info]- typed failureの考え方
-> 具体failureの意味は、そのfailureを定義するUseCase・対象機能・operationの設計が定める。
-> RAGScope固有Spanが表すoperationが最終的に失敗した場合は、2026-09-06時点のGeneral Recording Errors guidanceに従い、そのoperationを定義する設計でtyped failureから予測可能で低カーディナリティな`error.type`への変換を定める。
+> 具体failureの意味は、そのfailureが属するUseCaseまたは内部処理を定義する設計が定める。
+> RAGScope固有Spanが表すoperationが最終的に失敗した場合は、2026-09-06時点のGeneral Recording Errors guidanceに従い、そのUseCaseまたは内部処理を定義する設計で、対応するtyped failureから予測可能で低カーディナリティな`error.type`への変換を定める。
 >
 > typed failureが持つ詳細値・原因と、Telemetryへ記録する`error.type`は分けて扱う。`error.type`を得るためにtyped failureそのものを共通エラー型へ置換せず、failureが保持する原因・詳細値を失わない。failure型自身をOpenTelemetryやObservability固有型へ依存させない。変換規則が必要なら、実行状態やTrace Contextへ依存しない純粋な変換を第一候補とする。
 >
@@ -257,7 +258,7 @@ Application / AI推論サービス間で共有するfailure codeが通信契約�
 > OpenTelemetryのRecording Errorsでは、retryや内部処理でerrorが起きても、最終的にoperationが成功した場合は、囲っているoperationをerrorとして記録しない。
 > RAGScopeのUseCase設計でも、内部処理が失敗しても最終結果を成立させればUseCase成功である。そのため、UseCase SpanなどのRAGScope固有Spanは、内部処理で一度失敗したかではなく、そのSpanが表すoperationの最終結果からStatusを決める。
 >
-> 対象機能固有のfailureだけでは複数operationを横断して必要な集計・契約を成立させられない要求が追加された場合は、その具体的要求を基準に共通分類の必要性を再評価する。
+> UseCaseや内部処理ごとのtyped failureだけでは、複数operationを横断して必要な集計・契約を成立させられない要求が追加された場合は、その具体的要求を基準に共通分類の必要性を再評価する。
 
 > [!info]- unexpected同期Exception
 > RAGScope固有Spanが表すoperationの境界からunexpectedな同期Exceptionが外へ投げられる場合は、そのSpanのStatusを`Error`とし、`error.type`へexception class相当を設定してoriginal Exceptionをrethrowする。
