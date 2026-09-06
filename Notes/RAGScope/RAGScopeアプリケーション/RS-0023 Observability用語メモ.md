@@ -27,16 +27,22 @@ created: 2026-09-06
 特に、`entry Span`はOpenTelemetryのSpan種別ではない。**1 Invocation全体を観測するroot Spanの役割を、RS-0023で`entry Span`と呼んでいる**。
 
 ```text
-1 Invocation
-└─ entry Span                         ← RS-0023の役割名
-   ├─ API: HTTP SERVER Span           ← OpenTelemetry Semantic Conventions
-   └─ CLI: Execution (callee) Span    ← OpenTelemetry Semantic Conventions
-       └─ UseCase Span                ← RAGScope固有Span
-          ├─ DB client Span           ← OpenTelemetry Semantic Conventions
-          └─ GenAI client Span        ← OpenTelemetry Semantic Conventions
+APIの場合
+Invocation
+└─ HTTP SERVER Span (= entry Span)
+   └─ UseCase Span
+      ├─ DB client Span
+      └─ GenAI client Span / HTTP client Span
+
+CLIの場合
+Invocation
+└─ Execution (callee) Span (= entry Span)
+   └─ UseCase Span
+      ├─ DB client Span
+      └─ GenAI client Span / HTTP client Span
 ```
 
-この図は用語の関係を示すための簡略図である。実際のSpan階層と条件は[[RS-0023 Trace設計メモ]]を参照する。
+`entry Span`という別のSpanをHTTP SERVER SpanやExecution (callee) Spanの外側に追加するわけではない。この図は用語の関係を示すための簡略図であり、実際のSpan階層と条件は[[RS-0023 Trace設計メモ]]を参照する。
 
 ## OpenTelemetryから使う用語
 
@@ -83,6 +89,9 @@ created: 2026-09-06
 | `Body` | `LogRecord`のbody。具体的な利用方法は個別Eventまたは適用するSemantic Conventionで決める |
 | `SeverityNumber` | OpenTelemetryが定義するseverityの数値体系 |
 | Exception Log | Exceptions in Logs Semantic Conventionに従ってExceptionを記録する`LogRecord` |
+| `exception.type` | Exception Logへ記録するruntime Exceptionの型 |
+| `exception.message` | Exception Logへ記録するException message。sensitive informationを含み得るため、記録可否はSemConvとは別にRAGScope側のデータ取扱規則に従う |
+| `exception.stacktrace` | Exception Logへ記録するstack trace |
 | Span Event | Spanの中で、ある時点に起きた出来事を記録するTrace側のEvent。Log Eventとは別の表現である |
 | requirement level | Semantic Conventionが属性を`Required`、`Conditionally Required`、`Recommended`などで示す区分 |
 
@@ -117,6 +126,7 @@ created: 2026-09-06
 | RAGScope固有Span | 適用可能なSemantic Conventionだけでは表せないRAGScope固有operationを追跡するSpan |
 | RAGScope固有Event | 適用できるSemantic Conventionや既存Spanだけでは後から識別できない、RAGScope固有の出来事または状態変化を表すLog Event |
 | Telemetry利用境界 | UseCaseや内部処理がOpenTelemetry SDKを直接importせずにTelemetryを記録するため、RAGScope側に置く利用境界。具体的な名前と公開APIはRS-0023の共通設計では未決定 |
+| OpenTelemetry Adapter | Telemetry利用境界の外側でOpenTelemetry SDKへ接続するAdapter。具体的なmodule / package配置や公開APIはRS-0023の共通設計では未決定 |
 | handler | CLI / API入力をUseCaseへ渡す値へ変換し、UseCaseを呼び出し、その結果をCLI表示またはHTTP responseへ変換するApplication上の境界処理 |
 | UseCase | RAGScope正本で定義されるUseCase。この用語メモではObservability固有の別定義を作らない |
 | 内部処理 | Embedding生成、Database検索、文書チャンク化など、UseCaseから呼び出され、そのUseCaseを構成する処理 |
