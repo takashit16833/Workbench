@@ -90,7 +90,7 @@ APIへ外部Trace Contextが届いた場合の扱い、entry Span、UseCase Span
 Logsは、Spanの開始・終了・attributes・Statusだけでは後から識別できない出来事や状態変化を記録するために使う。
 Spanですでに分かる事実を、Log Eventへ機械的に重複させない。
 
-ログの記録単位にはOpenTelemetry `LogRecord`を使う。OTLPとは別にRAGScopeが独自定義する共通ログJSON契約や、RAGScopeが所有するログ保存用SQLite表現は維持しない。詳細は[[RS-0023 Logs設計メモ]]で扱う。
+ログの記録単位にはOpenTelemetry `LogRecord`を使う。詳細は[[RS-0023 Logs設計メモ]]で扱う。
 
 ### Metrics
 
@@ -223,7 +223,7 @@ RS-0023で必要なのは、RAGScope ApplicationとAI推論サービスの両方
 | `hs-opentelemetry` 1.x | Traces / Metrics / Logs、W3C Trace Context Propagator、Log / Span Processor、OTLP exporter、handle / in-memory exporter | SDK 1.0.0.0。upstreamはGHC 9.12を対象に含めるが、`proto-lens`は`allow-newer`利用の注記あり |
 | OpenTelemetry Python | Traces / Metrics / Logs、Context propagation、`LoggerProvider`、`BatchLogRecordProcessor`、OTLP exporter、console exporter | Traces / MetricsはStable、LogsはDevelopment。Python 3.10以上をサポート |
 
-現時点では、RAGScopeが必要とするTrace / Logs / Context連携を成立させられない具体的なSDK制約は確認できていない。このため、OpenTelemetry Logs採用判断を撤回する根拠はない。
+現時点では、RAGScopeが必要とするTrace / Logs / Context連携を成立させられない具体的なSDK制約は確認できていない。
 
 ただし、次の2点はRAGScope固有環境でまだ実測していない。
 
@@ -244,7 +244,7 @@ RAGScope本体のObservability設計とproduction backend選定を分離する�
 | Application → AI推論サービスのTrace Context伝播 | 両コンポーネントを同じOTLP endpointへ送り、必要ならローカルOpenTelemetry Collectorのdebug exporterでTraceId / 親子関係を確認する |
 | Processor / Exporter失敗時にApplication結果が変わらないこと | テスト用または失敗するExporter / Processor境界で自動テストする |
 
-console / handle exporterの出力形式はデバッグ用であり、RAGScopeの外部JSON契約として扱わない。OpenTelemetry標準でもstdout exporterの具体出力形式は標準化されていない。
+console / handle exporterの出力形式はデバッグ用であり、RAGScopeの外部Contractとして扱わない。OpenTelemetry標準でもstdout exporterの具体出力形式は標準化されていない。
 
 ローカルCollectorは複数コンポーネントのTelemetryを同じ受信先で確認するための開発用手段であり、RAGScope ApplicationやAI推論サービスの機能責務には含めない。Tempo / Lokiなどのbackend、production Collector構成、retentionは別の外部構成設計で決める。
 
@@ -257,21 +257,6 @@ UseCaseが成功している場合、Telemetry exportに失敗してもUseCase�
 
 Telemetryの欠落をApplication処理失敗として扱う要求が追加された場合は、この判断を見直す。
 
-## 旧設計から引き継がないもの
-
-RS-0023では、OpenTelemetryへ寄せることで不要になる独自基盤を現在設計として維持しない。
-
-- RAGScope全体で共有する独立した`error_type` taxonomy
-- OpenTelemetry `LogRecord`とは別のRAGScope独自`LogRecord`
-- OpenTelemetryと並行する独自Logging Runtime / Sink / 転送基盤
-- OTLPとは別にRAGScopeが定義する共通ログJSON契約
-- RAGScopeが所有するログ保存用SQLite表現
-- Spanと同じ処理を別の識別体系で追跡するRAGScope独自の実行追跡概念
-
-ただし、JSONやSQLiteという形式自体をRAGScopeから禁止するわけではない。実験結果、評価データ、ドメインデータなどログ以外の用途は別である。
-
-過去のJSON / SQLite投影Experimentや完了済みTicketは、当時の作業・検証履歴として書き換えない。RS-0023反映後の現在仕様の根拠や必須Contractとしては使用しない。
-
 ## 正本へ反映するときの責務分離
 
 Workbenchには今回の検討結果、確認した根拠、実装前に再確認する事項を残す。正本へ反映するときは、このNoteをそのまま正本化せず、情報の責務に応じて分ける。
@@ -279,12 +264,10 @@ Workbenchには今回の検討結果、確認した根拠、実装前に再確�
 | 情報 | 正本反映時の配置 |
 |---|---|
 | 現在採用するTrace / Logs / Metricsの責務・境界・契約と、理解に必要な最小限の理由 | `design/`の関係する設計書 |
-| 1 Invocation = 1独立Trace、共通`error_type`廃止、独自JSON / SQLiteログ契約廃止など、複数案比較と変更影響を伴う重要判断 | ADR。RS-0023全体を1つの後続ADRとしてADR-0005をsupersedeするか、判断を分けるかは正本反映作業で文書管理規約に従って決める |
-| 正本の更新・削除、既存実装移行、Contract更新などの作業範囲と完了条件 | RS-0023と後続Ticket |
+| 複数案比較と変更影響を伴う重要判断 | ADR |
+| 正本の更新、実装、Contract更新などの作業範囲と完了条件 | RS-0023と後続Ticket |
 | GHC / Cabal / `hs-opentelemetry`、Python SDK versionなどコンポーネント固有の採用可能性・実装詳細 | 各コンポーネントの設計、Ticket、コード、設定、テスト |
-| 実際に行ったSDK / exporter / projection等の検証結果 | 必要ならExperiment |
-
-正本反映時には、現在`error_type`、独自ログ外部表現、JSON Schema / SQLite表現を現在契約として参照する設計索引、システムアーキテクチャ、logging設計、Milestone / Epic / 未完了Ticket、Contract / fixtureを横断して更新する。完了済みTicketや過去のExperimentは当時の履歴として書き換えない。
+| 実際に行ったSDK / exporter等の検証結果 | 必要ならExperiment |
 
 ## このドラフトでは決めないこと
 
@@ -306,7 +289,6 @@ Haskellでtyped failureをTelemetry向けの値へ変換する位置を決める
 - Telemetry AdapterがApplication側で定義されたPortやtyped failure型へ依存するかどうかは、この共通設計で先に固定しない。
 
 package / module構成はTelemetry利用境界を決めた後に定め、先にpackageを分割してから責務を割り当てない。
-現在`main`では`ragscope` main libraryがprivate sublibrary `ragscope-logging`へ依存しているが、この既存構造を新しいTelemetry変換処理の配置を決める前提にはしない。
 
 ## 参考
 
