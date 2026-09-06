@@ -31,9 +31,10 @@ created: 2026-09-06
 - 正本が要求する評価データごとの性能値は実験結果へ保存し、OpenTelemetry Metricを個別実行値の保存先にしない。
 - 検索、reranking、回答生成の処理全体の時間は実験結果へ保存し、Trace / Spanで1実行の内訳を確認する。検索 / reranking用のRAGScope固有Metricは設けない。
 - DB / HTTP / GenAIについて適用可能な標準Metricがある場合は利用する。
-- GenAI client operationの時間と、そのoperationを運ぶHTTP requestの時間は同一視しない。両方を計装する場合は論理operationとtransportとして別に観測する。
+- GenAI client operationの時間と、そのoperationを運ぶHTTP requestの時間は同一視しない。**両方を計装する場合**は論理operationとtransportとして別に観測する。
 - TTFTと生成token数は評価データごとの実行結果から取得できる形で保持し、適用可能な標準GenAI Metricを併用する。
 - RAGScope固有Metricはこの共通設計では0個とし、Metric attributesへ実験ID・評価データID・文書IDなどのhigh-cardinality値を入れない。
+- HTTP / Databaseの採用MetricはStable、現在参照するGenAI MetricsはDevelopmentであり、同じstabilityとして固定しない。
 
 ## 性能値とTelemetryをどう分けるか
 
@@ -62,7 +63,7 @@ flowchart LR
 | `REQ-NF-PERF-001` | 検索処理時間 | 実験結果 + Span | 独自Metricなし |
 | `REQ-NF-PERF-001` / `REQ-EVAL-004` | reranking処理時間 | 実験結果 + Span | 独自Metricなし |
 | `REQ-NF-PERF-001` / `REQ-NF-PERF-002` | 回答生成時間 | 実験結果 + Span | GenAI / HTTP標準Metricを内訳観測に併用 |
-| `REQ-NF-PERF-002` | TTFT | 実験結果 | `gen_ai.server.time_to_first_token` |
+| `REQ-NF-PERF-002` | TTFT | 実験結果 | `gen_ai.server.time_to_first_token`を適用可能なら使用 |
 | `REQ-NF-PERF-002` | 生成token数 | 実験結果 | `gen_ai.client.token.usage`を適用可能なら使用 |
 | `REQ-EVAL-007` | 処理時間 / 成功率 / timeout率等 | 実験結果を集計 | Telemetry側は適用SemConvがある値だけ利用 |
 
@@ -108,7 +109,7 @@ RAGScope Applicationは検索候補をAI推論サービスへ渡し、並べ替�
 
 ### 回答生成
 
-回答生成では、Applicationから見た処理全体、GenAI client operation、HTTP transport、AI推論サービス側request処理を区別する。
+回答生成では、Applicationから見た処理全体、GenAI client operation、HTTP transport、AI推論サービス側request処理を区別する。下図は**各層を計装する場合**の測定境界を示す。
 
 ```mermaid
 flowchart LR
@@ -126,16 +127,16 @@ flowchart LR
 | 時間 | 意味 | 扱い |
 |---|---|---|
 | 回答生成処理時間 | Applicationが回答生成処理を開始してから結果を得るまでの時間 | 実験結果へ保存 |
-| `gen_ai.client.operation.duration` | Applicationから見た論理的なGenAI client operationの所要時間 | 適用可能なら標準Metric |
+| `gen_ai.client.operation.duration` | Applicationから見た論理的なGenAI client operationの所要時間 | 適用可能でGenAI client operationを計装する場合の標準Metric |
 | `http.client.request.duration` | AI推論サービスへ送るHTTP requestのtransport所要時間 | HTTP計装を行う場合の標準Metric |
-| `gen_ai.server.request.duration` | AI推論サービス側のGenAI request処理時間 | 適用可能なら標準Metric |
+| `gen_ai.server.request.duration` | AI推論サービス側のGenAI request処理時間 | 適用可能でserver側GenAI Metricを計装する場合の標準Metric |
 
 これらは包含しうるが測定境界が異なる。`gen_ai.client.operation.duration`と`http.client.request.duration`を同じ時間の別名として扱わず、一方の値から他方の値を導出しない。AI推論サービス側のMetricもApplication側のMetricから導出しない。
 
 ## TTFTをどう扱うか
 
-OpenTelemetry GenAI Semantic Conventionsには、AI serverが最初のtokenを生成するまでを表す`gen_ai.server.time_to_first_token`がある。
-これはRAGScopeの`REQ-NF-PERF-002`にあるTTFTを観測するための標準Metricとして利用する。
+現在のOpenTelemetry GenAI Semantic Conventionsには、AI serverが最初のtokenを生成するまでを表す`gen_ai.server.time_to_first_token`がある。
+RAGScopeでこれを計装できる場合は、`REQ-NF-PERF-002`にあるTTFTを集約観測する標準Metricとして利用する。
 
 一方、client側の`gen_ai.client.operation.time_to_first_chunk`は、streaming responseの**最初のchunkを受信するまで**を表す。
 最初のtoken生成時間とは測定境界が異なるため、同じ値として扱わない。
@@ -144,7 +145,7 @@ OpenTelemetry GenAI Semantic Conventionsには、AI serverが最初のtokenを�
 |---|---|
 | TTFTの計測 | AI推論サービス側で最初のtoken生成までの時間を計測する |
 | 実験結果 | 評価データごとの実行結果から取得できる形で保持する |
-| OTel Metric | `gen_ai.server.time_to_first_token` |
+| OTel Metric | `gen_ai.server.time_to_first_token`を適用可能なら利用する |
 | `gen_ai.client.operation.time_to_first_chunk` | streaming採用時のclient観測値として別に扱う |
 
 > [!info]- Applicationへの受け渡し
@@ -193,18 +194,19 @@ Metricは複数の観測値を同じ属性集合で集約するため、実行�
 したがって、**RS-0023の共通設計ではRAGScope固有Metricを0個とする**。
 対象機能で必要な集計・比較・監視が具体化し、Trace / 実験結果 / 標準Metricではその用途を満たせないことが確認された場合だけ、対象機能の設計で独自Metricを定義する。
 
-## Semantic Conventionsのstability（注意）
+## Semantic Conventionsのstability
 
-2026-09-06確認時点では、OpenTelemetry core Semantic Conventionsは1.44.0で、GenAI Semantic Conventionsは別リポジトリのDevelopment規約として管理されている。
-確認したGenAI manifestは`gen-ai-dev/1.42.0-dev`で、core Semantic Conventions 1.44.0へ依存している。
+2026-09-06確認時点で、OpenTelemetry core Semantic Conventionsの最新releaseは1.44.0である。GenAI Semantic Conventionsは専用リポジトリへ分離され、現在もDevelopmentとして管理されている。
 
 このため、`gen_ai.*`の現在のMetric名・attributesを**RAGScope独自の恒久契約へコピーしない**。
 実装時には、採用するOpenTelemetry / instrumentation versionと対象Conventionのstabilityを再確認する。
 
-現在確認した代表的なGenAI Metrics:
+このノートで参照する代表的なMetricsは次のとおりである。
 
 | Metric | instrument | unit | stability |
 |---|---|---|---|
+| `http.client.request.duration` | Histogram | `s` | Stable |
+| `db.client.operation.duration` | Histogram | `s` | Stable |
 | `gen_ai.client.operation.duration` | Histogram | `s` | Development |
 | `gen_ai.client.token.usage` | Histogram | `{token}` | Development |
 | `gen_ai.client.operation.time_to_first_chunk` | Histogram | `s` | Development |
@@ -212,7 +214,7 @@ Metricは複数の観測値を同じ属性集合で集約するため、実行�
 | `gen_ai.server.time_to_first_token` | Histogram | `s` | Development |
 | `gen_ai.server.time_per_output_token` | Histogram | `s` | Development |
 
-HTTPの`http.client.request.duration`とDatabaseの`db.client.operation.duration`はStableなSemantic Conventionとして利用する。GenAI Metricsとはstabilityが異なるため、同じ前提で固定しない。
+HTTP / Databaseの文書全体にはMixedなstabilityの項目も存在するため、「HTTPまたはDatabaseだからすべてStable」とは扱わない。このノートで採用候補としている`http.client.request.duration`と`db.client.operation.duration`はStableであり、GenAI Metricsとはstabilityが異なる。
 
 ## このMetrics共通設計では決めないこと
 
@@ -234,5 +236,5 @@ HTTPの`http.client.request.duration`とDatabaseの`db.client.operation.duration
 - [OpenTelemetry Semantic Conventions](https://opentelemetry.io/docs/specs/semconv/)
 - [OpenTelemetry GenAI Semantic Conventions](https://github.com/open-telemetry/semantic-conventions-genai)
 - [OpenTelemetry HTTP metrics](https://opentelemetry.io/docs/specs/semconv/http/http-metrics/)
-- [OpenTelemetry Database metrics](https://opentelemetry.io/docs/specs/semconv/database/database-metrics/)
+- [OpenTelemetry Database metrics](https://opentelemetry.io/docs/specs/semconv/db/database-metrics/)
 - [hs-opentelemetry](https://github.com/iand675/hs-opentelemetry)
