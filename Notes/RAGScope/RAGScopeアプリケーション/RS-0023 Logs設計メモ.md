@@ -11,6 +11,7 @@ created: 2026-09-06
 > [!note]
 > これはRS-0023を正本へ反映する前にレビューするための**Workbench上の設計ドラフト**であり、RAGScopeの正本ではない。
 > Observability全体は[[RS-0023 Observability設計メモ]]、Trace側の失敗時表現は[[RS-0023 Trace設計メモ]]を参照する。
+> このノートで使うOpenTelemetry用語とRAGScope / RS-0023側の用語は[[RS-0023 Observability用語メモ]]を参照する。
 
 ## このノートが答える問い
 
@@ -47,23 +48,6 @@ attempt、duration、最終失敗などをSpanや既存Semantic Conventionから
 一方、retryを選択した、fallbackへ切り替えた、これ以上retryしないと決定した、などの状態変化をSpanから後で識別できない場合は、その状態変化をEventとして記録する候補になる。
 
 つまり、Logsは「処理があったこと」を何でも記録する場所ではない。**Spanでは残らない、ある時点の意味ある出来事を残す**ために使う。
-
-## 先に押さえる用語
-
-Trace、Span、operation、Span Status、Trace Context、UseCase、内部処理、typed failure、unexpected同期Exceptionは[[RS-0023 Trace設計メモ]]の定義に従う。
-
-Logs固有で使う用語は次のとおりである。
-
-| 用語 | 意味 |
-|---|---|
-| `LogRecord` | OpenTelemetry Logsで1件のログを表すデータ |
-| Event | ある時点で発生した出来事または状態変化を表すLog Event |
-| `EventName` | Eventの種類を識別する名前。実行ごとに変わる値は含めない |
-| attributes | Eventに付随する機械可読な値 |
-| `Body` | `LogRecord`のbody。具体的な利用方法は個別Eventまたは適用SemConvで決める |
-| `SeverityNumber` | OpenTelemetryが定義するseverityの数値体系 |
-| Exception Log | Exceptions in Logs Semantic Conventionに従ってExceptionを記録する`LogRecord` |
-| requirement level | Semantic Conventionが属性を`Required`、`Conditionally Required`、`Recommended`などで示す区分 |
 
 ## SpanとLog Eventをどう分担するか
 
@@ -263,6 +247,7 @@ RS-0023を正本へ反映するときは、少なくとも次を確認する。
 
 ## 参考
 
+- [[RS-0023 Observability用語メモ]]
 - [OpenTelemetry — Logs Data Model](https://opentelemetry.io/docs/specs/otel/logs/data-model/)
 - [OpenTelemetry — Events](https://opentelemetry.io/docs/specs/semconv/general/events/)
 - [OpenTelemetry — Naming](https://opentelemetry.io/docs/specs/semconv/general/naming/)
