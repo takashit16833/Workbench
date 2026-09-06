@@ -72,7 +72,7 @@ RAGScopeの1回の実行をどのようなTrace / Spanとして追跡し、成�
 
 つまり、entry Spanがhandlerの代わりに処理を行うわけではない。**1つのhandler実行がentry Spanの計測範囲の中で動き、その途中でUseCase Spanが開始・終了する**。
 
-`1 Invocation = 1 Trace`を保つため、RAGScope APIのentry Spanは外部から受信したTrace Contextをparentにせず、新しいTraceのroot Spanとして開始する。RAGScope ApplicationからAI推論サービスを呼び出すときは、このTrace内のHTTP client SpanのTrace Contextを伝播し、AI推論サービス側のHTTP SERVER Spanへ同じTraceを継続する。
+`1 Invocation = 1 Trace`を保つため、RAGScope APIのentry Spanは外部から受信したTrace Contextをparentにせず、新しいTraceのroot Spanとして開始する。RAGScope ApplicationからAI推論サービスを呼び出すときは、Application側のHTTP client SpanからTrace Contextを伝播し、AI推論サービス側のHTTP SERVER Spanへ同じTraceを継続する。
 
 RAGScope API自体を上流システムの分散Traceへ参加させる要求が追加された場合は、受信したTrace Contextの扱いと`1 Invocation = 1 Trace`を一緒に見直す。
 
@@ -97,7 +97,8 @@ flowchart TB
                         direction TB
                         UC["UseCase実行"]
                         UC --> DB["DB client Span"]
-                        UC --> AI_REQ["HTTP client Span"]
+                        UC --> GENAI["GenAI client Span<br>（適用可能な場合）"]
+                        GENAI --> AI_REQ["HTTP client Span"]
                     end
 
                     HIN -->|"UseCaseを呼び出す"| UC
@@ -119,7 +120,11 @@ flowchart TB
 
 図の`handler`は1つであり、その実行の中に「入力変換 → UseCase呼び出し → 結果変換」がある。`UseCase Span`をhandlerの内側に描いているのは、handlerがUseCaseを呼び出して制御が戻るまで待つ実行上の包含関係を示すためであり、UseCaseそのものをhandlerの責務に含めるという意味ではない。
 
+図のAI通信は、Embedding生成やgenerationなどApplication側でGenAI Semantic Conventionsが適用できるoperationの例を示している。GenAI client SpanはモデルまたはGenAIサービスへの**論理的な依頼**、HTTP client Spanはその依頼を運ぶ**HTTP transport**を表すため、同じSpanを二重に描いているわけではない。両方を記録する場合は、GenAI client SpanのchildとしてHTTP client Spanを置く。適用可能なGenAI SpanがないoperationではGenAI client Spanを作らず、HTTP client SpanをUseCase Span配下の通信operationとして記録する。
+
 AI推論サービス側のHTTP SERVER Spanは別コンポーネントで実行されるため、RAGScope Applicationのboxとは分けて描いている。ただしTrace上では、Application側のHTTP client SpanからTrace Contextを引き継ぐremote childであり、entry Spanの子孫として同じTraceに属する。図でコンポーネントのboxを分けていることは、Trace上の親子関係が切れることを意味しない。
+
+現行のGenAI Semantic Conventionsではclient側のinference / embeddings Spanは定義されているが、AI推論サービス側の汎用`gen_ai.inference.server` Spanは確認できない。そのため、AI推論サービス側へRAGScope独自のGenAI server Spanを補って描かない。将来、適用可能なserver側Conventionが成立した場合は、その時点のConventionを優先する。
 
 handlerの責務とUseCaseとの関係は[[RS-0023 Observability設計メモ#handler]]も参照する。
 UseCaseが呼ばれる前にhandlerで終了してもInvocationは発生するためTraceには残るが、UseCase Spanは発生しない。
@@ -136,8 +141,8 @@ Spanは、開始・終了、所要時間、失敗、親子関係を他のSpanと
 | handler | 原則Spanにしない | entry Spanの内部処理 |
 | UseCase | 1 UseCase実行 = 1 UseCase Span | RAGScope固有Span。必要な内部operationはchild Spanとして追跡する |
 | PostgreSQL | database client operation = DB client Span | Database / PostgreSQL Semantic Conventions |
-| AI推論サービスへのHTTP通信 | Application側のHTTP client Span + AI推論サービス側のHTTP SERVER Span | HTTP Semantic Conventions。Trace Contextを伝播して同じTraceへ接続する |
-| Embedding / generation | 適用可能なGenAI Spanモデルを優先 | 同義のRAGScope固有Spanを重複させない |
+| Embedding / generation | ApplicationからモデルまたはGenAIサービスへの1 logical client operation = GenAI client Span | 適用可能なGenAI Semantic Conventionsを優先する。HTTPを使う場合、そのtransport Spanとは別operationとして扱う |
+| AI推論サービスへのHTTP通信 | HTTP request = Application側HTTP client Span + AI推論サービス側HTTP SERVER Span | HTTP Semantic Conventions。Trace Contextを伝播して同じTraceへ接続する。GenAI client Spanがある場合、HTTP client Spanはそのchild |
 | RAGScope内部処理 | 開始・終了、所要時間、失敗、親子関係を他のSpanと分けて確認する必要がある場合だけ | 必要ならRAGScope固有Span |
 | retry attempt | 既存計装 / SemConvでattemptを追跡できる場合は追加しない | 追跡できない場合は対象retry設計で判断 |
 
@@ -231,4 +236,5 @@ Logを生成するかどうかはSpan Statusとは別に判断する。[[RS-0023
 - [OpenTelemetry — Recording errors](https://opentelemetry.io/docs/specs/semconv/general/recording-errors/)
 - [OpenTelemetry — Semantic conventions for HTTP spans](https://opentelemetry.io/docs/specs/semconv/http/http-spans/)
 - [OpenTelemetry — Semantic conventions for CLI programs](https://opentelemetry.io/docs/specs/semconv/cli/cli-spans/)
+- [OpenTelemetry GenAI Semantic Conventions](https://github.com/open-telemetry/semantic-conventions-genai)
 - [hs-opentelemetry](https://github.com/iand675/hs-opentelemetry)
