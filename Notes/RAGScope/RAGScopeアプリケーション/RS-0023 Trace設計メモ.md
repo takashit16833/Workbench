@@ -59,7 +59,7 @@ RAGScopeの1回の実行をどのようなTrace / Spanとして追跡し、成�
 - 1 UseCase実行につきUseCase Spanを1つ作る。DBアクセス、AI通信など、開始・終了・所要時間・失敗・親子関係をUseCase Spanと分けて確認する必要がある内部operationはchild Spanとして表現する。
 - handlerは原則として独立Spanにしない。
 - DB / HTTP / GenAIなど適用可能なSemantic Conventionsがある領域では、その表現を優先する。
-- Span Statusは各operation自身の最終結果で決め、child Spanのfailureを親Spanへ自動伝播しない。
+- Span Statusは、SemConvで規則が定義されるSpanはその規則に従い、RAGScope固有Spanはoperation自身の最終結果で決める。child Spanのfailureを親Spanへ自動伝播しない。
 - async interruption / cancellationは一律分類せず、実際の中断源と対象operationが確定した時点でStatusを決める。
 
 ## RAGScopeの1回の実行はTrace上どう見えるか
@@ -148,14 +148,22 @@ RAGScopeの実行追跡にはOpenTelemetryのSpanを使用し、Spanと同じ処
 
 ## 成功・失敗をどう表すか
 
+Span Statusと`error.type`は、そのSpanが表すoperationを定義する規則から決める。
+HTTP、CLI、Database、GenAIなど、適用するSemantic ConventionがStatusや`error.type`を定義しているSpanでは、その規則を優先する。RAGScope固有Spanへ、SemConv対象SpanのStatus規則を上書きして適用しない。
+
+たとえばAPIのentry SpanはHTTP SERVER SpanなのでHTTP Semantic Conventionsに従う。HTTP 4xx responseはSERVER Spanでは通常`Unset`のままであり、5xx responseなどHTTP operation自身がエラーとなる場合に`Error`となる。CLIのentry SpanであるExecution (callee) Spanは、`process.exit.code`が0以外なら`Error`となる。このため、UseCase Spanが`Error`でもentry Spanが必ず`Error`になるわけではない。
+
+RAGScope固有Spanについては、operation自身の最終結果を次のように表す。
+
 | ケース | Span Status | `error.type` | その他 |
 |---|---|---|---|
 | final success | `Unset` | なし | — |
 | final typed failure | `Error` | RAGScope側で分類が必要な場合は、そのoperationを定義する設計で安定した機械可読な値を定める | failure詳細値は失わない |
-| intermediate failure → recovery成功 | 親Spanは`Unset` | 親Spanには不要 | retry / fallbackで回復したことだけで親SpanをErrorにしない |
-| child Span failure / parent success | 親Spanは`Unset` | 親Spanへ自動伝播しない | 各operation自身の結果で判断 |
+| intermediate failure → recovery成功 | `Unset` | なし | retry / fallbackで回復したことだけで、このSpanをErrorにしない |
 | unexpected同期Exceptionがescape | `Error` | exception class相当 | original Exceptionをrethrow |
 | async interruption / cancellation | 対象operationでの中断の意味に従う | 一律規則なし | cleanup / Telemetry後もoriginal exceptionをrethrow |
+
+child Spanのfailureは親Spanへ自動伝播しない。親がRAGScope固有Spanなら親operation自身の最終結果で判断し、親がSemConv対象SpanならそのSemConvの規則で判断する。
 
 Logを生成するかどうかはSpan Statusとは別に判断する。[[RS-0023 Logs設計メモ]]を参照する。
 
@@ -195,14 +203,14 @@ Logを生成するかどうかはSpan Statusとは別に判断する。[[RS-0023
 >
 > `typed failure`という用語だけでは、Haskellで`Either`、Exception、その他のどの型・機構を使って表現するかを決めない。
 
-> [!info]- Span Statusを最終結果で決める理由
+> [!info]- RAGScope固有SpanのStatusを最終結果で決める理由
 > OpenTelemetryのRecording errorsでは、retryや内部処理でerrorが起きても、最終的にoperationが成功した場合は、囲っているoperationをerrorとして記録しない。
-> RAGScopeのUseCase設計でも、内部処理が失敗しても最終結果を成立させればUseCase成功であるため、この意味をSpan Statusへ反映する。
+> RAGScopeのUseCase設計でも、内部処理が失敗しても最終結果を成立させればUseCase成功であるため、UseCase SpanなどRAGScope固有Spanにはこの意味を反映する。
 >
 > 対象機能固有のfailureだけでは複数operationを横断して必要な集計・契約を成立させられない要求が追加された場合は、共通分類の必要性を再評価する。
 
 > [!info]- unexpected同期Exception
-> RAGScopeが追跡するoperation境界からunexpectedな同期Exceptionがescapeする場合は、Spanを`Error`とし、`error.type`へexception class相当を設定してoriginal Exceptionをrethrowする。
+> RAGScope固有operationの境界からunexpectedな同期Exceptionがescapeする場合は、そのSpanを`Error`とし、`error.type`へexception class相当を設定してoriginal Exceptionをrethrowする。
 >
 > Exception Logの記録と重複防止は[[RS-0023 Logs設計メモ]]で扱う。
 > 親operation自身が最終的に失敗した場合に親SpanをErrorとすることは、Exception Logの重複防止とは別に判断する。
