@@ -62,6 +62,8 @@ Collector / Tempo / Lokiなどの外部構成は、このノートでは採用�
 
 ## Observabilityの基本方針
 
+このドラフトでは、OpenTelemetryで扱うTrace / Logs / Metricsをまとめて**signal**と呼ぶ。
+
 TelemetryはRAGScopeで実際に行われた処理を観測し、その結果をTrace / Logs / Metricsとして記録する。
 Applicationの処理内容や制御方針はTelemetryへ移さない。
 
@@ -99,7 +101,7 @@ OpenTelemetry SDK相当をRAGScopeで実装すると、Context管理、batching�
 
 - `hs-opentelemetry` 1.xの提供APIでは、RAGScopeが必要とするTrace / Logs / Context / Processor / Exporterの動作をAdapterから成立させられない
 - 採用するGHC / dependency構成で解消できない互換性問題がある
-- SDKのruntime挙動によってApplication本体の正しさを維持できない
+- SDKのruntime例外・終了処理・export処理によってUseCase結果またはApplicationの処理制御が変更される
 
 ### Semantic Conventionsを優先する
 
