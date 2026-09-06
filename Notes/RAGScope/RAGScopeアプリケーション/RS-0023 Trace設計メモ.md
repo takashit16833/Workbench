@@ -66,11 +66,11 @@ RAGScopeの1回の実行をどのようなTrace / Spanとして追跡し、成�
 
 `handler`と`entry Span`は同じ種類の概念ではない。
 
-- `handler`は、CLI / APIとUseCaseの間で、入力変換・UseCase呼び出し・結果変換を行うApplication上の境界処理である。
+- `handler`は、CLI / APIとUseCaseの間で、入力変換・UseCase呼び出し・結果変換を行うApplication上の**1つの境界処理**である。
 - `entry Span`は、その1 InvocationをTrace上で観測するためのOpenTelemetryのSpanである。APIではHTTP SERVER Span、CLIではExecution (callee) Spanがこの役割を担う。
-- `UseCase Span`は、handlerから呼び出されたUseCase実行を観測するchild Spanである。
+- `UseCase Span`は、そのhandlerが呼び出したUseCase実行を観測するchild Spanである。
 
-つまり、entry Spanがhandlerの代わりに処理を行うわけではない。**handlerという実際の処理がentry Spanの計測範囲の中で動き、その途中でUseCase Spanが開始・終了する**。
+つまり、entry Spanがhandlerの代わりに処理を行うわけではない。**1つのhandler実行がentry Spanの計測範囲の中で動き、その途中でUseCase Spanが開始・終了する**。
 
 ```mermaid
 flowchart TB
@@ -81,17 +81,21 @@ flowchart TB
 
         subgraph ENTRY["entry Span<br>API: HTTP SERVER Span<br>CLI: Execution (callee) Span"]
             direction TB
-            HIN["handler（Spanではない）<br>入力をUseCaseへ渡す値へ変換"]
 
-            subgraph UCSPAN["UseCase Span"]
+            subgraph HANDLER["handler（1つの境界処理 / Spanではない）"]
                 direction TB
-                UC["UseCase実行"]
-                UC --> DB["DB client Span"]
-                UC --> AI_REQ["AI通信 client Span"]
-            end
+                HIN["入力をUseCaseへ渡す値へ変換"]
 
-            HIN -->|"UseCaseを呼び出す"| UC
-            UC --> HOUT["handler（Spanではない）<br>結果をCLI表示 / HTTP responseへ変換"]
+                subgraph UCSPAN["UseCase Span"]
+                    direction TB
+                    UC["UseCase実行"]
+                    UC --> DB["DB client Span"]
+                    UC --> AI_REQ["AI通信 client Span"]
+                end
+
+                HIN -->|"UseCaseを呼び出す"| UC
+                UC --> HOUT["結果をCLI表示 / HTTP responseへ変換"]
+            end
         end
 
         AI_REQ -->|"Trace Context"| AI_SVC["AI推論サービス側 Span"]
@@ -101,7 +105,7 @@ flowchart TB
     HOUT --> OUTPUT["CLI表示 / HTTP response"]
 ```
 
-この図では、handlerの2つの箱はSpanではなく、entry Spanの中で実際に行われる境界処理を表す。UseCaseそのものはhandlerに含めず、UseCase実行だけをchildのUseCase Spanとして追跡する。AI推論サービス側のSpanはRAGScope Application側のentry Spanの外側にあるが、Trace Contextを引き継いで同じTraceへ参加する。
+図の`handler`は1つであり、その実行の中に「入力変換 → UseCase呼び出し → 結果変換」がある。`UseCase Span`をhandlerの内側に描いているのは、handlerがUseCaseを呼び出して制御が戻るまで待つ実行上の包含関係を示すためであり、UseCaseそのものをhandlerの責務に含めるという意味ではない。AI推論サービス側のSpanはRAGScope Application側のentry Spanの外側にあるが、Trace Contextを引き継いで同じTraceへ参加する。
 
 handlerの責務とUseCaseとの関係は[[RS-0023 Observability設計メモ#handler]]も参照する。
 UseCaseが呼ばれる前にhandlerで終了してもInvocationは発生するためTraceには残るが、UseCase Spanは発生しない。
