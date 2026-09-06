@@ -62,7 +62,7 @@ RAGScopeの1回の実行をどのようなTrace / Spanとして追跡し、成�
 - handlerは原則として独立Spanにしない。
 - DB / HTTP / GenAIなど適用可能なSemantic Conventionsがある領域では、その表現を優先する。
 - Span Statusは、SemConvで規則が定義されるSpanはその規則に従い、RAGScope固有Spanはoperation自身の最終結果で決める。child Spanのfailureを親Spanへ自動伝播しない。
-- feature / UseCase固有のtyped failureを失敗意味の正本とし、Telemetryでは対象operationの規則に従って`error.type`へmappingする。RAGScope全体で共有する独立した`error_type` taxonomyは設けない。
+- feature / UseCase固有のtyped failureを失敗意味の正本とし、RAGScope固有Spanがfinal failureで終了する場合はcurrent General Recording Errors guidanceに従って`error.type`へmappingする。RAGScope全体で共有する独立した`error_type` taxonomyは設けない。
 - async interruption / cancellationは一律分類せず、実際の中断源と対象operationが確定した時点でStatusを決める。
 
 ## Trace境界をどう決めるか
@@ -181,12 +181,12 @@ HTTP、CLI、Database、GenAIなど、適用するSemantic ConventionがStatus�
 
 たとえばAPIのentry SpanはHTTP SERVER SpanなのでHTTP Semantic Conventionsに従う。HTTP 4xx responseはSERVER Spanでは通常`Unset`のままであり、5xx responseなどHTTP operation自身がエラーとなる場合に`Error`となる。CLIのentry SpanであるExecution (callee) Spanは、`process.exit.code`が0以外なら`Error`となる。このため、UseCase Spanが`Error`でもentry Spanが必ず`Error`になるわけではない。
 
-RAGScope固有Spanについては、operation自身の最終結果を次のように表す。
+RAGScope固有Spanについては、operation自身の最終結果を次のように表す。2026-09-06時点のGeneral Recording ErrorsはDevelopmentだが、failed operationではSpan Statusを`Error`にし`error.type`を設定することをSHOULDとしているため、このcurrent guidanceに従う。実装時には対象versionを再確認し、現在のDevelopment規則の細部をRAGScope独自の恒久契約として固定しない。
 
 | ケース | Span Status | `error.type` | その他 |
 |---|---|---|---|
 | final success | `Unset` | なし | — |
-| final typed failure | `Error` | RAGScope側で分類が必要な場合は、そのoperationを定義する設計でtyped failureから安定した機械可読な値へmappingする | failure詳細値は失わない |
+| final typed failure | `Error` | typed failureから、そのoperationに対応する予測可能で低カーディナリティな値へmappingする | failure詳細値は失わない |
 | intermediate failure → recovery成功 | `Unset` | なし | retry / fallbackで回復したことだけで、このSpanをErrorにしない |
 | unexpected同期Exceptionがescape | `Error` | exception class相当 | original Exceptionをrethrow |
 | async interruption / cancellation | 対象operationでの中断の意味に従う | 一律規則なし | cleanup / Telemetry後もoriginal exceptionをrethrow |
@@ -206,7 +206,7 @@ Trace設計が担当するのは、このtyped failureを**そのSpanが表すop
 | feature / UseCase固有typed failure | 失敗意味の正本とする | failureの意味・詳細値・原因を、その処理を所有する設計と型で保持する |
 | RAGScope共通`ErrorCategory` / `ErrorType` / `error_type` taxonomy | 設けない | typed failureと別の共通分類を置かなければ成立しない現在要求を確認できず、対応規則の二重管理とfeature間の不要な結合を作る |
 | `ErrorClassifier failure` / 専用error package | 共通前提として設けない | 全operationを横断するtaxonomyを中央packageへ集約する要求がない |
-| RAGScope固有Spanの`error.type` | 必要なoperationだけtyped failureからmappingする | `error.type`はTelemetry boundaryの表現でありfailure modelそのものではない |
+| RAGScope固有Spanの`error.type` | final failureではcurrent General Recording Errors guidanceに従い、対象operationのtyped failureからmappingする | `error.type`はTelemetry boundaryの表現でありfailure modelそのものではない |
 | SemConv対象Spanの`error.type` | 適用SemConvに従う | HTTP / Database / GenAI等のoperation固有規則をRAGScope分類で上書きしない |
 | `OperationFailure`で分類を上位Spanまで伝播する仕組み | 設けない | 各Spanは自身のoperationの最終結果と適用規則からStatus / `error.type`を決める |
 | `AsyncException`を一律にcancellation / Errorへ分類する規則 | 設けない | constructorだけでは中断の意味を特定できない |
@@ -223,7 +223,7 @@ Application / AI推論サービス間で共有するfailure codeが通信契約�
 | HTTP client / server Span | Stable | API entry / HTTP transportへ適用する |
 | SQL / PostgreSQL database client Span | Stable | PostgreSQL operationへ適用する |
 | CLI Execution (callee) Span | Development | CLI entry Spanへ適用するが、現在の細部をRAGScope独自の恒久契約へコピーしない |
-| General Recording Errors | Development | RAGScope固有Spanのerror記録を決めるguidanceとして利用し、stabilityを明示する |
+| General Recording Errors | Development | RAGScope固有Spanのerror記録を決めるcurrent guidanceとして利用し、実装時に対象versionを再確認する |
 | GenAI Semantic Conventions | Development | 適用可能なlogical operationに利用するが、現在のSpan名・attributes等をRAGScope独自契約へ固定しない |
 
 ## このTrace共通設計では決めないこと
@@ -244,7 +244,7 @@ Application / AI推論サービス間で共有するfailure codeが通信契約�
 
 > [!info]- typed failureの考え方
 > 具体failureの意味は、そのfailureを定義するUseCase・対象機能・operationの設計が定める。
-> RAGScope固有Spanが表すoperationが最終的に失敗し、RAGScope側で`error.type`を付ける必要がある場合は、そのoperationを定義する設計でtyped failureから安定した機械可読な分類値へのmappingを定める。
+> RAGScope固有Spanが表すoperationが最終的に失敗した場合は、current General Recording Errors guidanceに従い、そのoperationを定義する設計でtyped failureから予測可能で低カーディナリティな`error.type`へのmappingを定める。
 >
 > 具体failureの詳細値とTelemetry用の分類は分離する。
 > `error.type`を得るために具体failureそのものを共通エラーへ置換せず、failureが保持する原因・詳細値を失わない。
@@ -252,7 +252,7 @@ Application / AI推論サービス間で共有するfailure codeが通信契約�
 > 分類規則が必要なら、実行状態やTrace Contextへ依存しない純粋な変換を第一候補とする。
 >
 > HTTP、Database、GenAIなど適用可能なSemantic Conventionや計装が`error.type`を定める領域では、同義のRAGScope独自分類を重複して作らない。
-> すべてのtyped failureへRAGScope独自`error.type`値を要求しない。
+> すべてのtyped failureに共通`error_type`や共通taxonomyを持たせない。RAGScope固有Spanがfinal failureになる場合に、そのSpanが表すoperationに対応するTelemetry mappingを定める。
 >
 > `typed failure`という用語だけでは、Haskellで`Either`、Exception、その他のどの型・機構を使って表現するかを決めない。
 
