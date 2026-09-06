@@ -541,21 +541,9 @@
   "enableDebugLogging": false,
   "lastSeenVersion": "4.12.3",
   "pomodoroState": {
-    "isRunning": true,
+    "isRunning": false,
     "timeRemaining": 1500,
-    "currentSession": {
-      "id": "1788656378851",
-      "taskPath": "Tasks/RS-0023 OpenTelemetry Logsを前提に実行追跡・構造化ログアーキテクチャを再設計する.md",
-      "startTime": "2026-09-06T09:59:38.851+09:00",
-      "plannedDuration": 25,
-      "type": "work",
-      "completed": false,
-      "activePeriods": [
-        {
-          "startTime": "2026-09-06T09:59:38.851+09:00"
-        }
-      ]
-    }
+    "nextSessionType": "work"
   },
   "lastPomodoroDate": "2026-09-05",
   "pomodoroHistory": [
@@ -4717,6 +4705,35 @@
         {
           "startTime": "2026-09-06T09:51:59.635+09:00",
           "endTime": "2026-09-06T09:56:59.635+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1788656378851",
+      "startTime": "2026-09-06T09:59:38.851+09:00",
+      "endTime": "2026-09-06T10:24:38.851+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "taskPath": "Tasks/RS-0023 OpenTelemetry Logsを前提に実行追跡・構造化ログアーキテクチャを再設計する.md",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-09-06T09:59:38.851+09:00",
+          "endTime": "2026-09-06T10:24:38.851+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1788657880070",
+      "startTime": "2026-09-06T10:24:40.070+09:00",
+      "endTime": "2026-09-06T10:29:40.070+09:00",
+      "plannedDuration": 5,
+      "type": "short-break",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-09-06T10:24:40.070+09:00",
+          "endTime": "2026-09-06T10:29:40.070+09:00"
         }
       ]
     }
