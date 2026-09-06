@@ -17,7 +17,7 @@ created: 2026-09-06
 
 > **RAGScopeでは何をLogに残し、何をSpanに任せるか？**
 
-このノートでは、RAGScopeがどの出来事をLog Eventとして記録し、そのEventをOpenTelemetry `LogRecord`でどう表すかをレビューする。typed failure、想定外の同期Exception、retry / fallback時にLogを出す条件も扱う。
+このノートでは、RAGScopeがどの出来事をLog Eventとして記録し、そのEventをOpenTelemetry `LogRecord`でどう表すかをレビューする。エラー型で表す失敗、想定外の同期Exception、retry / fallback時にLogを出す条件も扱う。
 
 ## 要するに
 
@@ -27,7 +27,7 @@ RAGScope固有Eventを作るのは、**適用できるSemantic Conventionや既�
 
 したがって、期間を持つ処理や最終結果をSpanですでに表現できるなら、同じ事実をLog Eventへ重複させない。
 
-typed failureが発生したという事実だけでもLogは自動生成しない。一方、想定外の同期Exceptionがoperation境界から外へ投げられる場合は、Exceptions in Logs Semantic Conventionに従うException Logを1件記録する。
+エラー型で表す失敗が発生したという事実だけでもLogは自動生成しない。一方、想定外の同期Exceptionがoperation境界から外へ投げられる場合は、Exceptions in Logs Semantic Conventionに従うException Logを1件記録する。
 
 ## いつLog Eventを出すか
 
@@ -68,7 +68,7 @@ RAGScope固有Eventは、その出来事を定義するUseCaseまたは内部処
 - Eventの発生時刻が何の時点を指すか
 - 既定severity
 - Event固有attributes
-- 失敗、または処理の成功・失敗という結果を表すEventでは、`error.type`をどの条件で要求するかと、typed failureからどの低カーディナリティ値へ変換するか
+- 失敗、または処理の成功・失敗という結果を表すEventでは、`error.type`をどの条件で要求するかと、対応するエラー型の値からどの低カーディナリティ値へ変換するか
 
 RAGScope固有Eventの`EventName`には`ragscope.*` namespaceを使う。ID、attempt番号、対象名など実行ごとに変わる値はEventNameへ埋め込まず、attributesへ置く。
 
@@ -92,19 +92,19 @@ OpenTelemetryのseverity体系を使うことと、UseCaseや内部処理の公�
 すべてのEventへ同じ構造を持たせる共通`payload`は設けない。Event固有の機械可読情報はattributesへ置く。
 `Body`をどう使うかは、個別Eventまたは適用するSemantic Conventionを決める時点で判断する。
 
-## typed failureとLogは1対1ではない
+## エラー型とLogは1対1ではない
 
 RAGScope全体の失敗理由の扱いは[[RS-0023 Observability設計メモ]]に従う。
-失敗理由の元情報は、そのUseCaseまたは内部処理に対応するtyped failureである。
+失敗理由の元情報は、そのUseCaseまたは内部処理に対応するエラー型である。
 
-**typed failureが発生しただけでは`LogRecord`を生成しない。**
+**エラー型で表す失敗が発生しただけでは`LogRecord`を生成しない。**
 
-たとえば途中でfailureが発生しても、retryやfallbackによって最終的に回復するなら、「failureが一度起きた」という事実だけを理由にEventを追加しない。
+たとえば途中で失敗が発生しても、retryやfallbackによって最終的に回復するなら、「失敗が一度起きた」という事実だけを理由にEventを追加しない。
 必要な状態変化をSpanから識別できない場合だけ、その出来事を表すEventを定義する。
 
-Logs設計が担当するのは、RAGScope固有Eventに失敗情報が必要な場合、そのEventが表すUseCaseまたは内部処理に対応するtyped failureをEventの`error.type`へ変換する規則である。
+Logs設計が担当するのは、RAGScope固有Eventに失敗情報が必要な場合、そのEventが表すUseCaseまたは内部処理に対応するエラー型の値をEventの`error.type`へ変換する規則である。
 
-RAGScope全体で共有する独立した共通エラー分類は設けない。共通のエラー分類を置かなくても現在要求は成立し、追加するとtyped failureとの対応規則を別に維持する必要があるためである。
+RAGScope全体で共有する独立した共通エラー分類は設けない。共通のエラー分類を置かなくても現在要求は成立し、追加すると各エラー型との対応規則を別に維持する必要があるためである。
 
 Application / AI推論サービス間で共有する失敗コードが必要になった場合は、その通信Contractで定義する。Logs用の共通エラー分類として先に定義しない。
 
@@ -114,9 +114,9 @@ Application / AI推論サービス間で共有する失敗コードが必要に�
 
 そのEventについて、`error.type`を`Required`、`Conditionally Required`、`Recommended`のどれとして扱うかも定義する。
 
-typed failureが持つ詳細値や原因を`error.type`へ押し込まない。`error.type`には、そのEventが表すerrorの種類として予測可能で低カーディナリティな値を使う。
+エラー型の値が持つ詳細値や原因を`error.type`へ押し込まない。`error.type`には、そのEventが表すerrorの種類として予測可能で低カーディナリティな値を使う。
 
-同じtyped failureをRAGScope固有Spanとfailure Eventの両方で表す必要がある場合は、同じ失敗理由から矛盾する`error.type`を生成しない。
+同じエラー型で表す失敗をRAGScope固有Spanとfailure Eventの両方で表す必要がある場合は、同じ失敗理由から矛盾する`error.type`を生成しない。
 
 General EventsはDevelopmentであるため、実装時に対象versionを再確認し、2026-09-06時点の細部をRAGScope独自の恒久契約として固定しない。
 
@@ -155,11 +155,11 @@ Span側のStatus / `error.type` / 再送出は[[RS-0023 Trace設計メモ]]で�
 | `error.type` | operationまたはEventが、どの種類のerrorで失敗・終了したか |
 | `exception.type` | 実際に記録したExceptionの型 |
 
-RAGScope固有Spanの最終失敗では、typed failureからSpanの`error.type`へ変換する。
-失敗や成功・失敗の結果を表すRAGScope固有Eventでは、typed failureからそのEventの`error.type`へ変換する。
+RAGScope固有Spanの最終失敗では、対応するエラー型の値からSpanの`error.type`へ変換する。
+失敗や成功・失敗の結果を表すRAGScope固有Eventでは、対応するエラー型の値からそのEventの`error.type`へ変換する。
 Exception Logでは、実際に発生したExceptionの型を`exception.type`へ記録する。
 
-typed failureは実行時に発生したExceptionとは限らないため、typed failureを表すために`exception.type`を合成しない。
+エラー型で表す失敗は実行時に発生したExceptionとは限らないため、その失敗を表すために`exception.type`を合成しない。
 
 想定外の同期Exceptionによってoperationが失敗した場合は、Exception Logの`exception.type`へそのException型を記録する。対応するSpanの`error.type`にも、そのException型がoperationの失敗分類として適切であればcanonical class nameを使える。これは2つの属性が同じ契約だからではなく、同じExceptionがoperationの失敗原因だからである。
 
@@ -175,7 +175,7 @@ RAGScope側では、OpenTelemetryと同じ責務を持つ別Logging基盤を作�
 | Logging専用ContextへのTrace Context手動注入 | 設けない | `LogRecord`自身が持つTrace Contextを使う |
 | OpenTelemetryと並行する独自ログ転送基盤 | 設けない | 同じLogを別経路で運ぶ基盤を重複して保守しない |
 
-RAGScope側で定義するのは、RAGScope固有Eventが表す意味、記録条件、`EventName`、attributes、severityと、必要な場合にtyped failureからEventの`error.type`へ変換する規則である。
+RAGScope側で定義するのは、RAGScope固有Eventが表す意味、記録条件、`EventName`、attributes、severityと、必要な場合に対応するエラー型の値からEventの`error.type`へ変換する規則である。
 
 ## Semantic Conventionsのstability
 
