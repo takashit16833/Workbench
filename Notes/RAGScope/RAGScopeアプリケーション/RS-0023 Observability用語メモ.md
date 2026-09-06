@@ -92,8 +92,8 @@ created: 2026-09-06
 | handler | CLI / API入力をUseCaseへ渡す値へ変換し、UseCaseを呼び出し、その結果をCLI表示またはHTTP応答へ変換するApplication上の境界処理 |
 | UseCase | RAGScope正本で定義されるUseCase。この用語メモではObservability固有の別定義を作らない |
 | 内部処理 | Embedding生成、Database検索、文書チャンク化など、UseCaseから呼び出され、そのUseCaseを構成する処理 |
-| typed failure | UseCaseまたは内部処理の契約上想定されるfailure。OpenTelemetryの`error.type`や実行時に発生したExceptionそのものを指す語ではない |
-| 想定外の同期Exception | typed failureとして扱われず、RAGScopeが追跡するoperationの境界から同期的に外へ投げられるException |
+| エラー型 | RAGScope Applicationで、UseCaseまたは内部処理の契約上想定される失敗を表すHaskellの型。具体的な型名・constructorや、`Either` / `ExceptT`などをどこで使うかは各設計・実装で定める。OpenTelemetryの`error.type`や、実行時に発生したExceptionそのものを指す語ではない |
+| 想定外の同期Exception | エラー型で表す契約上の失敗として扱われず、RAGScopeが追跡するoperationの境界から同期的に外へ投げられるException |
 | 非同期中断 / キャンセル | 実行中の処理を外部・非同期要因から中断するケースの総称。特定のException constructorや一律のSpan Statusを意味する語ではない |
 | TTFT | Time To First Token。RS-0023では、AI推論サービスが生成を開始してから最初のtokenを生成するまでの時間を指す。clientが最初のresponse chunkを受信するまでの時間とは区別する |
 
@@ -115,17 +115,17 @@ Invocation                                   ← RAGScopeの実行範囲
 
 UseCaseを呼ぶ前にhandlerで処理が終了した場合でもInvocationは発生しているため`entry Span`は残るが、UseCaseを実行していないのでUseCase Spanは作らない。詳細なTrace境界は[[RS-0023 Trace設計メモ]]で扱う。
 
-## `error.type` / typed failure / `exception.type`の関係
+## `error.type` / エラー型 / `exception.type`の関係
 
 この3つは同じものではない。
 
 | 用語 | 属する側 | 表すもの |
 |---|---|---|
-| typed failure | RAGScope / UseCase・内部処理 | 契約上想定されるfailureの元情報 |
+| エラー型 | RAGScope Application / UseCase・内部処理 | 契約上想定される失敗を表すHaskellの型 |
 | `error.type` | OpenTelemetry | operationまたはEventがどの種類のerrorで失敗・終了したか |
 | `exception.type` | OpenTelemetry Exceptions in Logs | 実際に記録したExceptionの型 |
 
-RAGScope固有Span / Eventで必要な`error.type`はtyped failureから変換するが、typed failure自体を`error.type`へ置き換えない。想定外の同期ExceptionをException Logへ記録する場合は、実際に発生したExceptionの型を`exception.type`へ記録する。具体的な変換規則は[[RS-0023 Trace設計メモ]]と[[RS-0023 Logs設計メモ]]で扱う。
+RAGScope固有Span / Eventで必要な`error.type`は、対応するエラー型の値から変換するが、エラー型自体を`error.type`へ置き換えない。想定外の同期ExceptionをException Logへ記録する場合は、実際に発生したExceptionの型を`exception.type`へ記録する。具体的な変換規則は[[RS-0023 Trace設計メモ]]と[[RS-0023 Logs設計メモ]]で扱う。
 
 ## 正本へ反映するとき
 
