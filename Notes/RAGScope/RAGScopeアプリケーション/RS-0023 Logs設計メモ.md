@@ -40,6 +40,7 @@ Trace、Span、operation、Span Status、Trace Context、typed failure、unexpec
 - RAGScope独自の`LogRecord`、Logging Runtime、Sink、Logging専用Context、OTelと並行するログ転送基盤は設けない。
 - Trace / Spanとの関連付けにはOpenTelemetry `LogRecord`自身のTrace Contextを使い、RAGScope独自の`trace_id` / `span_id`属性を追加しない。
 - severityはOpenTelemetry `SeverityNumber`の意味体系を使い、共通`payload`は設けない。
+- RAGScope共通のnon-OTLPログJSON契約とSQLiteログ表現は維持しない。外部転送にはOTLP等のOpenTelemetry経路を使い、ローカル確認用出力を新しいRAGScope JSON契約にはしない。
 
 ## いつLog Eventを出すか
 
@@ -115,6 +116,37 @@ Span側のStatus / `error.type` / rethrowは[[RS-0023 Trace設計メモ]]を参�
 
 RAGScope側で定義するのは、RAGScope固有Eventの意味、記録条件、`EventName`、attributes、severity、failureとの関係である。
 
+## JSON / SQLiteをどう扱うか
+
+現在の正本には、RAGScope独自`LogEvent`をnon-OTLPの外部形式へ投影するための共通外部表現、JSON表現、JSON Schema、SQLite表現がある。
+RS-0023ではLogsの記録単位をOpenTelemetry `LogRecord`へ置き換え、Processor / Exporterと外部転送をOpenTelemetryへ委ねるため、この独自外部表現層を並行して維持しない。
+
+| 現在の仕組み | RS-0023ドラフトでの扱い | 理由 |
+|---|---|---|
+| RAGScope共通non-OTLP外部表現 | 維持しない | `LogRecord`をRAGScope独自外部モデルへ再投影してから送る経路を作らない |
+| 共通ログJSON表現 / JSON Schema | 維持しない | 外部転送の契約にはOTLP等のOpenTelemetry経路を使う。console / handle exporterの表示形式もRAGScope契約にしない |
+| 共通ログSQLite表現 | 維持しない | RAGScope本体がログ保存用SQLite Schemaを所有する要求を確認できない。保存・検索・retentionは採用するTelemetry backend側の責務として扱う |
+| ローカルでのログ確認 | 維持する | 要求上必要。OpenTelemetry SDKのconsole / handle exporter、必要ならローカルCollectorで確認する |
+
+JSONやSQLiteという形式自体を禁止するわけではない。将来、OpenTelemetryの転送・backendとは別に、RAGScopeが安定したnon-OTLPログファイル契約を外部へ提供する要求や、RAGScope自身がSQLiteログをqueryする要求が追加された場合は、その要求を基準に外部表現を新たに設計する。
+
+この判断は、実験結果、評価データ、RAGScopeのドメインデータなど、**ログ以外のJSON / SQLite利用を変更するものではない**。
+また、既存のJSON / SQLite投影Experimentは当時の設計に対して実際に行った検証記録なので、過去の結果として残せる。RS-0023反映後の現在設計の根拠や必須Contractとしては使用しない。
+
+### 正本へ反映するときの影響
+
+| 対象 | 必要な扱い |
+|---|---|
+| `実行追跡・構造化ログ契約設計.md` | OTel `LogRecord` / Trace Contextを前提とする現在設計へ置き換える |
+| `構造化ログ外部表現共通設計.md` | non-OTLP共通外部表現を維持しないため、現在設計から外す |
+| `構造化ログJSON表現設計.md` | 共通ログJSON契約を維持しないため、現在設計から外す |
+| `構造化ログSQLite表現設計.md` | RAGScope所有のログSQLite表現を維持しないため、現在設計から外す |
+| `contracts/logging/v1/log-event.schema.json`とfixture | 共通ログJSON Contractを維持しないため、現在Contractから外す |
+| 現在のHaskell logging実装とSchema適合テスト | OpenTelemetry利用境界 / Adapterへ移行する後続実装で置き換える |
+| AI推論サービスの後続logging実装 | 独自共通JSON / Sinkを実装する前提を外し、OpenTelemetry Python SDKを前提に再編する |
+| v0.0 Milestoneと未完了の関連Ticket | 独自JSON / SQLite / `error_type`等を前提とする完了条件を新しいObservability設計へ合わせる |
+| 完了済みTicket / JSON・SQLite投影Experiment | 当時の作業・検証履歴として書き換えず、現在仕様の正本としては参照しない |
+
 ## このLogs共通設計で設けないもの
 
 | 項目 | 方針 | 理由 |
@@ -158,8 +190,8 @@ unexpected同期Exceptionによってoperationが失敗した場合は、Excepti
 一方、UseCaseや対象機能が保持するtyped failureの型・値・詳細情報はTelemetry分類とは別の責務であり、`error.type`へ置き換えない。
 
 > [!warning]
-> 現在の正本ADR-0005、実行追跡・構造化ログ契約設計、v0.0 Milestone、JSON / SQLite外部表現設計には、RAGScope共通の論理`error_type`を前提にした定義がある。
-> RS-0023を正本へ反映する際は、`error_type`を維持しないこの判断に合わせて、これらの定義と影響するContract / Schema / 後続Ticketを更新する必要がある。
+> 現在の正本ADR-0005、実行追跡・構造化ログ契約設計、v0.0 Milestone、外部表現設計、Contract / Schema、後続Ticketには、RAGScope共通の論理`error_type`や独自ログ外部表現を前提にした定義がある。
+> RS-0023を正本へ反映する際は、このノートの「正本へ反映するときの影響」に沿って、現在設計と未完了作業を新しいObservability設計へ整合させる。
 
 ## 判断理由・実装上の注意
 
