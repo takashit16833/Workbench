@@ -46,10 +46,13 @@ API: HTTP SERVER Span / CLI: Execution (callee) Span  ← entry Span / root
 |---|---|
 | Trace | 複数のSpanを親子関係などで結び、1つながりの処理として追跡するもの |
 | Span | Trace内の1つのoperationを表す。開始・終了、所要時間、attributes、Status、親子関係などを持つ |
+| operation | Spanが表す1つの処理 |
+| parent / child Span | Span同士の親子関係。あるoperationの内部で別のoperationを追跡する場合、後者をchild Spanとして表現できる |
 | Trace Context | Traceをコンポーネント間で継続するために引き継ぐTrace / SpanのContext |
 | Span Link | 親子関係とは別に、あるSpanから別のSpan Contextとの関連を記録する仕組み |
 | Span Status | Spanが表すoperationの最終状態。ここでは主に`Unset` / `Error`を扱う |
 | `error.type` | operationがエラーで終了した場合、そのエラーのクラスを表すOpenTelemetry Semantic Conventionsの属性 |
+| Semantic Conventions（SemConv） | Span名、Span Kind、attributes、`error.type`など、対象領域ごとのTelemetry表現を定めるOpenTelemetryの規約 |
 | Invocation | RAGScopeがCLI / APIなどを通じて外部から1回呼び出され、その処理が完了するまでの実行範囲 |
 | entry Span | 1 Invocationを表すTraceのroot Spanの役割名。APIではHTTP SERVER Span、CLIではExecution (callee) Spanが担う |
 | UseCase Span | 1 UseCase実行全体を表すRAGScope固有Span |
@@ -124,6 +127,7 @@ flowchart TB
 この図はTrace上の親子関係を示している。handlerの責務そのものをSpan階層として表した図ではない。
 
 GenAI client SpanはApplicationからモデルまたはGenAIサービスへ行う論理的な依頼全体を表し、HTTP client Spanはその依頼の中で行う1回のHTTP requestを表す。両方を計装する場合は別のSpanとして扱う。
+適用可能なGenAI Spanがない場合、またはGenAI Spanを計装しない場合は、HTTP client SpanをUseCase Spanの子Spanとして記録する。
 
 現行のGenAI Semantic Conventionsではclient側のinference / embeddings Spanは定義されているが、AI推論サービス側の汎用`gen_ai.inference.server` Spanは確認できない。そのため、AI推論サービス側へRAGScope独自のGenAI server Spanを補って作らない。将来、適用可能なserver側Conventionが成立した場合は、そのConventionを優先する。
 
@@ -186,6 +190,8 @@ API / CLIで利用者へ返す失敗情報や、実験・評価データモデ�
 
 RAGScope全体で共有する独立した`ErrorCategory` / `ErrorType` / `error_type` taxonomyや、すべてのfailureを中央で分類する`ErrorClassifier`は設けない。
 各Spanは、自身が表すoperationの最終結果と適用規則からStatus / `error.type`を決めるため、分類を上位Spanへ伝播する共通`OperationFailure`も設けない。
+
+将来、UseCaseや内部処理ごとのtyped failureだけでは、複数operationを横断して必要な集計・契約を成立させられない具体要求が追加された場合は、その要求を基準に共通分類の必要性を再評価する。
 
 RAGScope固有Spanで使う`error.type`は、そのSpanが表すUseCaseまたは内部処理に対応するtyped failureから、予測可能で低カーディナリティな値へ変換する。
 `error.type`を得るためにtyped failureそのものを共通エラー型へ置き換えず、failureが持つ原因・詳細値を失わない。failure型自身をOpenTelemetryやObservability固有型へ依存させない。

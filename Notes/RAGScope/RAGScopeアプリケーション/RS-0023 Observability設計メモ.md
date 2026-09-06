@@ -39,6 +39,8 @@ retry、timeout、fallback、処理順序などを決めるのはRAGScope Applic
 
 また、HTTP、Database、CLI、GenAIなど、観測する処理に適用できるOpenTelemetry Semantic Conventionsがある場合は、RAGScope独自の同義表現を作らず、そのConventionを優先する。
 
+Trace / Failure / Logs / Metricsの方針はRS-0023で決定済みとして扱う。OpenTelemetry採用に必要な主要SDK能力も確認済みだが、RAGScope固有のGHC / Cabal / Python環境での依存解決とビルドはまだ実測していない。
+
 ## 全体像
 
 1 InvocationでRAGScope ApplicationがDBやAI推論サービスを利用し、ApplicationとAI推論サービスがそれぞれOpenTelemetryを通じてTelemetryを記録する。
@@ -146,7 +148,9 @@ Application側はRAGScopeが定義するTelemetry利用境界を呼び、その�
 - OpenTelemetry SDK固有の型を、UseCaseや内部処理が公開・受け渡しする型へ含めない。
 - Trace Contextの引き継ぎにはPropagator / instrumentationなどOpenTelemetryの機構を使う。
 - Processor / Exporter、batching、flush / shutdown、送信にはSDKの機構を使い、同等の基盤処理をRAGScopeで別実装しない。
-- 観測する処理に適用できるSemantic Conventionがある場合は、そのSpan名・attributes・Event・MetricなどをRAGScope独自表現より優先する。
+- 観測する処理に適用できるSemantic Conventionがある場合は、そのSpan名・Span Kind・attributes・Event・Metric名・instrument・unitなどをRAGScope独自表現より優先する。
+
+OpenTelemetry SDK相当をRAGScopeで独自実装すると、Context管理、batching、Processor / Exporter、flush / shutdown、export失敗処理までRAGScope側の保守対象になる。これらはRAGScope固有の責務ではないためSDKへ委ねる。
 
 Haskell SDKは`hs-opentelemetry` 1.xを第一候補とする。AI推論サービスではOpenTelemetry Python API / SDKを使う。Python LogsはDevelopmentであるため、利用するversionとSDK固有APIは実装境界内へ閉じる。
 
@@ -154,7 +158,7 @@ AI推論サービス側の具体的なmodule境界はPython実装時に決める
 
 ## Semantic Conventionsをどう扱うか
 
-Span名、attributes、Event、Metric名などをRAGScope独自に定義する前に、観測する処理へ適用できるOpenTelemetry Semantic Conventionsがあるか確認する。
+Span名、Span Kind、attributes、Event、Metric名、instrument、unitなどをRAGScope独自に定義する前に、観測する処理へ適用できるOpenTelemetry Semantic Conventionsがあるか確認する。
 
 適用できるConventionがある場合は、その定義を優先する。HTTP、Database、CLI、Exceptionなどについて、同じ意味を持つRAGScope独自表現を重ねない。
 
@@ -303,6 +307,7 @@ Haskellでtyped failureをTelemetry向けの値へ変換する位置を決める
 - 各module / packageの責務に従った静的依存方向とし、Cabalの`build-depends`を循環させない。
 - Telemetry AdapterがApplication側で定義されたPortやtyped failure型へ依存するかどうかは、この共通設計で先に固定しない。
 
+package / module構成はTelemetry利用境界を決めた後に定め、先にpackageを分割してから責務を割り当てない。
 現在`main`では`ragscope` main libraryがprivate sublibrary `ragscope-logging`へ依存しているが、この既存構造を新しいTelemetry変換処理の配置を決める前提にはしない。
 
 ## 参考

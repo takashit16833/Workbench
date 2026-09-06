@@ -76,7 +76,7 @@ Logs固有で使う用語は次のとおりである。
 
 RAGScope固有Eventが必要な場合は、`EventName`を持つOpenTelemetry `LogRecord`として記録する。
 
-RAGScope固有Eventを定義する設計では、次を決める。
+RAGScope固有Eventは、その出来事を定義するUseCaseまたは内部処理の設計で定義する。その設計では、次を決める。
 
 - Eventが表す出来事または状態変化
 - Eventを記録する条件
@@ -100,7 +100,7 @@ RAGScope独自の`trace_id` / `span_id` attributesは追加しない。
 ## severityとBody
 
 EventのseverityにはOpenTelemetry `SeverityNumber`の意味体系を使う。RAGScope独自のLog Level契約は設けない。
-各Eventの既定severityは、そのEventを定義する設計で決める。
+各Eventの既定severityは、そのEventを定義するUseCaseまたは内部処理の設計で決める。
 
 severityからSpan Status、Applicationの最終結果、保存状態を導出しない。
 OpenTelemetryのseverity体系を使うことと、UseCaseや内部処理の公開型へ`hs-opentelemetry`固有型を含めることは別の問題である。
@@ -131,6 +131,8 @@ Application / AI推論サービス間で共有するfailure codeが必要にな�
 そのEventについて、`error.type`を`Required`、`Conditionally Required`、`Recommended`のどれとして扱うかも定義する。
 
 typed failureが持つ詳細値や原因を`error.type`へ押し込まない。`error.type`には、そのEventが表すerrorの種類として予測可能で低カーディナリティな値を使う。
+
+同じtyped failureをRAGScope固有Spanとfailure Eventの両方で表す必要がある場合は、同じ失敗理由から矛盾する`error.type`を生成しない。
 
 General EventsはDevelopmentであるため、実装時に対象versionを再確認し、2026-09-06時点の細部をRAGScope独自の恒久契約として固定しない。
 
@@ -222,7 +224,7 @@ RS-0023を正本へ反映するときは、少なくとも次を確認する。
 | `構造化ログ外部表現共通設計.md` | OTLPとは別の共通ログ外部表現を現在設計から外す |
 | `構造化ログJSON表現設計.md` | 共通ログJSON契約を現在設計から外す |
 | `構造化ログSQLite表現設計.md` | RAGScope所有のログSQLite表現を現在設計から外す |
-| ADR-0005 / 後続ADR | 1 Invocation = 1独立Trace、共通`error_type`廃止、独自JSON / SQLiteログ契約廃止などの重要判断を、文書管理規約に従う粒度で記録する |
+| ADR-0005 / 後続ADR | 1 Invocation = 1独立Trace、共通`error_type`廃止、独自JSON / SQLiteログ契約廃止などの重要判断を記録する。RS-0023全体を1つの後続ADRとしてADR-0005をsupersedeするか、判断を分けるかは正本反映時に文書管理規約に従って決める |
 | `contracts/logging/v1/log-event.schema.json`とfixture | 共通ログJSON Contractを現在Contractから外す |
 | 現在のHaskell logging実装とSchema適合テスト | OpenTelemetry利用境界 / Adapterへ移行する後続実装で置き換える |
 | AI推論サービスの後続logging実装 | 独自共通JSON / Sink前提を外し、OpenTelemetry Python SDKを前提に再編する |
@@ -250,8 +252,8 @@ RS-0023を正本へ反映するときは、少なくとも次を確認する。
 | 項目 | 具体化する時点 |
 |---|---|
 | `Body`の具体内容 | 個別Event / 適用SemConvを決める時 |
-| RAGScope固有EventのEventName / attributes / severity | そのEventを定義する時 |
-| RAGScope固有Eventの`error.type`値とrequirement level | そのEventを定義する時。実装時に対象versionのSemConvを再確認する |
+| RAGScope固有EventのEventName / attributes / severity | そのEventが表す出来事を定義するUseCaseまたは内部処理の設計で決める時 |
+| RAGScope固有Eventの`error.type`値とrequirement level | そのEventが表す出来事を定義するUseCaseまたは内部処理の設計で決める時。実装時に対象versionのSemConvを再確認する |
 | Exception attributesについてSemConvを超えて設けるRAGScope固有のデータ取扱規則 | その規則を必要とする要求・正本が具体化した時 |
 | API / CLIで利用者へ返すfailure表現 | API / CLI設計・Contract |
 | 実験・評価データモデルへ保存するerror | 実験・評価の設計 / データモデル |
