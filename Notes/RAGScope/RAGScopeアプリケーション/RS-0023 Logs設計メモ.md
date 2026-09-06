@@ -36,6 +36,7 @@ Trace、Span、operation、Span Status、Trace Context、typed failure、unexpec
 - Logsの基盤にはOpenTelemetry Logs / Semantic Conventionsを使う。
 - RAGScope固有Eventは、適用SemConvとSpanの開始・終了・attributes・Statusだけでは、後から必要な出来事または状態変化を識別できない場合に定義する。
 - typed failureが発生したことだけではLogを自動生成しない。unexpected同期Exceptionがoperation境界からescapeする場合はException Logを1件記録し、同じExceptionを重複記録しない。
+- Telemetry上の失敗分類には適用可能なOpenTelemetryの`error.type`を使い、それと並行するRAGScope共通`error_type`契約は設けない。Exception Logの`exception.type`はruntime Exceptionの型を表す別の属性として扱う。
 - RAGScope独自の`LogRecord`、Logging Runtime、Sink、Logging専用Context、OTelと並行するログ転送基盤は設けない。
 - Trace / Spanとの関連付けにはOpenTelemetry `LogRecord`自身のTrace Contextを使い、RAGScope独自の`trace_id` / `span_id`属性を追加しない。
 - severityはOpenTelemetry `SeverityNumber`の意味体系を使い、共通`payload`は設けない。
@@ -67,6 +68,7 @@ attempt、duration、最終失敗などをSpanや既存SemConvから確認でき
 | Event定義 | その出来事が属するUseCaseまたは対象処理を定義する設計で決める |
 | EventName namespace | RAGScope固有Eventは`ragscope.*` |
 | dynamic値 | EventNameへ埋め込まずattributesへ置く |
+| failureを表すEvent | 適用SemConvに従い、RAGScope固有Eventでは`error.type`で失敗クラスを表す |
 | Trace / Span correlation | OTel `LogRecord`自身のTrace Contextを使う |
 | TraceId / SpanId | RAGScope独自属性として追加しない |
 | severity | OTel `SeverityNumber`の意味体系を使う |
@@ -83,6 +85,7 @@ RAGScope固有Eventを定義する設計では、次を決める。
 - 発生時刻が指す時点
 - 既定severity
 - Event固有attributes
+- Eventがfailureまたは成功/失敗を持つoperation outcomeを表す場合は、`error.type`を付ける条件と安定した低カーディナリティの値
 
 全Eventを先に共通型へ列挙しない。
 複数の対象機能でEventが表す出来事、記録条件、`EventName`、attributesを同じ定義として共有する必要が生じた場合だけ共通化を検討する。
@@ -93,7 +96,7 @@ RAGScope固有Eventを定義する設計では、次を決める。
 |---|---|
 | typed failure | failure発生だけではLogRecordを生成しない |
 | retry / fallback後に回復 | failure発生だけではEventを生成しない |
-| Spanから識別できない出来事・状態変化 | その出来事が属するUseCaseまたは対象処理の設計でEventを定義する |
+| Spanから識別できない出来事・状態変化 | その出来事が属するUseCaseまたは対象処理の設計でEventを定義する。failureを表すRAGScope固有Eventなら`error.type`で失敗クラスを表す |
 | unexpected同期Exceptionがescape | Exception Logs SemConvでException Logを1件記録 |
 | 同じExceptionが下位の計装で記録済み | RAGScope上位層では重複記録しない |
 
@@ -117,6 +120,7 @@ RAGScope側で定義するのは、RAGScope固有Eventの意味、記録条件�
 | 項目 | 方針 | 理由 |
 |---|---|---|
 | typed failure → Logの共通自動変換 | 設けない | Span StatusとEvent Logは別の規則で決める |
+| RAGScope共通`error_type` | 設けない | Telemetry上の失敗分類にはOpenTelemetryの`error.type`を使い、同じ意味の分類体系を並行して持たない |
 | Exception Span EventをExceptionの主表現にする規則 | 設けない | このドラフトではException Logs Semantic Conventionを主表現として使う |
 | 全RAGScope Eventを列挙する共通`LogSpec` | 設けない | Eventは対象のUseCaseまたは処理を定義する設計で必要なものだけ定義する |
 | 共通`payload` | 設けない | Event固有の機械可読情報はattributesで表現する |
@@ -127,23 +131,35 @@ RAGScope側で定義するのは、RAGScope固有Eventの意味、記録条件�
 |---|---|
 | `Body`の具体内容 | 個別Event / 適用SemConvを決める時 |
 | 対象機能固有EventName / attributes / severity | 対象機能の設計時 |
+| 対象機能固有の`error.type`値 | 対象operation / Eventの設計時 |
 | ExperimentとTelemetryの関連付け | 実験実行境界が具体化した時 |
 | AdapterのException処理実装 | Adapter実装時 |
 
-## Spanの`error.type`とException Logの`exception.type`
+## failure分類と`error.type` / `exception.type`
 
-SpanとException Logでは、適用するOpenTelemetry Semantic Conventionに従って別の属性名を使う。
+`error.type`と`exception.type`は、どちらも文字列で失敗に関係する情報を持つが、同じ契約ではない。
 
-| signal | 属性 |
-|---|---|
-| Span | `error.type` |
-| Exception Log | `exception.type` |
+| 対象 | 属性 | 意味 |
+|---|---|---|
+| 失敗したRAGScope固有Span | `error.type` | operationが最終的にどのクラスのエラーで終了したか |
+| failureを表すRAGScope固有Event | `error.type` | Eventが表すfailureのクラス |
+| Exception Log | `exception.type` | 記録したruntime Exceptionの型 |
 
-同じ失敗クラスを表す場合は値の意味を一致させるが、同じ属性名を両signalへ重複して置くことは要求しない。
+HTTP、Database、GenAIなど適用するSemantic Conventionが`error.type`の値を定める場合は、その規則を優先する。
+RAGScope固有Span / Eventで`error.type`を定義する場合は、対象operationまたはEventの設計で、予測可能かつ低カーディナリティの値を定める。
+
+同じtyped failureをRAGScope固有Spanとfailure Eventの両方で表す必要がある場合は、両方の`error.type`に同じ分類値を使う。typed failureの詳細値や原因情報そのものを`error.type`へ押し込まず、元のfailureが保持する情報は失わない。
+
+typed failureはruntime Exceptionとは限らないため、typed failureを表すために`exception.type`を合成しない。
+unexpected同期Exceptionによってoperationが失敗した場合は、Exception Logの`exception.type`にはそのExceptionの型を記録し、対応するSpanの`error.type`にもそのException型が適切な失敗分類であれば同じcanonical class nameを使用できる。これは2つの属性が同じ契約だからではなく、同じExceptionがoperationの失敗原因だからである。
+
+このドラフトでは、Telemetry上の失敗分類のためにOpenTelemetryの`error.type`とは別のRAGScope共通`error_type`を維持しない。要求は処理状態・エラー・ログから失敗を識別できることを求めているが、OpenTelemetryと並行する別の分類名を要求していない。`error.type`はOpenTelemetryの共通属性として失敗クラスを表現できるため、同じ意味の分類体系を二重に持たない。
+
+一方、UseCaseや対象機能が保持するtyped failureの型・値・詳細情報はTelemetry分類とは別の責務であり、`error.type`へ置き換えない。
 
 > [!warning]
-> 現在の正本ADR-0005には、同じ失敗をSpanと構造化ログの両方へ記録する場合に同じ`error_type`値を使うという定義がある。
-> このドラフトの`error.type` / `exception.type`の整理はまだ正本へ反映されていないため、正本更新時に両者を整合させる必要がある。
+> 現在の正本ADR-0005、実行追跡・構造化ログ契約設計、v0.0 Milestone、JSON / SQLite外部表現設計には、RAGScope共通の論理`error_type`を前提にした定義がある。
+> RS-0023を正本へ反映する際は、`error_type`を維持しないこの判断に合わせて、これらの定義と影響するContract / Schema / 後続Ticketを更新する必要がある。
 
 ## 判断理由・実装上の注意
 
@@ -188,5 +204,6 @@ SpanとException Logでは、適用するOpenTelemetry Semantic Conventionに従
 - [OpenTelemetry — Events](https://opentelemetry.io/docs/specs/semconv/general/events/)
 - [OpenTelemetry — Naming](https://opentelemetry.io/docs/specs/semconv/general/naming/)
 - [OpenTelemetry — Recording errors](https://opentelemetry.io/docs/specs/semconv/general/recording-errors/)
+- [OpenTelemetry — `error.type`](https://opentelemetry.io/docs/specs/semconv/registry/attributes/error/)
 - [OpenTelemetry — Exceptions in Logs](https://opentelemetry.io/docs/specs/semconv/exceptions/exceptions-logs/)
 - [hs-opentelemetry](https://github.com/iand675/hs-opentelemetry)
