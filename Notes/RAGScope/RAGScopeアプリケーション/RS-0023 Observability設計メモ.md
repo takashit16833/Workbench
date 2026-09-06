@@ -125,15 +125,38 @@ UseCaseまたは内部処理のエラー型で表した失敗
 
 ### RAGScope全体で共通のエラー分類は設けない
 
-各エラー型とは別に、RAGScope全体で使う共通のエラー分類は設けない。
+RAGScopeでは、UseCaseや内部処理ごとのエラー型を、いったん`RAGScopeError`のような共通分類へ変換してからAPI / CLI、実験・評価結果、Telemetryへ渡す構造にはしない。
+`RAGScopeError`は、ここで作らない構造を説明するための例であり、採用する型名ではない。
 
-現在の要求では、各UseCaseや内部処理のエラー型と各出力先の間に共通のエラー分類を置かなくても、API / CLI、保存error、Telemetryはそれぞれ成立する。
-一方、共通のエラー分類を追加すると、各エラー型で表した失敗から共通分類への変換と、そこから各出力先への変換を別々に維持する必要がある。これはUseCaseや内部処理ごとの失敗定義を、不要に1つの分類体系へ結合する。
+例えば、仮に`SearchError`と`GenerateAnswerError`というエラー型があるとしても、次のような中間分類は置かない。
 
-Application / AI推論サービス間で共有する失敗コードが通信契約として実際に必要になった場合は、その通信方式を定義するContractで扱う。RAGScope全体の共通エラー分類として先に定義しない。
+```text
+SearchErrorで表した失敗 ───────────┐
+GenerateAnswerErrorで表した失敗 ───┤
+                                     └─→ RAGScopeErrorのような共通分類
+                                             ├─→ API / CLI
+                                             ├─→ 実験・評価結果
+                                             └─→ Telemetry
+```
 
-OpenTelemetryの`error.type`は、Telemetry上で「そのoperationやEventがどの種類のerrorを表すか」を記録する属性であり、RAGScopeのエラー型そのものではない。
+代わりに、各エラー型で表した失敗を、それぞれの用途に必要な表現へ直接変換する。
+
+```text
+各UseCase / 内部処理のエラー型で表した失敗
+        ├─→ API / CLI向けの表現
+        ├─→ 実験・評価結果へ保存する表現
+        └─→ Telemetry向けの表現
+```
+
+現在の要求はこの構造で成立する。
+共通分類を間に置くと、各エラー型から共通分類への変換と、共通分類から各出力先への変換を別々に維持する必要がある。さらに、UseCaseや内部処理ごとの失敗を共通分類の粒度へ合わせる必要が生じ、固有の失敗定義を不要に1つの分類体系へ結合することになる。
+
+Application / AI推論サービス間で共有する失敗コードが通信契約として実際に必要になった場合は、その通信方式を定義するContractで扱う。その失敗コードをRAGScope全体の共通エラー分類として先に定義しない。
+
+OpenTelemetryの`error.type`もRAGScope全体の共通エラー分類ではない。Telemetry上で「そのoperationやEventがどの種類のerrorを表すか」を記録する属性である。
 HTTP、Database、GenAIなど、適用するSemantic Conventionが`error.type`を定めている場合はその規則に従う。RAGScope固有SpanとEventでの変換は、それぞれ[[RS-0023 Trace設計メモ]]と[[RS-0023 Logs設計メモ]]で扱う。
+
+複数のUseCaseや内部処理をまたいで、共通のエラー分類がないと必要な集計やContractを成立させられない具体的な要求が追加された場合に、共通分類の必要性を再評価する。
 
 ## OpenTelemetryをどう利用するか
 
