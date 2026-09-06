@@ -11,6 +11,7 @@ created: 2026-09-06
 > [!note]
 > これはRS-0023を正本へ反映する前にレビューするための**Workbench上の設計ドラフト**であり、RAGScopeの正本ではない。
 > Observability全体の共通方針と、Metrics共通設計の外側にあるTelemetry利用境界 / package / 外部構成は[[RS-0023 Observability設計メモ]]を参照する。
+> このノートで使うOpenTelemetry用語とRAGScope / RS-0023側の用語は[[RS-0023 Observability用語メモ]]を参照する。
 
 ## このノートが答える問い
 
@@ -41,17 +42,6 @@ flowchart LR
 
 OpenTelemetry Metricを出したことだけでは、正本が求める評価データごとの性能値保存を満たさない。
 個別の実験結果をMetricの集約値から復元する構造にはしない。
-
-## 先に押さえる用語
-
-| 用語 | 意味 |
-|---|---|
-| Metric | OpenTelemetry Metricsで複数の観測値を集約して扱うための計測データ |
-| TTFT | Time To First Token。このノートでは、AI推論サービスが生成を開始してから最初のtokenを生成するまでの時間 |
-| GenAI operation | OpenTelemetry GenAI Semantic Conventionsが定義する、ApplicationからモデルまたはGenAIサービスへ行う論理的な依頼 |
-| high-cardinality属性 | 実行や対象ごとに値の種類が増えやすく、Metricの集約系列を増加させる属性 |
-
-TTFTは、clientが最初のresponse chunkを受信するまでの時間とは区別する。
 
 ## 正本要求をどう満たすか
 
@@ -228,6 +218,7 @@ HTTP / Databaseの文書全体にはMixedなstabilityの項目も存在するた
 
 ## 参考
 
+- [[RS-0023 Observability用語メモ]]
 - [[RS-0023 Observability設計メモ]]
 - [[RS-0023 Trace設計メモ]]
 - [[RS-0023 Logs設計メモ]]
