@@ -64,6 +64,16 @@ RAGScopeの1回の実行をどのようなTrace / Spanとして追跡し、成�
 
 ## RAGScopeの1回の実行はTrace上どう見えるか
 
+`handler`と`entry Span`は同じ種類の概念ではない。`handler`はCLI / APIとUseCaseの間で入力変換・UseCase呼び出し・結果変換を行うApplication上の境界処理であり、`entry Span`は1 InvocationをTrace上で追跡し始めるOpenTelemetryのSpanである。APIではHTTP SERVER Span、CLIではExecution (callee) Spanがentry Spanとなり、その実行範囲の中でhandlerの処理が行われる。
+
+実行上の関係とTrace上のSpan構造を分けると、次のようになる。
+
+```text
+実行上:  CLI / API → handler（入力変換 → UseCase呼び出し → 結果変換） → CLI / API
+Trace上: entry Span
+             └─ UseCase Span
+```
+
 ```mermaid
 flowchart TB
     USER["利用者"] --> ENTRY["entry Span<br>API: HTTP SERVER Span<br>CLI: Execution (callee) Span"]
@@ -78,7 +88,7 @@ flowchart TB
     AI_REQ -. "Trace Context" .-> AI_SVC
 ```
 
-この図はTrace上のSpan構造を示すため、独立SpanにしないhandlerはSpanノードとして描いていない。handlerの責務とUseCaseとの関係は[[RS-0023 Observability設計メモ#handler]]を参照する。handler側の処理はentry Spanの内部で追跡される。
+この図はTrace上のSpan構造だけを示しているため、独立SpanにしないhandlerはSpanノードとして描いていない。handlerの責務とUseCaseとの関係は[[RS-0023 Observability設計メモ#handler]]を参照する。
 UseCaseが呼ばれる前にhandlerで終了してもInvocationは発生するためTraceには残るが、UseCase Spanは発生しない。
 
 ## Spanをどこに切るか
