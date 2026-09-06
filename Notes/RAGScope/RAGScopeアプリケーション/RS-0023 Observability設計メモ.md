@@ -101,7 +101,7 @@ RAGScope全体で共有する独立した`error_type` taxonomyは設けない。
 
 Application / AI推論サービス間で共有するfailure codeが通信契約として実際に必要になった場合は、その通信方式を定義するContractで扱う。RAGScope全体の共通`error_type`として先に定義しない。
 
-OpenTelemetryの`error.type`はTelemetry boundaryでoperationがどのクラスのerrorで終了したかを表す属性であり、RAGScopeのfailure modelそのものではない。HTTP、Database、GenAIなど適用可能なSemantic Conventionが`error.type`の規則を定めるSpan / Metricではその規則を優先する。RAGScope固有Span / Eventで必要な場合だけ、対象のtyped failureから予測可能で低カーディナリティな`error.type`へmappingする。
+OpenTelemetryの`error.type`はTelemetry boundaryでoperationがどのクラスのerrorで終了したかを表す属性であり、RAGScopeのfailure modelそのものではない。HTTP、Database、GenAIなど適用可能なSemantic Conventionが`error.type`の規則を定めるSpan / Metricではその規則を優先する。RAGScope固有Spanのfinal failureとRAGScope固有Eventの`error.type`の扱いは、それぞれ[[RS-0023 Trace設計メモ]]と[[RS-0023 Logs設計メモ]]で現在のGeneral Recording Errors / General Events guidanceに沿って定める。これらのguidanceはDevelopmentであるため、実装時に対象versionを再確認し、現在の細部をRAGScope独自の恒久契約として複製しない。
 
 ## OpenTelemetryをどう利用するか
 
@@ -113,7 +113,7 @@ RAGScopeはOpenTelemetryをObservabilityの基盤として利用するが、Open
 | Haskell SDK | `hs-opentelemetry` 1.xを第一候補として採用する |
 | Python SDK | OpenTelemetry Python API / SDKを採用する。LogsはDevelopmentであることを前提にversionとSDK固有APIを実装境界内へ閉じる |
 | SDK固有型 | RAGScope固有の処理境界から外へ漏らさない |
-| OpenTelemetry SDKが担当する基盤処理 | Context伝播、Processor / Exporter、batching、flush / shutdown、送信などはSDKへ任せ、RAGScopeで並行実装しない |
+| OpenTelemetry基盤へ委ねる処理 | Trace Context propagationはPropagator / instrumentation等のOpenTelemetry基盤を利用し、Processor / Exporter、batching、flush / shutdown、送信などはSDKの機構を利用する。これらをRAGScopeで並行実装しない |
 | Semantic Conventions | 適用可能なConventionをRAGScope独自表現より優先する |
 
 ### Haskell / Python実装で必要な能力を利用できるか
@@ -253,11 +253,12 @@ Workbenchには今回の検討結果、確認した根拠、実装前に再確�
 |---|---|
 | Trace / Logs / Metricsの利用境界を1つにまとめるか分けるか | Telemetry利用境界設計 |
 | Telemetry利用境界の名前と公開API | Telemetry利用境界設計 |
+| typed failure → Telemetry表現のHaskell module / package配置 | Telemetry利用境界 / package・module設計。feature / UseCase側からOpenTelemetry SDKへの依存を生じさせず、Telemetry実装側からApplication libraryへの逆依存や`build-depends`の循環も生じない配置を決める |
 | SDK初期化設定エラー時に起動失敗するかTelemetryなしで起動するか | Telemetry初期化設計 |
 | package / module構成 | Telemetry利用境界の決定後に行うpackage / module設計 |
 | production Collector / Tempo / Loki等の外部構成 | 外部構成設計。現時点では候補であり採用を決めない |
 
-package / module構成はTelemetry利用境界を決めた後に定め、先にpackageを分割してから責務を割り当てない。
+package / module構成はTelemetry利用境界を決めた後に定め、先にpackageを分割してから責務を割り当てない。現在`main`の`ragscope` main libraryがprivate sublibrary `ragscope-logging`へ依存する構造を、そのまま新しいTelemetry mapping配置の前提にはしない。
 
 ## 参考
 
