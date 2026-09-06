@@ -89,10 +89,10 @@ created: 2026-09-06
 | RAGScope固有Event | 適用できるSemantic Conventionや既存Spanだけでは後から識別できない、RAGScope固有の出来事または状態変化を表すEvent |
 | Telemetry利用境界 | UseCaseや内部処理がOpenTelemetry SDKを直接importせずにTelemetryを記録するため、RAGScope側に置く利用境界。具体的な名前と公開APIはRS-0023の共通設計では未決定 |
 | OpenTelemetry Adapter | Telemetry利用境界の外側でOpenTelemetry SDKへ接続するAdapter。具体的なmodule / package配置や公開APIはRS-0023の共通設計では未決定 |
-| handler | CLI / API入力をUseCaseへ渡す値へ変換し、UseCaseを呼び出し、その結果をCLI表示またはHTTP応答へ変換するApplication上の境界処理 |
+| handler | CLI / API入力をUseCaseへ渡す値へ変換し、UseCaseを呼び出し、その結果をCLI表示またはHTTP応答へ変換するRAGScopeアプリケーション上の境界処理 |
 | UseCase | RAGScope正本で定義されるUseCase。この用語メモではObservability固有の別定義を作らない |
 | 内部処理 | Embedding生成、Database検索、文書チャンク化など、UseCaseから呼び出され、そのUseCaseを構成する処理 |
-| エラー型 | RAGScope Applicationで、UseCaseまたは内部処理の契約上想定される失敗を表すHaskellの型。具体的な型名・データコンストラクタや、`Either` / `ExceptT`などをどこで使うかは各設計・実装で定める。OpenTelemetryの`error.type`や、実行時に発生したExceptionそのものを指す語ではない |
+| エラー型 | RAGScopeアプリケーションで、UseCaseまたは内部処理の契約上想定される失敗を表すHaskellの型。具体的な型名・データコンストラクタや、`Either` / `ExceptT`などをどこで使うかは各設計・実装で定める。OpenTelemetryの`error.type`や、実行時に発生したExceptionそのものを指す語ではない |
 | 想定外の同期Exception | エラー型で表す契約上の失敗として扱われず、RAGScopeが追跡するoperationの境界から同期的に外へ投げられるException |
 | 非同期中断 / キャンセル | 実行中の処理を外部・非同期要因から中断するケースの総称。特定のExceptionのデータコンストラクタや一律のSpan Statusを意味する語ではない |
 | TTFT | Time To First Token。RS-0023では、AI推論サービスが生成を開始してから最初のtokenを生成するまでの時間を指す。clientが最初のresponse chunkを受信するまでの時間とは区別する |
@@ -121,7 +121,7 @@ UseCaseを呼ぶ前にhandlerで処理が終了した場合でもInvocationは�
 
 | 用語 | 属する側 | 表すもの |
 |---|---|---|
-| エラー型 | RAGScope Application / UseCase・内部処理 | 契約上想定される失敗を表すHaskellの型 |
+| エラー型 | RAGScopeアプリケーション / UseCase・内部処理 | 契約上想定される失敗を表すHaskellの型 |
 | `error.type` | OpenTelemetry | operationまたはEventがどの種類のerrorで失敗・終了したか |
 | `exception.type` | OpenTelemetry Semantic conventions for exceptions in logs | 実際に記録したExceptionの型 |
 

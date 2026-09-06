@@ -37,7 +37,7 @@ API: HTTP SERVER Span / CLI: Execution (callee) Span  ← entry Span / root
 ```
 
 外部の呼び出し元からAPIへTrace Contextが届いても、現在はそのTraceへRAGScopeを参加させない。RAGScopeが新しいTraceを開始する。
-一方、RAGScope ApplicationからAI推論サービスへはTrace Contextを引き継ぎ、同じTraceを継続する。
+一方、RAGScopeアプリケーションからAI推論サービスへはTrace Contextを引き継ぎ、同じTraceを継続する。
 
 ## Trace境界をどう決めるか
 
@@ -59,18 +59,18 @@ APIが受信した外部Trace Contextはparentに使わない
 APIへのリクエストにTrace Contextが含まれていても、そのContextをentry Spanの親にはしない。
 外部Traceとの因果関係だけを残すSpan Linkについても、現在はその関連付けを必要とする要求がないため作成しない。
 
-一方、ApplicationからAI推論サービスへの呼び出しは、RAGScopeが開始したInvocationの内部処理である。Application側HTTP client SpanのTrace ContextをHTTP通信で引き継ぎ、AI推論サービス側HTTP SERVER Spanをその子Spanとして同じTraceへ記録する。
+一方、RAGScopeアプリケーションからAI推論サービスへの呼び出しは、RAGScopeが開始したInvocationの内部処理である。RAGScopeアプリケーション側HTTP client SpanのTrace ContextをHTTP通信で引き継ぎ、AI推論サービス側HTTP SERVER Spanをその子Spanとして同じTraceへ記録する。
 
 将来、外部の呼び出し元からRAGScope APIまでを1本の分散Traceとして継続する要求が追加された場合は、Invocationごとに独立したTraceを開始する現在の方針と外部Trace Contextの扱いを一緒に再評価する。
 独立Traceを維持しつつ上流Traceとの因果関係だけを残す要求が追加された場合は、その時点でSpan Linkを再評価する。
 
 ## handlerとSpanは別の概念である
 
-`handler`はApplication上の境界処理であり、`entry Span`はそのInvocationを観測するためのSpanである。両者は同じ種類の概念ではない。
+`handler`はRAGScopeアプリケーション上の境界処理であり、`entry Span`はそのInvocationを観測するためのSpanである。両者は同じ種類の概念ではない。
 
 - `handler`は、CLI / API入力をUseCaseへ渡す値へ変換し、UseCaseを呼び出し、その結果をCLI表示やHTTP応答へ変換する。
 - `entry Span`は、その1 Invocation全体をTrace上で観測するroot Spanである。
-- `UseCase Span`は、handlerからUseCaseを呼び出してからApplicationへ制御が戻るまでを観測するchild Spanである。
+- `UseCase Span`は、handlerからUseCaseを呼び出してからRAGScopeアプリケーションへ制御が戻るまでを観測するchild Spanである。
 
 entry Spanがhandlerの代わりに処理を行うわけではない。handler実行がentry Spanの計測範囲に含まれ、その途中でUseCaseが呼ばれたときだけUseCase Spanを作る。
 UseCaseが呼ばれる前にhandlerで処理が終了してもInvocationは発生しているため、entry Spanは残る。一方、UseCaseは実行されていないのでUseCase Spanは作らない。
@@ -102,7 +102,7 @@ flowchart TB
 
 この図はTrace上の親子関係を示している。handlerの責務そのものをSpan階層として表した図ではない。
 
-GenAI client SpanはApplicationからモデルまたはGenAIサービスへ行う論理的な依頼全体を表し、HTTP client Spanはその依頼の中で行う1回のHTTP requestを表す。両方を計装する場合は別のSpanとして扱う。
+GenAI client SpanはRAGScopeアプリケーションからモデルまたはGenAIサービスへ行う論理的な依頼全体を表し、HTTP client Spanはその依頼の中で行う1回のHTTP requestを表す。両方を計装する場合は別のSpanとして扱う。
 適用可能なGenAI Spanがない場合、またはGenAI Spanを計装しない場合は、HTTP client SpanをUseCase Spanの子Spanとして記録する。
 
 現行のGenAI Semantic Conventionsではclient側のinference / embeddings Spanは定義されているが、AI推論サービス側の汎用`gen_ai.inference.server` Spanは確認できない。そのため、AI推論サービス側へRAGScope独自のGenAI server Spanを補って作らない。将来、適用可能なserver側Conventionが成立した場合は、そのConventionを優先する。
@@ -120,7 +120,7 @@ Spanは、開始・終了、所要時間、失敗、親子関係を他の処理�
 | UseCase | 1 UseCase実行 = 1 UseCase Span | RAGScope固有SpanとしてUseCase全体を追う |
 | PostgreSQL | database client operation = DB client Span | Database / PostgreSQL Semantic Conventionsに従う |
 | Embedding / generation | 1 logical client operation = GenAI client Span | 適用可能なGenAI Semantic Conventionsを優先する |
-| AI推論サービスへのHTTP通信 | 1 HTTP request | Application側HTTP client SpanとAI推論サービス側HTTP SERVER Spanを同じTraceでつなぐ |
+| AI推論サービスへのHTTP通信 | 1 HTTP request | RAGScopeアプリケーション側HTTP client SpanとAI推論サービス側HTTP SERVER Spanを同じTraceでつなぐ |
 | UseCaseを構成する内部処理 | 他のSpanと分けて確認する必要がある処理 | 必要な場合だけRAGScope固有Spanを作る |
 | retryの各試行 | 既存計装で区別できるなら追加しない | 既存計装では区別できず、その区別を必要とする要求がある場合だけ設計する |
 
@@ -215,7 +215,7 @@ structured cancellation、CLIからの中断、timeoutによる打ち切りな�
 | RAGScope固有Spanの`error.type`値 | 対応するエラー型を具体化する時 |
 | API / CLIで利用者へ返す失敗表現 | API / CLI設計・Contract |
 | 実験・評価データモデルへ保存するerror | 実験・評価の設計 / データモデル |
-| Application / AI推論サービス間の失敗時の応答 / 失敗コード | AI通信方式・Contract設計時 |
+| RAGScopeアプリケーション / AI推論サービス間の失敗時の応答 / 失敗コード | AI通信方式・Contract設計時 |
 | キャンセル / 中断時のStatus | 実際の中断源と、そのSpanが表すoperationが確定した時 |
 | retryの各試行にRAGScope固有Spanが必要か | そのretryを定義する設計時 |
 | ExperimentとTraceの関係 | Experimentをどの単位で実行・追跡するかを定義する時 |

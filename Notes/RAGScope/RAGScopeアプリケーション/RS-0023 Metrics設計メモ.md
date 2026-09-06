@@ -57,7 +57,7 @@ OpenTelemetry Metricを出したことだけでは、正本が求める評価デ
 | `REQ-NF-PERF-002` | 生成token数 | 実験結果 | `gen_ai.client.token.usage`を適用可能なら使用 |
 | `REQ-EVAL-007` | 処理時間 / 成功率 / timeout率等 | 実験結果を集計 | Telemetry側は適用SemConvがある値だけ利用 |
 
-`REQ-NF-PERF-003`はCPU / GPU、メモリ、デバイス、`dtype`等を性能比較条件として実験結果へ記録することを要求している。この要求を満たすためだけに、これらをRAGScope Application独自Metricへしない。
+`REQ-NF-PERF-003`はCPU / GPU、メモリ、デバイス、`dtype`等を性能比較条件として実験結果へ記録することを要求している。この要求を満たすためだけに、これらをRAGScopeアプリケーション独自Metricへしない。
 
 runtime / host / acceleratorのMetricsをObservabilityとして追加するかは、外部構成と、どの集約・比較・監視で利用するかが定義された時点で判断する。
 
@@ -77,7 +77,7 @@ flowchart LR
     DB -. "DB Span / Metric" .-> DB
 ```
 
-実験比較用の検索時間は、RAGScope Applicationが検索処理全体を計測して実験結果へ保存する。
+実験比較用の検索時間は、RAGScopeアプリケーションが検索処理全体を計測して実験結果へ保存する。
 
 Embedding生成の論理的な依頼全体は、適用可能なGenAI embeddings client Span / Metricで観測する。
 その中で実際に行うHTTP requestは、HTTP計装を行う場合にHTTP client Span / `http.client.request.duration`で別に観測する。
@@ -88,11 +88,11 @@ Embedding operation全体とHTTP requestは同じ時間の別名ではない。�
 
 ## reranking時間をどう扱うか
 
-RAGScope Applicationは検索候補をAI推論サービスへ渡し、並べ替え済み結果を受け取る。
+RAGScopeアプリケーションは検索候補をAI推論サービスへ渡し、並べ替え済み結果を受け取る。
 
 そのため、次の2つは別の時間である。
 
-- Applicationがrerankingを依頼して結果を受け取るまでの処理全体
+- RAGScopeアプリケーションがrerankingを依頼して結果を受け取るまでの処理全体
 - AI推論サービス内部でモデルがreranking計算を行う時間
 
 現時点で確認したGenAI Semantic Conventionsには、RAGScopeのreranking処理全体へそのまま適用できる専用Metricを確認できていない。
@@ -104,14 +104,14 @@ rerankingを実装する時点で、その時点のGenAI Semantic Conventionsを
 
 回答生成では、次の4つを別の測定対象として扱う。
 
-1. RAGScope Applicationが回答生成処理を開始してから結果を得るまでの処理全体
-2. ApplicationからモデルまたはGenAIサービスへ行う論理的なGenAI client operation
+1. RAGScopeアプリケーションが回答生成処理を開始してから結果を得るまでの処理全体
+2. RAGScopeアプリケーションからモデルまたはGenAIサービスへ行う論理的なGenAI client operation
 3. そのGenAI処理の中でAI推論サービスへ送るHTTP request
 4. AI推論サービス側でrequestを受けて処理する時間
 
 ```mermaid
 flowchart LR
-    WHOLE["Application<br>回答生成処理全体"] --> GENAI["GenAI client operation"]
+    WHOLE["RAGScopeアプリケーション<br>回答生成処理全体"] --> GENAI["GenAI client operation"]
     GENAI --> HTTP["HTTP request"]
     HTTP --> AI["AI推論サービス<br>request処理"]
     AI --> MODEL["Model"]
@@ -126,7 +126,7 @@ flowchart LR
 
 `gen_ai.client.operation.duration`はGenAIへの論理的な依頼全体、`http.client.request.duration`はその中で行われる1回のHTTP request、`gen_ai.server.request.duration`はAI推論サービス側でrequestを処理する時間を表す。
 
-`gen_ai.client.operation.duration`にはHTTP通信時間が含まれる場合があるが、それでもHTTP requestの時間と同じ値ではない。一方から他方を導出しない。AI推論サービス側の値もApplication側の観測値から導出しない。
+`gen_ai.client.operation.duration`にはHTTP通信時間が含まれる場合があるが、それでもHTTP requestの時間と同じ値ではない。一方から他方を導出しない。AI推論サービス側の値もRAGScopeアプリケーション側の観測値から導出しない。
 
 ## TTFTをどう扱うか
 
@@ -139,20 +139,20 @@ TTFTとは開始点・終了点が異なるため、同じ値として扱わな�
 RAGScopeの実験結果では、AI推論サービス側で計測したTTFTを評価データごとの実行結果から取得できる形で保持する。
 Telemetryの保存・集約先だけへTTFTを送り、後から取得して実験結果を補完する構造にはしない。
 
-そのため、AI推論サービス側で計測したTTFTをApplicationへ渡せる必要がある。ただし、どの通信Contractで返すかは現在の正本で具体化されていないため、このノートではフィールド名や通信表現まで決めない。
+そのため、AI推論サービス側で計測したTTFTをRAGScopeアプリケーションへ渡せる必要がある。ただし、どの通信Contractで返すかは現在の正本で具体化されていないため、このノートではフィールド名や通信表現まで決めない。
 
 ## 生成token数をどう扱うか
 
 GenAI Semantic Conventionsには`gen_ai.client.token.usage`があり、input / output token数をHistogramで記録できる。
-ApplicationがAI推論サービスの応答などから正確なtoken数を取得できる場合に利用する。Telemetryのためだけに取得できない値を推定しない。
+RAGScopeアプリケーションがAI推論サービスの応答などから正確なtoken数を取得できる場合に利用する。Telemetryのためだけに取得できない値を推定しない。
 
 RAGScopeでは生成token数を評価データ単位で比較するため、**正確な出力token数を実験結果へ保持する経路が主**である。
 
-その上で、AI推論サービスから返された出力token数をApplication側で取得でき、GenAI client operationの標準Metricへ記録できる場合は`gen_ai.client.token.usage`を併用する。
+その上で、AI推論サービスから返された出力token数をRAGScopeアプリケーション側で取得でき、GenAI client operationの標準Metricへ記録できる場合は`gen_ai.client.token.usage`を併用する。
 
 ```mermaid
 flowchart LR
-    AI["AI推論サービス<br>出力token数"] --> APP["RAGScope Application"]
+    AI["AI推論サービス<br>出力token数"] --> APP["RAGScopeアプリケーション"]
     APP --> RESULT["評価データごとの実行結果"]
     APP --> METRIC["gen_ai.client.token.usage"]
 ```

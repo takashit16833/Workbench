@@ -86,7 +86,7 @@ RAGScope独自の`trace_id` / `span_id` attributesは追加しない。
 EventのseverityにはOpenTelemetry `SeverityNumber`の意味体系を使う。RAGScope独自のログレベル体系は設けない。
 各Eventの既定severityは、そのEventを定義するUseCaseまたは内部処理の設計で決める。
 
-severityからSpan Status、Applicationの最終結果、保存状態を導出しない。
+severityからSpan Status、RAGScopeアプリケーションの最終結果、保存状態を導出しない。
 OpenTelemetryのseverity体系を使うことと、UseCaseや内部処理の公開型へ`hs-opentelemetry`固有型を含めることは別の問題である。
 
 すべてのEventへ同じ構造を持たせる共通`payload`は設けない。Event固有の機械可読情報はattributesへ置く。
@@ -106,7 +106,7 @@ Logs設計が担当するのは、RAGScope固有Eventに失敗情報が必要な
 
 各エラー型とは別に、RAGScope全体で使う共通のエラー分類は設けない。共通のエラー分類を置かなくても現在要求は成立し、追加すると各エラー型との対応規則を別に維持する必要があるためである。
 
-Application / AI推論サービス間で共有する失敗コードが必要になった場合は、その通信Contractで定義する。Logs用の共通エラー分類として先に定義しない。
+RAGScopeアプリケーション / AI推論サービス間で共有する失敗コードが必要になった場合は、その通信Contractで定義する。Logs用の共通エラー分類として先に定義しない。
 
 ## `error.type`をEventでどう扱うか
 
@@ -198,7 +198,7 @@ RAGScope側で定義するのは、RAGScope固有Eventが表す意味、記録�
 | Exception attributesについてSemConvを超えて設けるRAGScope固有のデータ取扱規則 | その規則を必要とする要求・正本が具体化した時 |
 | API / CLIで利用者へ返す失敗表現 | API / CLI設計・Contract |
 | 実験・評価データモデルへ保存するerror | 実験・評価の設計 / データモデル |
-| Application / AI推論サービス間の失敗時の応答 / 失敗コード | AI通信方式・Contract設計時 |
+| RAGScopeアプリケーション / AI推論サービス間の失敗時の応答 / 失敗コード | AI通信方式・Contract設計時 |
 | ExperimentとTelemetryの関連付け | Experimentをどの単位で実行・追跡するかを定義する時 |
 | AdapterのException処理実装 | Adapter実装時 |
 
