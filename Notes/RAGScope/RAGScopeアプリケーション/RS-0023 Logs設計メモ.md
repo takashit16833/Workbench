@@ -10,44 +10,51 @@ created: 2026-09-06
 
 > [!note]
 > これはRS-0023を正本へ反映する前にレビューするための**Workbench上の設計ドラフト**であり、RAGScopeの正本ではない。
-> Observability全体は[[RS-0023 Observability設計メモ]]、Trace側は[[RS-0023 Trace設計メモ]]を参照する。
+> Observability全体は[[RS-0023 Observability設計メモ]]、Trace側の用語と失敗時のSpan表現は[[RS-0023 Trace設計メモ]]を参照する。
 
 ## このノートでレビューすること
 
 このノートは**上から順に読むレビュー用ドラフト**である。
 RAGScopeがいつLog Eventを出し、どのような`LogRecord`として表現し、failure / Exception時にどう扱うかをレビューする。
 
+## このノートで使う用語
+
+Trace、Span、operation、Span Status、Trace Context、typed failure、unexpected同期Exceptionは[[RS-0023 Trace設計メモ]]の定義に従う。
+
+| 用語 | 意味 |
+|---|---|
+| `LogRecord` | OpenTelemetry Logsで1件のログを表すデータ |
+| Event | ある時点で発生した出来事または状態変化を表すLog Event |
+| `EventName` | Eventの種類を識別する名前。実行ごとに変わる値は含めない |
+| attributes | Eventに付随する機械可読な値 |
+| `Body` | `LogRecord`のbody。具体的な利用方法は個別Eventまたは適用SemConvで決める |
+| `SeverityNumber` | OpenTelemetryが定義するseverityの数値体系 |
+| Exception Log | Exception Logs Semantic Conventionに従ってExceptionを記録する`LogRecord` |
+
 ## まず結論
 
-| 論点 | 状態 | 決定 |
-|---|---|---|
-| Logs基盤 | ✅ | OpenTelemetry Logs / Semantic Conventionsを土台にする |
-| RAGScope独自LogRecord / Runtime / Sink | ✅ | 作らない |
-| 構造化Event | ✅ | `EventName`を持つOTel `LogRecord`として表現 |
-| Event追加 | ✅ | SemConv / Spanで不足する意味のある時点だけ |
-| typed failure | ✅ | failure発生だけではLogを自動生成しない |
-| Exception | ✅ | Exception Logを1件。重複記録しない |
-| TraceId / SpanId | ✅ | RAGScope独自属性へ複製しない |
-| severity | ✅ | OTel `SeverityNumber`の意味体系を使う |
-| 共通`payload` | ✅ | 作らない |
-| `Body`の具体利用 | 個別設計で決定 | 個別Event / SemConvで決める |
+- Logsの基盤にはOpenTelemetry Logs / Semantic Conventionsを使う。
+- RAGScope固有Eventは、適用SemConvとSpanの開始・終了・attributes・Statusだけでは、後から必要な出来事または状態変化を識別できない場合に定義する。
+- typed failureが発生したことだけではLogを自動生成しない。unexpected同期Exceptionがoperation境界からescapeする場合はException Logを1件記録し、同じExceptionを重複記録しない。
+- RAGScope独自の`LogRecord`、Logging Runtime、Sink、Logging専用Context、OTelと並行するログ転送基盤は設けない。
+- Trace / Spanとの関連付けにはOpenTelemetry `LogRecord`自身のTrace Contextを使い、RAGScope独自の`trace_id` / `span_id`属性を追加しない。
+- severityはOpenTelemetry `SeverityNumber`の意味体系を使い、共通`payload`は設けない。
 
 ## いつLog Eventを出すか
 
 ```mermaid
 flowchart TD
-    A["観測したい出来事"] --> B{"適用SemConvですでに表現できる?"}
+    A["記録候補の出来事・状態変化"] --> B{"適用SemConvですでに表現できる?"}
     B -->|Yes| C["既存表現を使う"]
-    B -->|No| D{"Span / Span属性 / Statusで十分?"}
+    B -->|No| D{"Spanの開始・終了・attributes・Statusから識別できる?"}
     D -->|Yes| E["Eventを追加しない"]
-    D -->|No| F{"時点として独立して確認する意味がある?"}
-    F -->|No| E
-    F -->|Yes| G["ownerがRAGScope Eventを定義"]
+    D -->|No| F["RAGScope Eventを定義"]
 ```
 
 retryやtimeoutという**種類だけ**を理由に共通Eventを作らない。
-attempt、duration、最終失敗などがSpanや既存SemConvで十分追跡できるならEventを重複させない。
-retryを選択した、fallbackへ切り替えた、これ以上retryしないと決定したなど、Spanだけでは失われる状態変化を後から独立して確認する必要がある場合はEvent候補になる。
+attempt、duration、最終失敗などをSpanや既存SemConvから確認できる場合はEventを重複させない。
+
+一方、retryを選択した、fallbackへ切り替えた、これ以上retryしないと決定した、などの状態変化をSpanの開始・終了・attributes・Statusから後で識別できない場合はEventとして記録する候補になる。
 
 ## Log Eventをどう表現するか
 
@@ -55,9 +62,9 @@ retryを選択した、fallbackへ切り替えた、これ以上retryしない�
 |---|---|
 | 期間を持つ処理 | Span |
 | operation全体を説明する値 | Span attributes |
-| 意味のある時点の出来事 | Event |
+| ある時点の出来事・状態変化 | Event |
 | Event表現 | `EventName`を持つOTel `LogRecord` |
-| Event owner | feature / UseCase / operation |
+| Event定義 | その出来事が属するUseCaseまたは対象処理を定義する設計で決める |
 | EventName namespace | RAGScope固有Eventは`ragscope.*` |
 | dynamic値 | EventNameへ埋め込まずattributesへ置く |
 | Trace / Span correlation | OTel `LogRecord`自身のTrace Contextを使う |
@@ -68,9 +75,9 @@ retryを選択した、fallbackへ切り替えた、これ以上retryしない�
 | `Body` | 具体Event / 適用SemConvを決める時点で判断 |
 | Semantic Conventions | Eventでも適用可能なConventionを優先 |
 
-Eventを定義するownerは次を決める。
+RAGScope固有Eventを定義する設計では、次を決める。
 
-- Eventが表す出来事
+- Eventが表す出来事または状態変化
 - 記録条件
 - `EventName`
 - 発生時刻が指す時点
@@ -78,7 +85,7 @@ Eventを定義するownerは次を決める。
 - Event固有attributes
 
 全Eventを先に共通型へ列挙しない。
-複数featureで実際に同じEvent定義を共有する必要が生じた場合だけ共通化を検討する。
+複数の対象機能でEventが表す出来事、記録条件、`EventName`、attributesを同じ定義として共有する必要が生じた場合だけ共通化を検討する。
 
 ## failure / Exception時にどうLogを出すか
 
@@ -86,54 +93,57 @@ Eventを定義するownerは次を決める。
 |---|---|
 | typed failure | failure発生だけではLogRecordを生成しない |
 | retry / fallback後に回復 | failure発生だけではEventを生成しない |
-| Spanだけでは失われる意味のある出来事 | ownerがEventを定義する |
+| Spanから識別できない出来事・状態変化 | その出来事が属するUseCaseまたは対象処理の設計でEventを定義する |
 | unexpected同期Exceptionがescape | Exception Logs SemConvでException Logを1件記録 |
-| 同じExceptionが下位instrumentationで記録済み | RAGScope上位層では重複記録しない |
+| 同じExceptionが下位の計装で記録済み | RAGScope上位層では重複記録しない |
 
 Exception Logでは`exception.type`、`exception.message`、取得できる場合は`exception.stacktrace`を記録する。
 Span側のStatus / `error.type` / rethrowは[[RS-0023 Trace設計メモ]]を参照する。
 
-## 採用しない: 旧Logging基盤を作り直さない
+## RAGScopeで独自に設けないLogging機構
 
-| 旧RS-0022 | 今回 |
-|---|---|
-| RAGScope独自LogRecord | 作らない |
-| Logging Runtime | 作らない |
-| 独自Sink | 作らない |
-| Logging専用ContextへTrace Contextを手動注入 | 作らない |
-| OTelと並行する独自ログ転送基盤 | 作らない |
-
-RAGScope側で所有するのは、Eventの意味、EventName、attributes、failureとの関係などRAGScope固有の表現である。
-
-## 採用しないもの・まだ決めないこと
-
-| 項目 | 状態 | 理由 / 具体化時点 |
+| 機構 | 方針 | 理由 |
 |---|---|---|
-| typed failure → Logの共通自動変換 | 採用しない | Span StatusとEvent Logは別責務 |
-| Exception Span Eventを主表現にする | 採用しない | 現在のException Logs SemConvを優先 |
-| 全RAGScope Eventを列挙する共通`LogSpec` | 採用しない | 複数featureで共有が必要になった時だけ検討 |
-| 旧ログ契約の共通`payload` | 採用しない | Event固有の機械可読情報はattributesで表現 |
-| `Body`の具体内容 | 保留 | 個別Event / 適用SemConvを決める時 |
-| feature固有EventName / attributes / severity | 保留 | 対象feature設計時 |
-| ExperimentとTelemetryの関連付け | 保留 | 実験実行境界が具体化した時 |
-| AdapterのException処理実装 | 保留 | Adapter実装時 |
+| RAGScope独自`LogRecord` | 設けない | Logの記録単位にはOpenTelemetry `LogRecord`を使う |
+| Logging Runtime | 設けない | Processor / Exporter、batching、flush / shutdownなどはOpenTelemetry SDKへ委ねる |
+| 独自Sink | 設けない | Log転送はOpenTelemetryのProcessor / Exporter経路へ委ねる |
+| Logging専用ContextへのTrace Context手動注入 | 設けない | OpenTelemetry `LogRecord`自身のTrace Context関連付けを使う |
+| OTelと並行する独自ログ転送基盤 | 設けない | 同じLogを別経路で運ぶ基盤をRAGScopeで重複して保守しない |
 
-> [!important]
-> 「採用しない」は将来も不要という意味ではない。必要な要求が正本で追加された場合は再評価する。
+RAGScope側で定義するのは、RAGScope固有Eventの意味、記録条件、`EventName`、attributes、severity、failureとの関係である。
 
-## 正本反映時に確認する点
+## このLogs共通設計で設けないもの
 
-現在のADR-0005は、同じ失敗をSpanと構造化ログの両方へ記録する場合に同じ`error_type`値を使うとしている。
+| 項目 | 方針 | 理由 |
+|---|---|---|
+| typed failure → Logの共通自動変換 | 設けない | Span StatusとEvent Logは別の規則で決める |
+| Exception Span EventをExceptionの主表現にする規則 | 設けない | このドラフトではException Logs Semantic Conventionを主表現として使う |
+| 全RAGScope Eventを列挙する共通`LogSpec` | 設けない | Eventは対象のUseCaseまたは処理を定義する設計で必要なものだけ定義する |
+| 共通`payload` | 設けない | Event固有の機械可読情報はattributesで表現する |
 
-OpenTelemetryのException Logは`exception.type`を標準属性として使用するため、正本反映時は次の関係が明確になるよう見直す。
+## このLogs共通設計では決めないこと
+
+| 項目 | 具体化する時点 |
+|---|---|
+| `Body`の具体内容 | 個別Event / 適用SemConvを決める時 |
+| 対象機能固有EventName / attributes / severity | 対象機能の設計時 |
+| ExperimentとTelemetryの関連付け | 実験実行境界が具体化した時 |
+| AdapterのException処理実装 | Adapter実装時 |
+
+## Spanの`error.type`とException Logの`exception.type`
+
+SpanとException Logでは、適用するOpenTelemetry Semantic Conventionに従って別の属性名を使う。
 
 | signal | 属性 |
 |---|---|
 | Span | `error.type` |
 | Exception Log | `exception.type` |
 
-同じ失敗クラスを表す値の**意味は一致**させるが、同じ属性名を両signalへ重複して置くことは要求しない。
-このWorkbench上の判断だけで現在のADRを変更したことにはしない。
+同じ失敗クラスを表す場合は値の意味を一致させるが、同じ属性名を両signalへ重複して置くことは要求しない。
+
+> [!warning]
+> 現在の正本ADR-0005には、同じ失敗をSpanと構造化ログの両方へ記録する場合に同じ`error_type`値を使うという定義がある。
+> このドラフトの`error.type` / `exception.type`の整理はまだ正本へ反映されていないため、正本更新時に両者を整合させる必要がある。
 
 ## 判断理由・実装上の注意
 
@@ -150,31 +160,27 @@ OpenTelemetryのException Logは`exception.type`を標準属性として使用�
 > [!info]- Trace Contextを独自属性として複製しない
 > Eventを現在のTrace / Spanへ関連付けるために、RAGScope独自の`trace_id` / `span_id`属性を追加しない。
 > OpenTelemetry `LogRecord`自身が持つTrace Contextとの関連付けを使用する。
->
-> 旧RS-0022のように、Logging専用ContextへTrace Contextを手動注入する仕組みも作らない。
 
 > [!info]- severity
-> RAGScope独自の`debug` / `info` / `warn` / `error` / `fatal`という別のLog Level契約は新設計では維持しない。
-> Eventの重要度はOpenTelemetry `SeverityNumber`の意味体系に従い、各Eventのownerが既定severityを決める。
+> RAGScope独自のLog Level契約は設けず、Eventの重要度はOpenTelemetry `SeverityNumber`の意味体系に従う。
+> 各Eventの既定severityは、そのEventを定義する設計で決める。
 >
-> これはUseCaseやfeatureへ`hs-opentelemetry`固有型を直接渡すことを意味しない。
+> これはUseCaseや対象機能へ`hs-opentelemetry`固有型を直接渡すことを意味しない。
 > SDK型を境界の外へ漏らすかどうかと、Telemetry上のseverity体系をOpenTelemetryへ合わせることは別問題である。
 >
 > severityからSpan Status、Applicationの最終結果、保存状態を導出しない。
 
 > [!info]- unexpected同期Exceptionと`hs-opentelemetry`
-> RAGScopeが所有するoperation境界からunexpectedな同期Exceptionがescapeする場合は、Logs側ではOpenTelemetryのException Logs Semantic Conventionを使用し、Exception Logを1件記録する。
+> RAGScopeが追跡するoperation境界からunexpectedな同期Exceptionがescapeする場合は、Logs側ではOpenTelemetryのException Logs Semantic Conventionを使用し、Exception Logを1件記録する。
 >
-> 同じExceptionをUseCase / handler / rootなど伝播経路の各層で重複記録しない。
-> 下位のHTTP / DB / GenAI instrumentationなどが同じExceptionをすでに所有・記録している場合は、RAGScope上位層が同じException Logを追加しない。
+> 同じExceptionをUseCase / handler / entry Spanなど伝播経路の各層で重複記録しない。
+> 下位のHTTP / DB / GenAI計装などが同じExceptionをすでに記録している場合は、RAGScope上位層が同じException Logを追加しない。
 >
 > `hs-opentelemetry`の`inSpan`は、既定ではescapeしたExceptionをSpanのException Eventとして記録する。
-> 一方、現在のOpenTelemetry Semantic ConventionsではExceptionをLogsとして記録する方向へ移行しているため、RAGScopeが所有するmanual SpanではSDKの既定挙動をそのままRAGScope契約にしない。
+> このドラフトではException Logを主表現とするため、RAGScopeが作成するmanual SpanでSDK既定のException EventとException Logが重複する場合は、OpenTelemetry Adapterで既定のException記録を抑える。
 >
-> 必要な場合はOpenTelemetry Adapterで既定のException記録を抑え、RAGScopeが採用するException Log + Span Status / `error.type`へ写像する。
 > 具体的に`ExceptionHandler`を使うか、Span lifecycleを別の方法で扱うかはAdapter実装時に決める。
->
-> 採用する`hs-opentelemetry`の将来versionが現在のException Logs Semantic Conventionを直接扱い、RAGScope固有Adapterでの補正が不要になった場合はAdapter内部の実装を簡略化する。
+> Adapterでの補正は、採用するSDKの既定挙動とこのLogs設計が一致しない場合だけ行う。
 
 ## 参考
 
