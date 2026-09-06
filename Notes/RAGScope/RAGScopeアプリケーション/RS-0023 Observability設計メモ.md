@@ -35,28 +35,27 @@ Trace / Logs / Metrics固有の判断は、それぞれの設計メモでレビ�
 
 ## 全体像
 
+この図では、1 InvocationでRAGScope Applicationが外部のDB / AI推論サービスを利用する関係と、ApplicationからOpenTelemetryへTelemetryを記録する経路を俯瞰する。Composition Rootは実行に必要な部品を構築・接続する**構築時**の責務であり、1 Invocationの実行フローではないため、この図には含めない。
+
 ```mermaid
 flowchart TB
-    USER["利用者"] --> H["CLI / API handler"]
+    USER["利用者"] --> APP["RAGScope Application（handler / UseCase / 対象処理）"]
 
-    CR["Composition Root"] --> H
-    CR --> UC["UseCase"]
-    CR --> TEL["RAGScope Telemetry利用境界"]
-
-    H --> UC
-    UC --> DB[("PostgreSQL")]
-    UC --> AIREQ["AI推論サービスへの依頼"]
+    APP --> DB[("PostgreSQL")]
+    APP --> AIREQ["AI推論サービスへの依頼"]
     AIREQ --> AI["AI推論サービス"]
-
     AIREQ -. "Trace Contextを伝播" .-> AI
 
-    UC -. "観測" .-> TEL
-    OTEL["hs-opentelemetry<br>Adapter / SDK"] --> TEL
+    APP -. "Telemetryを利用" .-> TEL["RAGScope Telemetry利用境界"]
+    TEL --> ADAPTER["OpenTelemetry Adapter"]
+    ADAPTER --> SDK["hs-opentelemetry SDK"]
 
-    OTEL --> TR["Traces"]
-    OTEL --> LG["Logs"]
-    OTEL --> MT["Metrics"]
+    SDK --> TR["Traces"]
+    SDK --> LG["Logs"]
+    SDK --> MT["Metrics"]
 ```
+
+この図はApplication内部のhandler / UseCase境界やSpanの包含関係までは表さない。それらは後述の「RAGScopeへどう組み込むか」と[[RS-0023 Trace設計メモ]]で具体化する。自動計装 / 手動計装の選択やTelemetry利用境界の具体APIも、この図からは決めない。
 
 Collector / Tempo / Lokiなどの外部構成は、このノートでは採用を決めない。
 
@@ -130,7 +129,7 @@ Observabilityを組み込む位置を理解するため、**構築時**と**1 In
 
 ### handler
 
-`handler`は、CLI / APIとUseCaseの間の境界処理を指す。CLI / APIから受け取った入力をUseCaseへ渡す値へ変換してUseCaseを呼び出し、UseCaseから制御が戻った後は、その結果をCLI表示やHTTP responseなどへ変換する。UseCaseそのものはhandlerに含めない。
+`handler`は、CLI / APIとUseCaseの間の**1つの境界処理**を指す。CLI / APIから受け取った入力をUseCaseへ渡す値へ変換してUseCaseを呼び出し、UseCaseから制御が戻った後は、その結果をCLI表示やHTTP responseなどへ変換する。入力側handlerと出力側handlerが別々に存在するのではなく、1つのhandler実行の中でUseCase呼び出しの前後にこれらの処理がある。UseCaseそのものはhandlerに含めない。
 
 ### 構築時
 
