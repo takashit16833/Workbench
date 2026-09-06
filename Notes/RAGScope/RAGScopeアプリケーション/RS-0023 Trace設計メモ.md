@@ -79,7 +79,7 @@ flowchart TB
     subgraph TRACE["1 Invocation = 1 Trace"]
         direction TB
 
-        subgraph ENTRY["entry Span<br>API: HTTP SERVER Span<br>CLI: Execution (callee) Span"]
+        subgraph ENTRY["entry Span API: HTTP SERVER Span CLI: Execution (callee) Span"]
             direction TB
 
             subgraph HANDLER["handler（1つの境界処理 / Spanではない）"]
