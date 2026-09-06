@@ -8,42 +8,6 @@ created: 2026-09-06
 
 # RS-0023 Observability用語メモ
 
-> [!note]
-> これはRS-0023を正本へ反映する前にレビューするための**Workbench上の用語メモ**であり、RAGScopeの正本ではない。
-> [[RS-0023 Observability設計メモ]]、[[RS-0023 Trace設計メモ]]、[[RS-0023 Logs設計メモ]]、[[RS-0023 Metrics設計メモ]]で使うOpenTelemetry用語と、RAGScope / RS-0023側で定義する用語をまとめる。
-> 用語の意味と出自を確認するためのメモであり、Trace境界、Log Eventを記録する条件、Metricsの保存・集約方針などの設計判断は各設計メモで扱う。
-
-## このノートが答える問い
-
-> **RS-0023のObservability設計で使う用語は、OpenTelemetryの用語なのか、RAGScope / RS-0023側で定義した用語なのか。それぞれ何を意味するか？**
-
-## 要するに
-
-この4つの設計メモで使う用語は、次の2種類に分ける。
-
-- **OpenTelemetryから使う用語**: OpenTelemetry specification、Semantic Conventions、SDKで定義・使用される概念や名称である。RAGScope独自の同義語へ置き換えない。
-- **RAGScope / RS-0023側の用語**: RAGScopeの実行範囲や、OpenTelemetryのSpan / LogをRAGScope上でどう位置づけるかを説明するために、この設計で使う名称である。
-
-特に、`entry Span`はOpenTelemetryのSpan種別ではない。**1 Invocation全体を観測するroot Spanの役割を、RS-0023で`entry Span`と呼んでいる**。
-
-```text
-APIの場合
-Invocation
-└─ HTTP SERVER Span (= entry Span)
-   └─ UseCase Span
-      ├─ DB client Span
-      └─ GenAI client Span / HTTP client Span
-
-CLIの場合
-Invocation
-└─ Execution (callee) Span (= entry Span)
-   └─ UseCase Span
-      ├─ DB client Span
-      └─ GenAI client Span / HTTP client Span
-```
-
-`entry Span`という別のSpanをHTTP SERVER SpanやExecution (callee) Spanの外側に追加するわけではない。この図は用語の関係を示すための簡略図であり、実際のSpan階層と条件は[[RS-0023 Trace設計メモ]]を参照する。
-
 ## OpenTelemetryから使う用語
 
 ### Observability / Trace共通
@@ -115,8 +79,6 @@ Invocation
 | OTLP | OpenTelemetry Protocol。TelemetryをOpenTelemetry対応component間で送るためのprotocol |
 
 ## RAGScope / RS-0023側の用語
-
-ここに置く用語は、このWorkbenchドラフトでRAGScopeのObservability設計を説明するために使う。**正本へ反映されるまでは、RAGScopeの現在仕様として採用済みという意味ではない。**
 
 | 用語 | 意味 |
 |---|---|
