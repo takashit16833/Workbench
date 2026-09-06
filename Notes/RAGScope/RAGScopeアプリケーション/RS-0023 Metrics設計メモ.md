@@ -10,7 +10,7 @@ created: 2026-09-06
 
 > [!note]
 > これはRS-0023を正本へ反映する前にレビューするための**Workbench上の設計ドラフト**であり、RAGScopeの正本ではない。
-> Observability全体の共通方針と、Metrics共通設計の外側にあるTelemetry利用境界 / package / 外部構成は[[RS-0023 Observability設計メモ]]を参照する。
+> Observability全体の共通方針と、Metrics共通設計の外側にあるTelemetry利用境界 / package構成 / 外部構成は[[RS-0023 Observability設計メモ]]を参照する。
 > このノートで使うOpenTelemetry用語とRAGScope / RS-0023側の用語は[[RS-0023 Observability用語メモ]]を参照する。
 
 ## このノートが答える問い
@@ -59,7 +59,7 @@ OpenTelemetry Metricを出したことだけでは、正本が求める評価デ
 
 `REQ-NF-PERF-003`はCPU / GPU、メモリ、デバイス、`dtype`等を性能比較条件として実験結果へ記録することを要求している。この要求を満たすためだけに、これらをRAGScope Application独自Metricへしない。
 
-runtime / host / acceleratorのMetricsをObservabilityとして追加するかは、外部構成と、どの集計・比較・監視で利用するかが定義された時点で判断する。
+runtime / host / acceleratorのMetricsをObservabilityとして追加するかは、外部構成と、どの集約・比較・監視で利用するかが定義された時点で判断する。
 
 ## 検索時間をどう扱うか
 
@@ -164,7 +164,7 @@ Metricは複数の観測値を同じ属性集合で集約するため、実行�
 実験ID、評価データID、文書ID、文書チャンクIDはMetric attributesへ入れない。
 TraceId / SpanIdもRAGScope独自attributeとして追加しない。
 
-適用するSemantic Conventionが要求・推奨する低cardinality attributesは、そのConventionに従う。
+適用するSemantic Conventionが要求・推奨する低カーディナリティのattributesは、そのConventionに従う。
 RAGScope独自attributeは、どの集計・比較・監視で使うかを特定できた場合だけ検討する。
 
 個別実行の識別はTraceと実験結果が担当し、Metric attributesへ実験識別を持ち込まない。
@@ -184,10 +184,10 @@ UseCaseまたは内部処理について必要な集約・比較・監視が具�
 
 ## Semantic Conventionsのstability
 
-2026-09-06確認時点で、OpenTelemetry core Semantic Conventionsの最新releaseは1.44.0である。GenAI Semantic Conventionsは専用リポジトリへ分離され、現在もDevelopmentとして管理されている。
+2026-09-06確認時点で、OpenTelemetry core Semantic Conventionsの最新リリースは1.44.0である。GenAI Semantic Conventionsは専用リポジトリへ分離され、現在もDevelopmentとして管理されている。
 
 そのため、`gen_ai.*`の現在のMetric名・attributesを**RAGScope独自の恒久契約へコピーしない**。
-実装時には、採用するOpenTelemetry / instrumentation versionと対象Conventionのstabilityを再確認する。
+実装時には、採用するOpenTelemetry / instrumentationバージョンと対象Conventionのstabilityを再確認する。
 
 このノートで参照する代表的なMetricsは次のとおりである。
 
@@ -202,7 +202,7 @@ UseCaseまたは内部処理について必要な集約・比較・監視が具�
 | `gen_ai.server.time_to_first_token` | Histogram | `s` | Development |
 | `gen_ai.server.time_per_output_token` | Histogram | `s` | Development |
 
-HTTP / Databaseの文書全体にはMixedなstabilityの項目も存在するため、「HTTPまたはDatabaseだからすべてStable」とは扱わない。このノートで採用候補としている`http.client.request.duration`と`db.client.operation.duration`はStableであり、GenAI Metricsとはstabilityが異なる。
+HTTP / Databaseの文書全体にはstabilityが混在するため、「HTTPまたはDatabaseだからすべてStable」とは扱わない。このノートで採用候補としている`http.client.request.duration`と`db.client.operation.duration`はStableであり、GenAI Metricsとはstabilityが異なる。
 
 ## このMetrics共通設計では決めないこと
 
