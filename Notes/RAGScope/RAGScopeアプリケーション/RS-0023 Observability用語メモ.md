@@ -1,0 +1,170 @@
+---
+fileClass: Note
+type: note
+projects:
+  - "[[RAGScope]]"
+created: 2026-09-06
+---
+
+# RS-0023 Observability用語メモ
+
+> [!note]
+> これはRS-0023を正本へ反映する前にレビューするための**Workbench上の用語メモ**であり、RAGScopeの正本ではない。
+> [[RS-0023 Observability設計メモ]]、[[RS-0023 Trace設計メモ]]、[[RS-0023 Logs設計メモ]]、[[RS-0023 Metrics設計メモ]]で使うOpenTelemetry用語と、RAGScope / RS-0023側で定義する用語をまとめる。
+> 用語の意味と出自を確認するためのメモであり、Trace境界、Log Eventを記録する条件、Metricsの保存・集約方針などの設計判断は各設計メモで扱う。
+
+## このノートが答える問い
+
+> **RS-0023のObservability設計で使う用語は、OpenTelemetryの用語なのか、RAGScope / RS-0023側で定義した用語なのか。それぞれ何を意味するか？**
+
+## 要するに
+
+この4つの設計メモで使う用語は、次の2種類に分ける。
+
+- **OpenTelemetryから使う用語**: OpenTelemetry specification、Semantic Conventions、SDKで定義・使用される概念や名称である。RAGScope独自の同義語へ置き換えない。
+- **RAGScope / RS-0023側の用語**: RAGScopeの実行範囲や、OpenTelemetryのSpan / LogをRAGScope上でどう位置づけるかを説明するために、この設計で使う名称である。
+
+特に、`entry Span`はOpenTelemetryのSpan種別ではない。**1 Invocation全体を観測するroot Spanの役割を、RS-0023で`entry Span`と呼んでいる**。
+
+```text
+1 Invocation
+└─ entry Span                         ← RS-0023の役割名
+   ├─ API: HTTP SERVER Span           ← OpenTelemetry Semantic Conventions
+   └─ CLI: Execution (callee) Span    ← OpenTelemetry Semantic Conventions
+       └─ UseCase Span                ← RAGScope固有Span
+          ├─ DB client Span           ← OpenTelemetry Semantic Conventions
+          └─ GenAI client Span        ← OpenTelemetry Semantic Conventions
+```
+
+この図は用語の関係を示すための簡略図である。実際のSpan階層と条件は[[RS-0023 Trace設計メモ]]を参照する。
+
+## OpenTelemetryから使う用語
+
+### Observability / Trace共通
+
+| 用語 | この設計メモでの意味 |
+|---|---|
+| Telemetry | 実行時に観測・記録するTrace / Logs / Metricsなどのデータ |
+| signal | OpenTelemetryで扱うTraces / Metrics / Logsの各signal。この設計メモではこれらをまとめてsignalと呼ぶ |
+| Trace | 複数のSpanを親子関係などで結び、1つながりの処理として追跡するもの |
+| Span | Trace内の1つのoperationを表す。開始・終了、所要時間、attributes、Status、親子関係などを持つ |
+| operation | Spanが表す1つの処理 |
+| root Span | Trace内でparentを持たないSpan。この設計では1 Invocationの`entry Span`がrootになる |
+| parent / child Span | Span同士の親子関係。あるoperationの内部で別のoperationを追跡する場合、後者をchild Spanとして表現できる |
+| Span Kind | Spanが表すoperationの役割を示すOpenTelemetryの区分。SERVER / CLIENTなどがある |
+| Trace Context | Traceをコンポーネント間で継続するために引き継ぐTrace / SpanのContext |
+| Span Link | 親子関係とは別に、あるSpanから別のSpan Contextとの関連を記録する仕組み |
+| Span Status | Spanが表すoperationの最終状態。この設計では主に`Unset` / `Error`を扱う |
+| attributes | Span、LogRecord、Metricなどへ付与する機械可読なkey-valueの情報 |
+| `error.type` | operationまたはEventがどの種類のerrorで失敗・終了したかを表すOpenTelemetry Semantic Conventionsの属性 |
+| Semantic Conventions（SemConv） | Span名、Span Kind、attributes、Event、Metric名、instrument、unitなど、対象領域ごとのTelemetry表現を定めるOpenTelemetryの規約 |
+| instrumentation | ApplicationやlibraryのoperationをOpenTelemetryで観測できるようにする計装 |
+| automatic instrumentation / manual instrumentation | 計装をlibrary / framework等により自動で行うか、Application側で明示的に行うかの区分 |
+| Propagator | Trace Contextなどをプロセス・通信境界を越えて注入・抽出するOpenTelemetryの仕組み |
+
+### この設計で利用する主なSpan
+
+| 用語 | この設計メモでの意味 |
+|---|---|
+| HTTP SERVER Span | HTTP serverが1 HTTP requestを処理するoperationを表すSpan。RAGScope APIでは`entry Span`の役割を担う |
+| HTTP client Span | HTTP clientが1 HTTP requestを送信するoperationを表すSpan |
+| Execution (callee) Span | CLI programの1実行を表すCLI Semantic ConventionsのSpan。RAGScope CLIでは`entry Span`の役割を担う |
+| Database client Span / DB client Span | Database client operationを表すSpan。RAGScopeではPostgreSQL operationへ適用する |
+| GenAI operation | OpenTelemetry GenAI Semantic Conventionsが定義する、ApplicationからmodelまたはGenAI serviceへ行う論理的な依頼 |
+| GenAI client Span | GenAI client operationを表すSpan。この設計ではEmbedding / generationなどへ適用可能な場合に使う |
+
+### Logs
+
+| 用語 | この設計メモでの意味 |
+|---|---|
+| `LogRecord` | OpenTelemetry Logsで1件のlogを表すデータ |
+| Log Event / Event | ある時点で発生した出来事または状態変化をOpenTelemetry Logsで表すもの。Logs設計メモで単にEventと書く場合は原則としてこのLog Eventを指す |
+| `EventName` | Eventの種類を識別する名前。実行ごとに変わる値は含めない |
+| `Body` | `LogRecord`のbody。具体的な利用方法は個別Eventまたは適用するSemantic Conventionで決める |
+| `SeverityNumber` | OpenTelemetryが定義するseverityの数値体系 |
+| Exception Log | Exceptions in Logs Semantic Conventionに従ってExceptionを記録する`LogRecord` |
+| Span Event | Spanの中で、ある時点に起きた出来事を記録するTrace側のEvent。Log Eventとは別の表現である |
+| requirement level | Semantic Conventionが属性を`Required`、`Conditionally Required`、`Recommended`などで示す区分 |
+
+### Metrics
+
+| 用語 | この設計メモでの意味 |
+|---|---|
+| Metric | OpenTelemetry Metricsで複数の観測値を集約して扱うための計測データ |
+| instrument | Metricを記録するOpenTelemetry Metricsの計測器。RS-0023で参照する標準MetricではHistogramなどが使われる |
+| unit | Metric値の単位。秒を表す`s`やtoken数を表す`{token}`など、Semantic Conventionが定める値に従う |
+| high-cardinality属性 | 実行や対象ごとに値の種類が増えやすく、Metricの集約系列を増加させるattribute |
+
+### SDK / export
+
+| 用語 | この設計メモでの意味 |
+|---|---|
+| OpenTelemetry SDK | Trace / Logs / Metricsの生成、処理、exportなどを実装するOpenTelemetryのSDK |
+| Processor | 生成されたSpan / LogRecordなどをExporterへ渡す前に処理するSDKの仕組み |
+| Exporter | Telemetryを外部endpointやconsole等へ送るSDKの仕組み |
+| Collector | 複数コンポーネントなどからTelemetryを受信し、処理・転送できるOpenTelemetryの外部コンポーネント |
+| OTLP | OpenTelemetry Protocol。TelemetryをOpenTelemetry対応component間で送るためのprotocol |
+
+## RAGScope / RS-0023側の用語
+
+ここに置く用語は、このWorkbenchドラフトでRAGScopeのObservability設計を説明するために使う。**正本へ反映されるまでは、RAGScopeの現在仕様として採用済みという意味ではない。**
+
+| 用語 | 意味 |
+|---|---|
+| Invocation | RAGScopeがCLI / APIなどを通じて外部から1回呼び出され、その処理が完了するまでの実行範囲。RS-0023では1 Invocationを1独立Traceとして追跡する |
+| `entry Span` | 1 Invocation全体をTrace上で観測するroot Spanの**役割名**。OpenTelemetryのSpan種別ではない。APIではHTTP SERVER Span、CLIではExecution (callee) Spanがこの役割を担い、Invocation専用Spanは別に作らない |
+| UseCase Span | 1 UseCase実行全体を観測するRAGScope固有Span |
+| RAGScope固有Span | 適用可能なSemantic Conventionだけでは表せないRAGScope固有operationを追跡するSpan |
+| RAGScope固有Event | 適用できるSemantic Conventionや既存Spanだけでは後から識別できない、RAGScope固有の出来事または状態変化を表すLog Event |
+| Telemetry利用境界 | UseCaseや内部処理がOpenTelemetry SDKを直接importせずにTelemetryを記録するため、RAGScope側に置く利用境界。具体的な名前と公開APIはRS-0023の共通設計では未決定 |
+| handler | CLI / API入力をUseCaseへ渡す値へ変換し、UseCaseを呼び出し、その結果をCLI表示またはHTTP responseへ変換するApplication上の境界処理 |
+| UseCase | RAGScope正本で定義されるUseCase。この用語メモではObservability固有の別定義を作らない |
+| 内部処理 | Embedding生成、Database検索、文書チャンク化など、UseCaseから呼び出され、そのUseCaseを構成する処理 |
+| typed failure | UseCaseまたは内部処理の契約上想定されるfailure。OpenTelemetryの`error.type`やruntime Exceptionそのものを指す語ではない |
+| unexpected同期Exception | typed failureとして扱われず、RAGScopeが追跡するoperationの境界から同期的に外へ投げられるException |
+| async interruption / cancellation | 実行中の処理を外部・非同期要因から中断するケースの総称。特定のException constructorや一律のSpan Statusを意味する語ではない |
+| TTFT | Time To First Token。RS-0023では、AI推論サービスが生成を開始してから最初のtokenを生成するまでの時間を指す。clientが最初のresponse chunkを受信するまでの時間とは区別する |
+
+## `entry Span` / Invocation / UseCase Spanの関係
+
+`Invocation`はRAGScopeの**実行範囲**であり、Spanそのものではない。
+`entry Span`は、そのInvocation全体をTrace上で観測する**root Spanの役割名**である。
+`UseCase Span`は、Invocationの途中でUseCaseが実行された場合に、そのUseCase実行だけを観測するchild Spanである。
+
+```text
+Invocation                                   ← RAGScopeの実行範囲
+└─ entry Span                                ← Trace上のroot Spanの役割
+   ├─ handlerの入力変換                     ← entry Spanの計測範囲内
+   ├─ UseCase Span                           ← UseCaseを呼んだ場合だけ作る
+   │  ├─ DB client Span
+   │  └─ GenAI client Span / HTTP client Span
+   └─ handlerの出力変換                     ← entry Spanの計測範囲内
+```
+
+UseCaseを呼ぶ前にhandlerで処理が終了した場合でもInvocationは発生しているため`entry Span`は残るが、UseCaseを実行していないのでUseCase Spanは作らない。詳細なTrace境界は[[RS-0023 Trace設計メモ]]で扱う。
+
+## `error.type` / typed failure / `exception.type`の関係
+
+この3つは同じものではない。
+
+| 用語 | 属する側 | 表すもの |
+|---|---|---|
+| typed failure | RAGScope / UseCase・内部処理 | 契約上想定されるfailureの元情報 |
+| `error.type` | OpenTelemetry | operationまたはEventがどの種類のerrorで失敗・終了したか |
+| `exception.type` | OpenTelemetry Exceptions in Logs | 実際に記録したruntime Exceptionの型 |
+
+RAGScope固有Span / Eventで必要な`error.type`はtyped failureから変換するが、typed failure自体を`error.type`へ置き換えない。unexpected同期ExceptionをException Logへ記録する場合は、実際のruntime Exception型を`exception.type`へ記録する。具体的な変換規則は[[RS-0023 Trace設計メモ]]と[[RS-0023 Logs設計メモ]]で扱う。
+
+## 正本へ反映するとき
+
+この用語メモ自体を正本の用語集として扱わない。
+RS-0023の判断を正本へ反映するときは、採用するRAGScope固有用語だけを正本の責務に応じた設計書・用語集へ移す。OpenTelemetry用語はOpenTelemetry specification / Semantic Conventionsの意味を変えず、RAGScope独自の同義語として再定義しない。
+
+## 参考
+
+- [[RS-0023 Observability設計メモ]]
+- [[RS-0023 Trace設計メモ]]
+- [[RS-0023 Logs設計メモ]]
+- [[RS-0023 Metrics設計メモ]]
+- [OpenTelemetry Specification](https://opentelemetry.io/docs/specs/otel/)
+- [OpenTelemetry Semantic Conventions](https://opentelemetry.io/docs/specs/semconv/)
