@@ -253,7 +253,7 @@ Workbenchには今回の検討結果、確認した根拠、実装前に再確�
 |---|---|
 | Trace / Logs / Metricsの利用境界を1つにまとめるか分けるか | Telemetry利用境界設計 |
 | Telemetry利用境界の名前と公開API | Telemetry利用境界設計 |
-| typed failure → Telemetry表現のHaskell module / package配置 | Telemetry利用境界 / package・module設計。feature / UseCase側からOpenTelemetry SDKへの依存を生じさせず、Telemetry実装側からApplication libraryへの逆依存や`build-depends`の循環も生じない配置を決める |
+| typed failure → Telemetry表現のHaskell module / package配置 | Telemetry利用境界 / package・module設計。feature / UseCase側へOpenTelemetry SDK依存を生じさせず、各module/packageの責務に従った静的依存方向とし、`build-depends`の循環を生じさせない。Telemetry AdapterがApplication側で定義されたPortやtyped failure型へ依存するかを含む具体的な依存方向は、この共通設計では先に固定しない |
 | SDK初期化設定エラー時に起動失敗するかTelemetryなしで起動するか | Telemetry初期化設計 |
 | package / module構成 | Telemetry利用境界の決定後に行うpackage / module設計 |
 | production Collector / Tempo / Loki等の外部構成 | 外部構成設計。現時点では候補であり採用を決めない |
