@@ -11,6 +11,7 @@ created: 2026-09-06
 > [!note]
 > これはRS-0023を正本へ反映する前にレビューするための**Workbench上の設計ドラフト**であり、RAGScopeの正本ではない。
 > Observability全体の共通方針は[[RS-0023 Observability設計メモ]]を参照する。
+> このノートで使うOpenTelemetry用語とRAGScope / RS-0023側の用語は[[RS-0023 Observability用語メモ]]を参照する。
 
 ## このノートが答える問い
 
@@ -37,31 +38,6 @@ API: HTTP SERVER Span / CLI: Execution (callee) Span  ← entry Span / root
 
 外部callerからAPIへTrace Contextが届いても、現在はそのTraceへRAGScopeを参加させない。RAGScopeが新しいTraceを開始する。
 一方、RAGScope ApplicationからAI推論サービスへはTrace Contextを引き継ぎ、同じTraceを継続する。
-
-## 先に押さえる用語
-
-詳細を読むために必要な用語だけをここで整理する。
-
-| 用語 | 意味 |
-|---|---|
-| Trace | 複数のSpanを親子関係などで結び、1つながりの処理として追跡するもの |
-| Span | Trace内の1つのoperationを表す。開始・終了、所要時間、attributes、Status、親子関係などを持つ |
-| operation | Spanが表す1つの処理 |
-| parent / child Span | Span同士の親子関係。あるoperationの内部で別のoperationを追跡する場合、後者をchild Spanとして表現できる |
-| Trace Context | Traceをコンポーネント間で継続するために引き継ぐTrace / SpanのContext |
-| Span Link | 親子関係とは別に、あるSpanから別のSpan Contextとの関連を記録する仕組み |
-| Span Status | Spanが表すoperationの最終状態。ここでは主に`Unset` / `Error`を扱う |
-| `error.type` | operationがエラーで終了した場合、そのエラーのクラスを表すOpenTelemetry Semantic Conventionsの属性 |
-| Semantic Conventions（SemConv） | Span名、Span Kind、attributes、`error.type`など、対象領域ごとのTelemetry表現を定めるOpenTelemetryの規約 |
-| Invocation | RAGScopeがCLI / APIなどを通じて外部から1回呼び出され、その処理が完了するまでの実行範囲 |
-| entry Span | 1 Invocationを表すTraceのroot Spanの役割名。APIではHTTP SERVER Span、CLIではExecution (callee) Spanが担う |
-| UseCase Span | 1 UseCase実行全体を表すRAGScope固有Span |
-| RAGScope固有Span | 適用可能なSemantic Conventionだけでは表せないRAGScope固有operationを追跡するSpan |
-| typed failure | UseCaseまたは内部処理の契約上想定されるfailure |
-| unexpected同期Exception | typed failureとして扱われず、RAGScopeが追跡するoperationの境界から同期的に外へ投げられるException |
-| async interruption / cancellation | 実行中の処理を外部・非同期要因から中断するケースの総称 |
-
-`UseCase`と`内部処理`の意味はRAGScope正本に従う。Embedding生成、データベース検索、文書チャンク化など、UseCaseから呼び出されてそのUseCaseを構成する処理を、このノートでは内部処理と呼ぶ。
 
 ## Trace境界をどう決めるか
 
@@ -247,6 +223,7 @@ structured cancellation、CLI interrupt、timeout打ち切りなどについて�
 
 ## 参考
 
+- [[RS-0023 Observability用語メモ]]
 - [OpenTelemetry — Trace API](https://opentelemetry.io/docs/specs/otel/trace/api/)
 - [OpenTelemetry — Context propagation](https://opentelemetry.io/docs/concepts/context-propagation/)
 - [OpenTelemetry — `error.type`](https://opentelemetry.io/docs/specs/semconv/registry/attributes/error/)
