@@ -32,10 +32,11 @@ Trace / Logs / Metrics固有の判断は、それぞれの設計メモでレビ�
 | Trace | ドラフト内で決定 | 1 Invocation = 1 Trace。詳細は[[RS-0023 Trace設計メモ]] |
 | Logs | ドラフト内で決定 | OTel Logs / Eventを土台にし、Spanと重複させない。詳細は[[RS-0023 Logs設計メモ]] |
 | Metrics | ドラフト内で決定 | 性能値は実験結果へ保持し、集約観測には適用可能な標準Metricを使う。詳細は[[RS-0023 Metrics設計メモ]] |
+| OpenTelemetry採用可能性 | 主要能力を確認済み | Haskell / PythonともTrace / Logs / Context連携とexportに必要なSDK能力を確認した。RAGScope固有の依存解決は実装前に最小確認する |
 
 ## 全体像
 
-この図では、1 InvocationでRAGScope Applicationが外部のDB / AI推論サービスを利用する関係と、ApplicationからOpenTelemetryへTelemetryを記録する経路を俯瞰する。Composition Rootは実行に必要な部品を構築・接続する**構築時**の責務であり、1 Invocationの実行フローではないため、この図には含めない。
+この図では、1 InvocationでRAGScope Applicationが外部のDB / AI推論サービスを利用する関係と、両コンポーネントがOpenTelemetryへTelemetryを記録する関係を俯瞰する。Composition Rootは実行に必要な部品を構築・接続する**構築時**の責務であり、1 Invocationの実行フローではないため、この図には含めない。
 
 ```mermaid
 flowchart TB
@@ -46,18 +47,23 @@ flowchart TB
     AIREQ --> AI["AI推論サービス"]
     AIREQ -. "Trace Contextを伝播" .-> AI
 
-    APP -. "Telemetryを利用" .-> TEL["RAGScope Telemetry利用境界"]
-    TEL --> ADAPTER["OpenTelemetry Adapter"]
-    ADAPTER --> SDK["hs-opentelemetry SDK"]
+    APP -. "Telemetryを利用" .-> TEL["RAGScope Application<br>Telemetry利用境界"]
+    TEL --> HADAPTER["OpenTelemetry Adapter"]
+    HADAPTER --> HSDK["hs-opentelemetry SDK"]
 
-    SDK --> TR["Traces"]
-    SDK --> LG["Logs"]
-    SDK --> MT["Metrics"]
+    AI -. "Telemetryを記録" .-> PYSDK["OpenTelemetry Python SDK"]
+
+    HSDK --> TR["Traces"]
+    HSDK --> LG["Logs"]
+    HSDK --> MT["Metrics"]
+    PYSDK --> TR
+    PYSDK --> LG
+    PYSDK --> MT
 ```
 
-この図はApplication内部のhandler / UseCase境界やSpanの包含関係までは表さない。それらは後述の「RAGScopeへどう組み込むか」と[[RS-0023 Trace設計メモ]]で具体化する。自動計装 / 手動計装の選択やTelemetry利用境界の具体APIも、この図からは決めない。
+この図はApplication内部のhandler / UseCase境界やSpanの包含関係までは表さない。それらは後述の「RAGScopeへどう組み込むか」と[[RS-0023 Trace設計メモ]]で具体化する。自動計装 / 手動計装の選択、Application側Telemetry利用境界の具体API、AI推論サービス側でSDKを包む具体構造も、この図からは決めない。
 
-Collector / Tempo / Lokiなどの外部構成は、このノートでは採用を決めない。
+Collector / Tempo / Lokiなどのproduction向け外部構成は、このノートでは採用を決めない。
 
 ## Observabilityの基本方針
 
@@ -77,30 +83,38 @@ Trace / Logs / Metricsそれぞれの具体的な役割と表現は、各設計�
 
 ## OpenTelemetryをどう利用するか
 
-RAGScopeはOpenTelemetryをObservabilityの基盤として利用するが、OpenTelemetry SDKそのものをApplication設計へ直接露出させない。
+RAGScopeはOpenTelemetryをObservabilityの基盤として利用するが、OpenTelemetry SDKそのものをRAGScope固有の処理設計へ直接露出させない。
 
 | 論点 | 決定 |
 |---|---|
-| SDK境界 | UseCaseへOpenTelemetry SDKを直接漏らさず、RAGScope側のTelemetry利用境界までを見せる |
-| Haskell SDK | `hs-opentelemetry` 1.xを採用する |
-| SDK固有型 | OpenTelemetry Adapterの内側に閉じ込める |
+| SDK境界 | RAGScope ApplicationのUseCaseへOpenTelemetry SDKを直接漏らさず、RAGScope側のTelemetry利用境界までを見せる。AI推論サービス側の具体境界はPython実装時に決める |
+| Haskell SDK | `hs-opentelemetry` 1.xを第一候補として採用する |
+| Python SDK | OpenTelemetry Python API / SDKを採用する。LogsはDevelopmentであることを前提にversionとSDK固有APIを実装境界内へ閉じる |
+| SDK固有型 | RAGScope固有の処理境界から外へ漏らさない |
 | OpenTelemetry SDKが担当する基盤処理 | Context伝播、Processor / Exporter、batching、flush / shutdown、送信などはSDKへ任せ、RAGScopeで並行実装しない |
 | Semantic Conventions | 適用可能なConventionをRAGScope独自表現より優先する |
 
-### `hs-opentelemetry`を採用する理由と見直し条件
+### Haskell / Python実装で必要な能力を利用できるか
 
-`hs-opentelemetry` 1.xは、RAGScopeで必要となるTrace、Logs、Context / Propagator、Processor、OTLP Exporterの主要能力を提供する。
-SDK固有型をAdapter内へ閉じ込められるため、UseCaseをSDK固有型へ依存させずに利用できる。
+RS-0023で必要なのは、両コンポーネントでTrace / Logsを記録でき、Trace Contextをコンポーネント間で引き継ぎ、Processor / Exporter経由の送信失敗をApplication本体の結果から分離できることである。
 
-OpenTelemetry SDK相当をRAGScopeで実装すると、Context管理、batching、Processor / Exporter、flush / shutdown、export失敗処理など、RAGScope固有ではない責務までRAGScopeが保守することになるため採用しない。
+2026-09-06時点で確認した実装能力は次のとおりである。
 
-採用前の大規模PoCを必須条件にはしない。実装時にRAGScopeのGHC / dependency構成との互換性と、必要なAdapter動作を確認する。
+| 対象 | 確認した能力 | stability / 互換性 |
+|---|---|---|
+| `hs-opentelemetry` 1.x | Traces / Metrics / Logs、W3C Trace Context Propagator、Log / Span Processor、OTLP exporter、handle / in-memory exporter | SDK 1.0.0.0。upstreamはGHC 9.12を対象に含めるが、`proto-lens`は`allow-newer`利用の注記あり |
+| OpenTelemetry Python | Traces / Metrics / Logs、Context propagation、`LoggerProvider`、`BatchLogRecordProcessor`、OTLP exporter、console exporter | Traces / MetricsはStable、LogsはDevelopment。Python 3.10以上をサポート |
 
-次のいずれかが確認された場合は採用を見直す。
+現時点では、RAGScopeが必要とするTrace / Logs / Context連携を成立させられない具体的なSDK制約は確認できていない。このため、OpenTelemetry Logs採用判断を撤回する根拠はない。
 
-- `hs-opentelemetry` 1.xの提供APIでは、RAGScopeが必要とするTrace / Logs / Context / Processor / Exporterの動作をAdapterから成立させられない
-- 採用するGHC / dependency構成で解消できない互換性問題がある
-- SDKのruntime例外・終了処理・export処理によってUseCase結果またはApplicationの処理制御が変更される
+一方、次の2点はRAGScope固有環境でまだ実測していない。
+
+- RAGScope ApplicationのGHC 9.12.4 / `base ^>=4.21.2.0`と`hs-opentelemetry` 1.x / OTLP exporterを組み合わせたCabal依存解決とビルド。upstreamではGHC 9.12対応に`proto-lens`の`allow-newer`注記があるため、実装着手前に最小の依存解決・ビルド確認を行う
+- AI推論サービスのPythonプロジェクトとPython versionは正本上まだ実装されていないため、OpenTelemetry Python SDKの具体versionとの依存解決。Python LogsがDevelopmentであるため、実装時にversionを固定し、利用APIとOTLP Logs exportを最小確認する
+
+これらは採用前提を覆す事実がまだ見つかっていないという意味であり、**RAGScope環境でビルド確認済みという意味ではない**。解消できない依存衝突または必要動作の不足が実測された場合は、SDK採用判断を見直す。
+
+OpenTelemetry SDK相当をRAGScopeで独自実装すると、Context管理、batching、Processor / Exporter、flush / shutdown、export失敗処理など、RAGScope固有ではない責務までRAGScopeが保守することになるため採用しない。
 
 ### Semantic Conventionsを優先する
 
@@ -152,12 +166,26 @@ UseCaseから呼び出されるEmbedding生成、DB検索などはUseCaseを構�
 AI推論サービス側の処理は同じTraceへ参加できるが、RAGScope Application側のUseCaseそのものではない。
 プロセス起動時の構築やTelemetry送信はInvocation / UseCaseとは別の処理である。
 
+## ローカル実行でTelemetryをどう確認するか
+
+RAGScope本体のObservability設計とproduction backend選定を分離するため、ローカル確認では永続backendを必須にしない。
+
+| 確認したいこと | 方法 |
+|---|---|
+| 単一コンポーネントのSpan / Log / Metricが生成されること | Haskellはhandle exporter、Pythonはconsole exporterを使い、ローカル出力で確認する |
+| RAGScope Application → AI推論サービスのTrace Context伝播 | 両コンポーネントを同じOTLP endpointへ送り、必要な場合はローカルOpenTelemetry Collectorのdebug exporterでTraceId / 親子関係を確認する |
+| Processor / Exporter失敗時にApplication結果が変わらないこと | テスト用または失敗するExporter / Processor境界で自動テストする |
+
+console / handle exporterの出力形式はデバッグ用であり、RAGScopeの外部JSON契約として扱わない。OpenTelemetry標準でもstdout exporterの具体出力形式は標準化されていない。
+
+ローカルCollectorは複数コンポーネントのTelemetryを同じ受信先で確認するための開発用手段であり、RAGScope ApplicationまたはAI推論サービスの機能責務には含めない。Tempo / Loki等のbackend、production Collector構成、retentionは別の外部構成設計で決める。
+
 ## Telemetry自身が失敗したらどうするか
 
 Exporter、Processor、Collectorへの送信などTelemetry基盤自身の失敗は、Application本体の結果を変更しない。
 UseCaseが成功している場合、Telemetry exportに失敗してもUseCase成功のままとする。
 
-Telemetry基盤の診断には、まず`hs-opentelemetry` SDK自身のerror handling / internal diagnosticsを使用する。
+Telemetry基盤の診断には、まず採用するOpenTelemetry SDK自身のerror handling / internal diagnosticsを使用する。
 SDKの診断機能では満たせない具体的な診断要求が確認された場合だけ、RAGScope側の補助経路を検討する。
 
 Telemetryの欠落をApplication処理失敗として扱う要求が追加された場合は、この判断を見直す。
@@ -172,11 +200,14 @@ Telemetryの欠落をApplication処理失敗として扱う要求が追加され
 | Telemetry利用境界の名前と公開API | Telemetry利用境界設計 |
 | SDK初期化設定エラー時に起動失敗するかTelemetryなしで起動するか | Telemetry初期化設計 |
 | package / module構成 | Telemetry利用境界の決定後に行うpackage / module設計 |
-| Collector / Tempo / Lokiなどの外部構成 | 外部構成設計。現時点では候補であり採用を決めない |
+| production Collector / Tempo / Loki等の外部構成 | 外部構成設計。現時点では候補であり採用を決めない |
 
 package / module構成はTelemetry利用境界を決めた後に定め、先にpackageを分割してから責務を割り当てない。
 
 ## 参考
 
 - [OpenTelemetry — Error handling](https://opentelemetry.io/docs/specs/otel/error-handling/)
+- [OpenTelemetry — Python](https://opentelemetry.io/docs/languages/python/)
+- [OpenTelemetry — Python instrumentation](https://opentelemetry.io/docs/languages/python/instrumentation/)
+- [OpenTelemetry — stdout LogRecord exporter](https://opentelemetry.io/docs/specs/otel/logs/sdk_exporters/stdout/)
 - [hs-opentelemetry](https://github.com/iand675/hs-opentelemetry)
