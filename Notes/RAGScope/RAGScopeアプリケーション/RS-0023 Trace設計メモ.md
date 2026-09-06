@@ -17,13 +17,13 @@ created: 2026-09-06
 
 > **RAGScopeの1回の実行を、Trace上でどこからどこまで・どんなSpanとして追うか？**
 
-このノートでは、1 InvocationのTrace境界、Spanの切り方、成功・失敗・Exceptionの表現をレビューする。
+このノートでは、RAGScopeの1回の実行に対するTrace境界、Spanの切り方、成功・失敗・Exceptionの表現をレビューする。
 
 ## 要するに
 
-RAGScopeでは、**1 Invocationごとに独立したTraceを開始して追跡する**。
+RAGScopeでは、**1回の実行ごとに独立したTraceを開始して追跡する**。
 
-APIではHTTP SERVER Span、CLIではExecution (callee) SpanがそのTraceのrootとなる`entry Span`を担当する。Invocation専用Spanは別に作らない。
+APIではHTTP SERVER Span、CLIではExecution (callee) SpanがそのTraceのrootとなる`entry Span`を担当する。1回の実行全体を表す専用Spanは別に作らない。
 
 その内側でUseCaseを1つのUseCase Spanとして追い、必要に応じてDB、GenAI、HTTPなどのSpanを子として記録する。
 
@@ -41,15 +41,15 @@ API: HTTP SERVER Span / CLI: Execution (callee) Span  ← entry Span / root
 
 ## Trace境界をどう決めるか
 
-現在の要求とシステム構造では、利用者がCLI / APIを通じてRAGScopeへ行う1回のInvocationをトップレベルの追跡単位とする。
+現在の要求とシステム構造では、利用者がCLI / APIを通じて行うRAGScopeの1回の実行をトップレベルの追跡単位とする。
 
 現在要求には、外部の呼び出し元が持つTraceへRAGScope APIを参加させ、さらにAI推論サービスまで1本の分散Traceとして継続することは含まれていない。
-そのため、API / CLIのどちらから開始しても同じ単位で追跡できるよう、InvocationごとにRAGScopeが独立したTraceを開始する。
+そのため、API / CLIのどちらから開始しても同じ単位で追跡できるよう、1回の実行ごとにRAGScopeが独立したTraceを開始する。
 
 ```text
-RAGScopeが追跡するトップレベル単位 = 1 Invocation
+RAGScopeが追跡するトップレベル単位 = RAGScopeの1回の実行
     ↓
-1 Invocationごとに独立したTraceを開始する
+1回の実行ごとに独立したTraceを開始する
     ↓
 API / CLIのentry Spanをrootにする
     ↓
@@ -59,29 +59,29 @@ APIが受信した外部Trace Contextはparentに使わない
 APIへのリクエストにTrace Contextが含まれていても、そのContextをentry Spanの親にはしない。
 外部Traceとの因果関係だけを残すSpan Linkについても、現在はその関連付けを必要とする要求がないため作成しない。
 
-一方、ApplicationからAI推論サービスへの呼び出しは、RAGScopeが開始したInvocationの内部処理である。Application側HTTP client SpanのTrace ContextをHTTP通信で引き継ぎ、AI推論サービス側HTTP SERVER Spanをその子Spanとして同じTraceへ記録する。
+一方、ApplicationからAI推論サービスへの呼び出しは、RAGScopeの1回の実行に含まれる内部処理である。Application側HTTP client SpanのTrace ContextをHTTP通信で引き継ぎ、AI推論サービス側HTTP SERVER Spanをその子Spanとして同じTraceへ記録する。
 
-将来、外部の呼び出し元からRAGScope APIまでを1本の分散Traceとして継続する要求が追加された場合は、Invocationごとに独立したTraceを開始する現在の方針と外部Trace Contextの扱いを一緒に再評価する。
+将来、外部の呼び出し元からRAGScope APIまでを1本の分散Traceとして継続する要求が追加された場合は、1回の実行ごとに独立したTraceを開始する現在の方針と外部Trace Contextの扱いを一緒に再評価する。
 独立Traceを維持しつつ上流Traceとの因果関係だけを残す要求が追加された場合は、その時点でSpan Linkを再評価する。
 
 ## handlerとSpanは別の概念である
 
-`handler`はApplication上の境界処理であり、`entry Span`はそのInvocationを観測するためのSpanである。両者は同じ種類の概念ではない。
+`handler`はApplication上の境界処理であり、`entry Span`はRAGScopeの1回の実行を観測するためのSpanである。両者は同じ種類の概念ではない。
 
 - `handler`は、CLI / API入力をUseCaseへ渡す値へ変換し、UseCaseを呼び出し、その結果をCLI表示やHTTP応答へ変換する。
-- `entry Span`は、その1 Invocation全体をTrace上で観測するroot Spanである。
+- `entry Span`は、その実行全体をTrace上で観測するroot Spanである。
 - `UseCase Span`は、handlerからUseCaseを呼び出してからApplicationへ制御が戻るまでを観測するchild Spanである。
 
 entry Spanがhandlerの代わりに処理を行うわけではない。handler実行がentry Spanの計測範囲に含まれ、その途中でUseCaseが呼ばれたときだけUseCase Spanを作る。
-UseCaseが呼ばれる前にhandlerで処理が終了してもInvocationは発生しているため、entry Spanは残る。一方、UseCaseは実行されていないのでUseCase Spanは作らない。
+UseCaseが呼ばれる前にhandlerで処理が終了してもRAGScopeの1回の実行は始まっているため、entry Spanは残る。一方、UseCaseは実行されていないのでUseCase Spanは作らない。
 
-## 1 InvocationはTrace上でどう見えるか
+## RAGScopeの1回の実行はTrace上でどう見えるか
 
 ```mermaid
 flowchart TB
     INPUT["CLI / API入力"]
 
-    subgraph TRACE["1 Invocationごとに独立したTrace"]
+    subgraph TRACE["1回の実行ごとに独立したTrace"]
         direction TB
         ENTRY["entry Span（root）<br>API: HTTP SERVER Span<br>CLI: Execution (callee) Span"]
         UC["UseCase Span"]
@@ -113,7 +113,7 @@ Spanは、開始・終了、所要時間、失敗、親子関係を他の処理�
 
 | 対象 | Span境界 | 方針 |
 |---|---|---|
-| Invocation | 専用Spanは作らない | API / CLIのentry SpanをrootとしてInvocation全体を観測する |
+| RAGScopeの1回の実行 | 専用Spanは作らない | API / CLIのentry Spanをrootとして実行全体を観測する |
 | API | 1 HTTP request = SERVER Span | HTTP Semantic Conventionsに従う。RAGScope側では新しいTraceを開始する |
 | CLI | 1 CLI program execution = Execution (callee) Span | CLI Semantic Conventionsに従う。RAGScope側では新しいTraceを開始する |
 | handler | 専用Spanは作らない | handler実行はentry Spanの計測範囲に含める |
