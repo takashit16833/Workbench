@@ -122,45 +122,25 @@ Observabilityを組み込む位置を理解するため、**構築時**と**1 In
 
 | 概念 | 境界 |
 |---|---|
-| Composition Root | 実行に必要なUseCase、handler実装、Telemetry実装などの依存を構築・接続する |
-| handler | CLI / API固有表現とUseCaseの入力・結果の間を仲介する。このドラフトで使う境界の呼び方であり、単一のmodule / function / objectや呼び出し回数を意味しない |
+| Composition Root | 実行に必要なUseCase、handler、Telemetry実装などの依存を構築・接続する |
+| handler | CLI / APIとUseCaseの間の境界処理 |
 | Invocation | RAGScopeが外部から1回呼び出され、その処理が完了するまでの実行範囲。Traceでは**1 Invocation = 1 Trace**として追跡する |
 | UseCase | RAGScope ApplicationがUseCaseを呼び出してから、Applicationへ制御が戻るまで |
 | Telemetry利用境界 | UseCase等のRAGScope側コードがOpenTelemetry SDKへ直接依存せずTelemetryを利用するための境界。具体APIはこのノートでは決めない |
 
 ### handler
 
-`handler`は、このWorkbenchドラフトでCLI / APIとUseCaseの間の境界処理を説明するために使う呼び方であり、現時点のRAGScope正本で定義された正式用語ではない。
-
-正本のユースケース設計では、CLI / APIによる入力の受け取りと変換はUseCase実行の前にあり、UseCase呼び出し終了後の表示やHTTP responseへの変換もUseCase実行の外側にある。このドラフトでは、そのインターフェース固有の入力・出力とUseCaseの入力・結果を仲介する責務をhandlerとして扱う。
-
-`handler`はこの境界の**責務**を表し、単一のmodule、function、object、または1 Invocationあたりの呼び出し回数を意味しない。UseCase呼び出し前の入力側処理と、UseCase終了後の出力側処理を別々に図示する場合も、handlerが2つ存在することを意味しない。
-
-UseCaseそのものはhandlerに含めない。CLI parserやHTTP routingのどこまでをhandlerに含めるかという実装上の詳細境界は、このノートでは決めない。
-
-```mermaid
-sequenceDiagram
-    participant I as CLI / API
-    participant H as handlerの責務
-    participant U as UseCase
-
-    I->>H: インターフェース固有の入力
-    H->>U: UseCase入力へ変換して呼び出す
-    U-->>H: UseCase結果 / 制御
-    H-->>I: CLI出力 / HTTP responseへ変換
-```
-
-図中の`handlerの責務`は、単一のmodule / function / objectを表すものではない。
+`handler`は、CLI / APIとUseCaseの間の境界処理を指す。CLI / APIから受け取った入力をUseCaseへ渡す値へ変換してUseCaseを呼び出し、UseCaseから制御が戻った後は、その結果をCLI表示やHTTP responseなどへ変換する。UseCaseそのものはhandlerに含めない。
 
 ### 構築時
 
 Composition Rootは1回の利用者処理を構成する実行ステップではなく、実行に必要な部品を構築・接続する。
-APIサーバーのような長時間動作するプロセスでは、Composition Rootで一度構築したhandler実装やUseCaseを複数のInvocationから利用できる。
+APIサーバーのような長時間動作するプロセスでは、Composition Rootで一度構築したhandlerやUseCaseを複数のInvocationから利用できる。
 
 ```mermaid
 flowchart TB
     MAIN["Main"] --> CR["Composition Root"]
-    CR --> HDEF["CLI / API handler実装"]
+    CR --> HDEF["CLI / API handler"]
     CR --> UCDEF["UseCase"]
     CR --> TEL["Telemetry実装"]
 ```
@@ -168,8 +148,6 @@ flowchart TB
 実装上のmodule/function名として`Bootstrap`を使うかは、package / module設計時に決める。
 
 ### 1 Invocationの実行時
-
-1 Invocationの中では、handlerの責務に属する入力側処理からUseCaseを呼び出し、UseCaseから制御が戻った後にhandlerの責務に属する出力側処理を行いうる。これはhandlerが2つ存在することや、handlerが2回呼び出されることを意味しない。
 
 UseCaseから呼び出されるEmbedding生成、DB検索などはUseCaseを構成する内部処理である。
 AI推論サービス側の処理は同じTraceへ参加できるが、RAGScope Application側のUseCaseそのものではない。
