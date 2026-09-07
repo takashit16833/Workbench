@@ -542,17 +542,16 @@
   "lastSeenVersion": "4.12.3",
   "pomodoroState": {
     "isRunning": true,
-    "timeRemaining": 1500,
+    "timeRemaining": 900,
     "currentSession": {
-      "id": "1788741861249",
-      "taskPath": "Tasks/RS-0023 OpenTelemetry Logsを前提に実行追跡・構造化ログアーキテクチャを再設計する.md",
-      "startTime": "2026-09-07T09:44:21.249+09:00",
-      "plannedDuration": 25,
-      "type": "work",
+      "id": "1788745172161",
+      "startTime": "2026-09-07T10:39:32.161+09:00",
+      "plannedDuration": 15,
+      "type": "long-break",
       "completed": false,
       "activePeriods": [
         {
-          "startTime": "2026-09-07T09:44:21.249+09:00"
+          "startTime": "2026-09-07T10:39:32.161+09:00"
         }
       ]
     }
@@ -4862,6 +4861,50 @@
         {
           "startTime": "2026-09-07T09:32:11.995+09:00",
           "endTime": "2026-09-07T09:37:11.995+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1788741861249",
+      "startTime": "2026-09-07T09:44:21.249+09:00",
+      "endTime": "2026-09-07T10:09:21.249+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "taskPath": "Tasks/RS-0023 OpenTelemetry Logsを前提に実行追跡・構造化ログアーキテクチャを再設計する.md",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-09-07T09:44:21.249+09:00",
+          "endTime": "2026-09-07T10:09:21.249+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1788743362326",
+      "startTime": "2026-09-07T10:09:22.326+09:00",
+      "endTime": "2026-09-07T10:14:22.326+09:00",
+      "plannedDuration": 5,
+      "type": "short-break",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-09-07T10:09:22.326+09:00",
+          "endTime": "2026-09-07T10:14:22.326+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1788743671075",
+      "startTime": "2026-09-07T10:14:31.075+09:00",
+      "endTime": "2026-09-07T10:39:31.075+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "taskPath": "Tasks/RS-0023 OpenTelemetry Logsを前提に実行追跡・構造化ログアーキテクチャを再設計する.md",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-09-07T10:14:31.075+09:00",
+          "endTime": "2026-09-07T10:39:31.075+09:00"
         }
       ]
     }
