@@ -43,7 +43,7 @@ RAGScopeでは、観測したい情報を次の順で考える。
 - **開始と終了を持つ処理そのもの**はSpanで表す。
 - **operation全体を説明する値**はSpan attributesへ置く。
 - **ある時点で起きた、名前を付けて後から識別したい出来事・状態変化**をLogsへ構造化して残す場合は`EventRecord`候補になる。
-- **特定の種類の出来事として`EventName`を付けて検索・集計する必要はないが、障害調査やデバッグのために残したい診断情報**は、`EventName`を持たない通常の`LogRecord`候補になる。通常の`LogRecord`もattributesを持てるため、`EventRecord`との違いは「構造化されているか」ではなく、名前付きの出来事として定義するかどうかである。この共通設計では個別の診断メッセージまでは定義しない。
+- **特定の種類の出来事として`EventName`を付けて検索・集計する必要はないが、障害調査やデバッグのために残したい診断情報**は、`EventName`を持たない通常LogRecord候補になる。通常LogRecordもattributesを持てるため、`EventRecord`との違いは「構造化されているか」ではなく、名前付きの出来事として定義するかどうかである。この共通設計では個別の診断メッセージまでは定義しない。
 
 `EventRecord`候補についてOpenTelemetryが標準のEvent Semantic Conventionを定義している場合は、その定義を使う。標準定義がなく、既存Spanからも必要な出来事を識別できない場合に、RAGScope固有`EventRecord`を定義する。
 
@@ -86,7 +86,7 @@ Semantic Conventionは、Span、Metric、Log、`EventRecord`などについて�
 
 例えば、HTTP requestという処理はHTTP SpanのSemantic Conventionで観測する。一方、ExceptionをLogsの`EventRecord`として記録する場合はSemantic conventions for exceptions in logsに従う。この2つはどちらもSemantic Conventionを使っているが、片方はSpan、もう片方はLogsの`EventRecord`である。
 
-## Span / `EventRecord` / 通常の`LogRecord`をどう分担するか
+## Span / `EventRecord` / 通常LogRecordをどう分担するか
 
 判断軸は次のとおりである。
 
@@ -97,7 +97,7 @@ flowchart TD
     B -->|No| D{"operation全体を説明する情報?<br>独立した時刻が不要?"}
     D -->|Yes| E["Span attributesへ置く"]
     D -->|No| F{"ある時点の名前付きの出来事・状態変化として<br>後から識別したい?"}
-    F -->|No| G["通常のLogRecordの候補<br>EventNameを持つ出来事としては定義しない"]
+    F -->|No| G["通常LogRecordの候補<br>EventNameを持つ出来事としては定義しない"]
     F -->|Yes| H{"適用できる標準Event SemConvがある?"}
     H -->|Yes| I["標準`EventRecord`を使う"]
     H -->|No| J{"既存Spanからその出来事を<br>必要な粒度で識別できる?"}
