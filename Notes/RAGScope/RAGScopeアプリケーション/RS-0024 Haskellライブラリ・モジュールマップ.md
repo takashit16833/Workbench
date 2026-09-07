@@ -17,32 +17,32 @@ created: 2026-09-08
 ```mermaid
 flowchart TB
     subgraph PKG["ragscope"]
-        PUBLIB["public library: ragscope"]:::public
+        PUBLIB["library: ragscope"]:::public
         PUBEX["exposed-modules<br/>RAGScope.*<br/>具体名は未決定"]:::public
         PUBOTHER["other-modules<br/>公開library内部実装<br/>具体名は未決定"]:::private
         PUBLIB --> PUBEX
         PUBLIB --> PUBOTHER
 
-        APPLIB["private library: application"]:::private
+        APPLIB["library: application"]:::private
         APPAPI["exposed-modules<br/>RAGScope.Application"]:::private
         APPOTHER["other-modules<br/>RAGScope.Application.*"]:::private
         APPLIB --> APPAPI
         APPAPI --> APPOTHER
 
-        TELLIB["private library: telemetry"]:::private
+        TELLIB["library: telemetry"]:::private
         TELAPI["exposed-modules<br/>RAGScope.Telemetry<br/>Telemetry利用境界"]:::private
         TELOTHER["other-modules<br/>RAGScope.Telemetry.*"]:::private
         TELLIB --> TELAPI
         TELAPI --> TELOTHER
 
-        OTELLIB["private library: opentelemetry"]:::private
+        OTELLIB["library: opentelemetry"]:::private
         OTELAPI["exposed-modules<br/>RAGScope.Telemetry.OpenTelemetry<br/>Adapter入口"]:::private
         OTELOTHER["other-modules<br/>Lifecycle / Trace / Logs / Metrics<br/>具体module名は未決定"]:::private
         OTELLIB --> OTELAPI
         OTELAPI --> OTELOTHER
 
-        MAIN["executable: ragscope<br/>Main / Composition Root"]:::runtime
-        TEST["test-suite(s)"]:::runtime
+        MAIN["executable: ragscope<br/>Main / Composition Root"]
+        TEST["test-suite(s)"]
 
         MAIN --> APPAPI
         MAIN --> TELAPI
@@ -59,11 +59,13 @@ flowchart TB
     OTELPKG["OpenTelemetry Haskell packages"]:::external
     OTELOTHER --> OTELPKG
 
-    classDef public fill:#dbeafe,stroke:#2563eb,color:#1e3a8a,stroke-width:2px;
-    classDef private fill:#f3e8ff,stroke:#9333ea,color:#581c87,stroke-width:2px;
-    classDef external fill:#f8fafc,stroke:#64748b,color:#334155,stroke-width:1px;
-    classDef runtime fill:#e2e8f0,stroke:#475569,color:#0f172a,stroke-width:1px;
+    classDef public fill:#052A59,stroke:#5EAFFF,color:#DDF0FF,stroke-width:2px
+    classDef private fill:#211536,stroke:#8A5EC0,color:#DDF0FF,stroke-width:2px
+    classDef external fill:#001947,stroke:#316CBD,color:#A6CAFF,stroke-width:2px
+    style PKG fill:transparent,stroke:#153A75,color:#4C9EEB,stroke-width:2px
 ```
+
+凡例: **青** = 公開library / module、**紫** = 非公開library / module、**濃青** = 外部package
 
 - `application`は`telemetry`へ依存する。
 - `application`は`opentelemetry`とOpenTelemetry packageへ依存しない。
@@ -75,7 +77,7 @@ flowchart TB
 
 ```mermaid
 flowchart LR
-    MAIN["Main<br/>Composition Root"]:::runtime
+    MAIN["Main<br/>Composition Root"]
 
     APP["RAGScope.Application"]:::private
     APPIMPL["RAGScope.Application.*<br/>other-modules"]:::private
@@ -100,10 +102,12 @@ flowchart LR
     OTEL --> TEL
     OTELIMPL --> SDK
 
-    classDef private fill:#f3e8ff,stroke:#9333ea,color:#581c87,stroke-width:2px;
-    classDef external fill:#f8fafc,stroke:#64748b,color:#334155,stroke-width:1px;
-    classDef runtime fill:#e2e8f0,stroke:#475569,color:#0f172a,stroke-width:1px;
+    classDef public fill:#052A59,stroke:#5EAFFF,color:#DDF0FF,stroke-width:2px
+    classDef private fill:#211536,stroke:#8A5EC0,color:#DDF0FF,stroke-width:2px
+    classDef external fill:#001947,stroke:#316CBD,color:#A6CAFF,stroke-width:2px
 ```
+
+凡例: **青** = 公開library / module、**紫** = 非公開library / module、**濃青** = 外部package
 
 禁止する依存は次のとおり。
 
