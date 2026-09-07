@@ -112,15 +112,13 @@ AI推論サービスから受け取った応答の解析過程を調査するた
 
 つまり、Logsは「処理があったこと」を何でも記録する場所ではない。Spanと同じ事実を重ねず、**Spanでは分からない名前付きの出来事は必要な場合に`EventRecord`として、名前付きEventにする必要のない診断情報は必要な場合に通常LogRecordとして残す**。
 
-## retry / timeoutと「共通`EventRecord`」
+## retry / timeoutの`EventRecord`をどう扱うか
 
-retryやtimeoutという**種類だけ**を理由に共通`EventRecord`を作らない。
+retryやtimeoutという**種類だけ**を理由に、複数のUseCaseや内部処理で同じRAGScope固有`EventRecord`定義を共有しない。
 
-ここでいう「共通`EventRecord`」はOpenTelemetryの正式用語ではない。例えば`ragscope.retry`や`ragscope.timeout`のような1つの`EventName`を、複数のUseCaseや内部処理で横断して使うRAGScope側の共通`EventRecord`定義を指す。
+同じ`EventName`を複数のUseCaseや内部処理で使えば横断検索・集計しやすくなり、同じ意味・記録条件・attributesを1つの定義として共有できる。しかし、OpenTelemetryでは同じ`EventName`を使うなら、その名前で記録されるすべての`EventRecord`に同じ構造・意味の定義が適用できる必要がある。
 
-共通`EventRecord`を作れば、同じ`EventName`で横断検索・集計しやすくなり、同じ意味・記録条件・attributesを1つの定義として共有できる。しかし、OpenTelemetryでは同じ`EventName`を使うなら、その名前で記録されるすべての`EventRecord`に同じ構造・意味の定義が適用できる必要がある。
-
-そのため、「retryである」「timeoutである」という分類だけでは共通化の理由にならない。例えば、retryについても次は別の出来事である。
+そのため、「retryである」「timeoutである」という分類だけでは、同じRAGScope固有`EventRecord`定義を共有する理由にならない。例えば、retryについても次は別の出来事である。
 
 - retryを選択した
 - 次の試行を開始した
@@ -128,9 +126,9 @@ retryやtimeoutという**種類だけ**を理由に共通`EventRecord`を作ら
 
 試行、所要時間、最終的な失敗などを、そのoperationについて記録されるSpanや適用するSemantic Conventionから確認できるなら、同じ情報を`EventRecord`へ重複して記録しない。
 
-一方、retryを選択した、fallbackへ切り替えた、これ以上retryしないと決定した、などの**ある時点の状態変化**を後から識別する必要があり、そのoperationについて記録されるSpanの名前、attributes、Status、親子関係などからはその状態変化を必要な粒度で判断できない場合は、その状態変化を`EventRecord`として記録する候補になる。
+一方、retryを選択した、fallbackへ切り替えた、これ以上retryしないと決定した、などの**ある時点の状態変化**を後から識別する必要があり、そのoperationについて記録されるSpanの名前、attributes、Status、親子関係などからはその状態変化を必要な粒度で判断できない場合は、その状態変化をRAGScope固有`EventRecord`として記録する候補になる。
 
-全`EventRecord`を先に共通型へ列挙しない。複数のUseCaseまたは内部処理で、`EventRecord`が表す出来事、記録条件、`EventName`、attributesを同じ定義として共有する必要が実際に生じた場合だけ共通化を検討する。
+RAGScope固有`EventRecord`をあらかじめ横断的に列挙しない。複数のUseCaseまたは内部処理で、`EventRecord`が表す出来事、記録条件、`EventName`、attributesを同じ定義として共有する必要が実際に生じた場合だけ、同じRAGScope固有`EventRecord`定義を共有する。
 
 ## RAGScope固有`EventRecord`をどう定義するか
 
