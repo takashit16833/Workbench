@@ -12,6 +12,8 @@ created: 2026-09-08
 > これはRS-0024の実装前にレビューするためのWorkbench上の設計ドラフトであり、RAGScopeの正本ではない。
 > library名とmodule名はこのNoteでレビューする提案である。
 
+Mermaidの色分けは[[Mermaid図の色分けルール]]に従う。
+
 ## library / component map
 
 ```mermaid
