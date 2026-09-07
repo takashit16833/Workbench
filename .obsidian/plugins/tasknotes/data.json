@@ -4910,6 +4910,39 @@
           "endTime": "2026-09-07T10:54:32.161+09:00"
         }
       ]
+    },
+    {
+      "id": "1788766509473",
+      "startTime": "2026-09-07T16:35:09.473+09:00",
+      "endTime": "2026-09-07T17:00:10.707+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "taskPath": "Tasks/RS-0023 OpenTelemetry Logsを前提に実行追跡・構造化ログアーキテクチャを再設計する.md",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-09-07T16:35:09.473+09:00",
+          "endTime": "2026-09-07T16:35:09.680+09:00"
+        },
+        {
+          "startTime": "2026-09-07T16:35:10.914+09:00",
+          "endTime": "2026-09-07T17:00:10.707+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1788768012022",
+      "startTime": "2026-09-07T17:00:12.022+09:00",
+      "endTime": "2026-09-07T17:05:12.022+09:00",
+      "plannedDuration": 5,
+      "type": "short-break",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-09-07T17:00:12.022+09:00",
+          "endTime": "2026-09-07T17:05:12.022+09:00"
+        }
+      ]
     }
   ],
   "lastSelectedTaskPath": "Tasks/RS-0023 OpenTelemetry Logsを前提に実行追跡・構造化ログアーキテクチャを再設計する.md",
