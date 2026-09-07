@@ -29,23 +29,26 @@ OpenTelemetryでは、**`Event`という同じ語がLogsとTraceの両方に出�
 
 | このドラフトでの呼び方 | 属するsignal | OpenTelemetry上の形 | RAGScopeのローカル環境で主に見る場所 |
 |---|---|---|---|
-| `EventRecord` | Logs | `EventName`を持つ`LogRecord` | Loki / Grafana |
+| 通常LogRecord | Logs | `EventName`を持たない`LogRecord` | Loki / Grafana |
+| `EventRecord` | Logs | 非空の`EventName`を持つ`LogRecord` | Loki / Grafana |
 | Span Event | Traces | Spanに付属するtimestamp付きのSpan Event | Tempo / Grafana |
 
-このノートでは混同を避けるため、**Logs側は`EventRecord`、Trace側はSpan Eventと書き、単独の「Event」は原則使わない**。OpenTelemetry仕様の名称を引用するときだけ、必要に応じて「Event」という原語を併記する。
+`EventRecord`と通常LogRecordは、どちらもOpenTelemetry Logsの`LogRecord`である。このRS-0023ドラフトでは、`EventName`を持たない`LogRecord`を`EventRecord`と区別するときに**通常LogRecord**と呼ぶ。通常LogRecordはOpenTelemetryの正式用語ではない。
+
+このノートでは混同を避けるため、**Logs側の名前付きの出来事は`EventRecord`、`EventName`を持たないログは通常LogRecord、Trace側の出来事はSpan Eventと書く**。OpenTelemetry仕様の名称を引用するときだけ、必要に応じて単独の「Event」という原語を併記する。
 
 > [!important] RAGScopeのEvent記録方針
 > **RAGScopeが新規に記録するEventはOpenTelemetry Logsの`EventRecord`として記録し、RAGScope固有のSpan Eventは定義・記録しない。**
 > OpenTelemetryがSpan Event APIを非推奨化し、新しいコードではEventを現在のSpanに関連付けたLogsとして記録することを推奨しているためである。SDKや既存instrumentationが互換性のためSpan Eventを生成すること自体は、この方針の対象外とする。同じ出来事を`EventRecord`とSpan Eventへ重複記録しない。
 
-RAGScopeでは、観測したい情報を次の順で考える。
+RAGScopeでは、観測したい情報を次のように分ける。
 
 - **開始と終了を持つ処理そのもの**はSpanで表す。
-- **operation全体を説明する値**はSpan attributesへ置く。
-- **ある時点で起きた、名前を付けて後から識別したい出来事・状態変化**をLogsへ構造化して残す場合は`EventRecord`候補になる。
-- **特定の種類の出来事として`EventName`を付けて検索・集計する必要はないが、障害調査やデバッグのために残したい診断情報**は、`EventName`を持たない通常LogRecord候補になる。通常LogRecordもattributesを持てるため、`EventRecord`との違いは「構造化されているか」ではなく、名前付きの出来事として定義するかどうかである。この共通設計では個別の診断メッセージまでは定義しない。
+- **そのSpanを見るときに「この処理はどんな処理だったか」を説明する情報で、独立した発生時刻を持たせる必要がないもの**はSpan attributesへ置く。例えば、1回のGenAI operationで使用したmodelやoperationの種類のように、「途中のある時点で起きた出来事」ではなく、その1回のoperationに付く値が該当する。
+- **ある時点で起きた、名前を付けて後から検索・集計したい出来事や状態変化**をLogsへ残す場合は`EventRecord`として扱う。
+- **名前付きの出来事として検索・集計する必要はないが、障害調査やデバッグで人が確認するために残したい診断情報**は通常LogRecord候補になる。通常LogRecordもattributesを持てるため、`EventRecord`との違いは「構造化されているか」ではなく、非空の`EventName`を持つ名前付きの出来事として定義するかどうかである。この共通設計では個別の診断メッセージまでは定義しない。
 
-`EventRecord`候補についてOpenTelemetryが標準のEvent Semantic Conventionを定義している場合は、その定義を使う。標準定義がなく、既存Spanからも必要な出来事を識別できない場合に、RAGScope固有`EventRecord`を定義する。
+`EventRecord`として記録したい出来事について、OpenTelemetryが適用できる具体的なEvent Semantic Conventionをすでに定義している場合は、その定義を使う。標準Event定義がない場合でも、同じ事実がそのoperationについて記録されるSpanから分かるなら`EventRecord`を重ねない。それでも名前付きの出来事として残す必要がある場合だけ、RAGScope固有`EventRecord`を定義する。
 
 エラー型で表す失敗が発生したという事実だけでは`EventRecord`を自動生成しない。一方、想定外の同期Exceptionがoperation境界から外へ投げられる場合は、Semantic conventions for exceptions in logsに従うLogs側のException `EventRecord`を1件記録する。
 
@@ -62,15 +65,17 @@ RAGScopeのTelemetry
 │
 └─ Logs ───────────────→ Loki
    └─ LogRecord
-      └─ EventNameがある場合 = EventRecord
-         └─ Logsとして独立して検索・集計する名前付きの出来事
+      ├─ EventNameあり = EventRecord
+      │  └─ Logsとして独立して検索・集計する名前付きの出来事
+      └─ EventNameなし = 通常LogRecord
+         └─ 名前付きEventとして扱わないログ
 
 Grafana
 ├─ TempoのTrace / Span / Span Eventを見る
-└─ LokiのLogRecord / EventRecordを見る
+└─ Lokiの通常LogRecord / EventRecordを見る
 ```
 
-`EventRecord`は`LogRecord`とは別の第4のsignalではない。OpenTelemetry Logsのデータモデル上、**`EventName`が入った`LogRecord`をEventとして扱う**。Semantic conventions for eventsでは、この形を`EventRecord`と呼ぶ。すべての`LogRecord`が`EventRecord`になるわけではない。
+`EventRecord`は`LogRecord`とは別の第4のsignalではない。OpenTelemetry Logsのデータモデル上、**非空の`EventName`を持つ`LogRecord`をEventとして扱う**。Semantic conventions for eventsでは、この形を`EventRecord`と呼ぶ。`EventName`を持たない`LogRecord`はEventではなく、このドラフトでは通常LogRecordと呼ぶ。
 
 一方、Span EventはTraceのSpanに直接ぶら下がる。Trace API上、Spanはtimestamp付きEventのリストを持つことができる。これはLogs signalへ送る`LogRecord` / `EventRecord`ではない。
 
@@ -78,13 +83,17 @@ Grafana
 
 Semantic Conventionは、Span、Metric、Log、`EventRecord`などについて、OpenTelemetryが標準の名前、attributes、記録条件などを定める規約である。**Semantic ConventionそのものがSpanや`EventRecord`の代わりになるわけではない。**
 
+Semantic conventions for eventsは、`EventRecord`候補を一覧にしたカタログではない。ある情報をEventとして定義するかどうかの判断基準と、Eventを定義する場合に`EventName`、発生時刻、既定severity、attributes、`Body`などをどう定めるかという共通ルールを示す。
+
+具体的な出来事については、その出来事が属する領域のSemantic Conventionに適用できるEvent定義があるかを確認する。例えばExceptionをLogsの`EventRecord`として記録する場合はSemantic conventions for exceptions in logsに従う。
+
 そのため、このノートでは「SemConvで表現できるか」という曖昧な言い方を使わず、対象を分けて判断する。
 
-- 処理そのものを観測する場合は、その処理に適用できるSpanのSemantic Conventionがあるか確認する。
-- `EventRecord`候補を記録する場合は、その出来事に適用できるEvent Semantic Conventionがあるか確認する。
-- 適用できる標準定義がある場合は、RAGScope独自の同義表現を重ねない。
+- 開始と終了を持つ処理そのものを観測する場合は、そのoperationに適用できるSpan Semantic Conventionがあるか確認する。
+- ある時点の名前付きの出来事を`EventRecord`として記録する場合は、その出来事に適用できる具体的なEvent Semantic Conventionがあるか確認する。
+- 適用できる標準定義がある場合は、RAGScope独自の同義Spanや`EventRecord`を重ねない。
 
-例えば、HTTP requestという処理はHTTP SpanのSemantic Conventionで観測する。一方、ExceptionをLogsの`EventRecord`として記録する場合はSemantic conventions for exceptions in logsに従う。この2つはどちらもSemantic Conventionを使っているが、片方はSpan、もう片方はLogsの`EventRecord`である。
+例えば、HTTP requestという処理はHTTP SpanのSemantic Conventionで観測する。一方、Exceptionというある時点の出来事をLogsへ記録する場合はExceptionのEvent定義を使う。どちらもSemantic Conventionを使うが、片方はoperationを表すSpan、もう片方はある時点の出来事を表す`EventRecord`である。
 
 ## Span / `EventRecord` / 通常LogRecordをどう分担するか
 
@@ -94,22 +103,41 @@ Semantic Conventionは、Span、Metric、Log、`EventRecord`などについて�
 flowchart TD
     A["観測したい情報"] --> B{"開始と終了を持つ処理そのもの?"}
     B -->|Yes| C["Spanで表す<br>適用できるSpan SemConvがあれば使う"]
-    B -->|No| D{"operation全体を説明する情報?<br>独立した時刻が不要?"}
+    B -->|No| D{"あるSpanが表す処理についての情報で<br>独立した発生時刻が不要?"}
     D -->|Yes| E["Span attributesへ置く"]
-    D -->|No| F{"ある時点の名前付きの出来事・状態変化として<br>後から識別したい?"}
-    F -->|No| G["通常LogRecordの候補<br>EventNameを持つ出来事としては定義しない"]
-    F -->|Yes| H{"適用できる標準Event SemConvがある?"}
+    D -->|No| F{"ある時点の名前付きの出来事・状態変化として<br>検索・集計したい?"}
+    F -->|No| G["通常LogRecord候補<br>診断情報として残す必要がある場合だけ記録"]
+    F -->|Yes| H{"適用できる標準Event定義がある?"}
     H -->|Yes| I["標準`EventRecord`を使う"]
-    H -->|No| J{"既存Spanからその出来事を<br>必要な粒度で識別できる?"}
+    H -->|No| J{"そのoperationについて記録されるSpanから<br>同じ事実を必要な粒度で判断できる?"}
     J -->|Yes| K["`EventRecord`を追加しない"]
     J -->|No| L["RAGScope固有`EventRecord`を定義"]
 ```
 
-したがって、**「SemConvもSpanも使えないという判定が続いたら、自動的に`EventRecord`を出す」という設計ではない。**
+**「標準Event定義がないならRAGScope固有`EventRecord`を出す」という設計ではない。** 標準Event定義がない場合は、その出来事を新しい`EventRecord`として残さなくても、すでにそのoperationを観測するために記録されるSpanの名前、attributes、Status、親子関係などから同じ事実を判断できないか確認する。
 
-まず、その情報が処理なのか、operation全体の情報なのか、ある時点の名前付きの出来事なのかを分ける。`EventRecord`に向く種類の情報であることを確認したうえで、標準Event Semantic Conventionがあるか、既存Spanからすでに識別できるかを確認し、それでも必要な場合だけRAGScope固有`EventRecord`を定義する。
+### 判断例
 
-つまり、Logsは「処理があったこと」を何でも記録する場所ではない。Spanと重複する情報を増やすのではなく、**Spanでは残らない、ある時点の意味ある出来事を必要な場合に残す**。
+> [!note]
+> 以下は判断基準を説明するための例であり、ここで新しいRAGScope固有Span、`EventRecord`、通常LogRecordの具体定義を採用するものではない。
+
+**Span attributesへ置く例**
+
+1回のGenAI operationについて、使用したmodelやoperationの種類を記録するとする。これらは「この1回の処理はどんな処理だったか」を説明する値であり、「途中のある時点でmodelが選ばれた」という出来事自体を観測する必要がないなら、そのSpanのattributesとして扱う。
+
+**Spanから同じ事実が分かるため`EventRecord`を追加しない例**
+
+retryによってHTTP requestを3回送信し、HTTP計装によって各requestが別のHTTP client Spanとして記録されるとする。「HTTP requestが3回行われた」という事実だけを知りたいなら、その3つのSpanから確認できるため、同じ「retryを試行した」という事実を表す`EventRecord`を重ねる必要はない。
+
+**Spanだけでは出来事の意味を判断できない例**
+
+ある処理Aのあとに処理BのSpanが記録されていても、それだけでは「最初からAの次にBを実行する処理だった」のか、「Aの失敗を受けてfallbackとしてBを選択した」のかを区別できない場合がある。後者の**fallbackを選択したという状態変化そのもの**を後から検索・集計する必要があるなら、RAGScope固有`EventRecord`の候補になる。
+
+**通常LogRecord候補の例**
+
+AI推論サービスから受け取った応答の解析過程を調査するために、人が読む診断メッセージを残したいが、そのメッセージを特定の`EventName`を持つ出来事として横断検索・集計する必要はない場合は、通常LogRecord候補になる。attributesを付けても通常LogRecordのままであり、非空の`EventName`を持たせてEventとして定義したときに`EventRecord`になる。
+
+つまり、Logsは「処理があったこと」を何でも記録する場所ではない。Spanと同じ事実を重ねず、**Spanでは分からない名前付きの出来事は必要な場合に`EventRecord`として、名前付きEventにする必要のない診断情報は必要な場合に通常LogRecordとして残す**。
 
 ## retry / timeoutと「共通`EventRecord`」
 
@@ -125,9 +153,9 @@ retryやtimeoutという**種類だけ**を理由に共通`EventRecord`を作ら
 - 次の試行を開始した
 - これ以上retryしないと決定した
 
-試行、所要時間、最終的な失敗などをSpanや適用するSemantic Conventionから確認できるなら、同じ情報を`EventRecord`へ重複して記録しない。
+試行、所要時間、最終的な失敗などを、そのoperationについて記録されるSpanや適用するSemantic Conventionから確認できるなら、同じ情報を`EventRecord`へ重複して記録しない。
 
-一方、retryを選択した、fallbackへ切り替えた、これ以上retryしないと決定した、などの**ある時点の状態変化**を後から識別する必要があり、既存Spanからはその状態変化を必要な粒度で識別できない場合は、その状態変化を`EventRecord`として記録する候補になる。
+一方、retryを選択した、fallbackへ切り替えた、これ以上retryしないと決定した、などの**ある時点の状態変化**を後から識別する必要があり、そのoperationについて記録されるSpanの名前、attributes、Status、親子関係などからはその状態変化を必要な粒度で判断できない場合は、その状態変化を`EventRecord`として記録する候補になる。
 
 全`EventRecord`を先に共通型へ列挙しない。複数のUseCaseまたは内部処理で、`EventRecord`が表す出来事、記録条件、`EventName`、attributesを同じ定義として共有する必要が実際に生じた場合だけ共通化を検討する。
 
@@ -173,7 +201,7 @@ RAGScope全体の失敗理由の扱いは[[RS-0023 Observability設計メモ]]�
 **エラー型で表す失敗が発生しただけでは`EventRecord`を生成しない。**
 
 たとえば途中で失敗が発生しても、retryやfallbackによって最終的に回復するなら、「失敗が一度起きた」という事実だけを理由に`EventRecord`を追加しない。
-必要な状態変化をSpanから識別できない場合だけ、その出来事を表す`EventRecord`を定義する。
+必要な状態変化をそのoperationについて記録されるSpanから判断できない場合だけ、その出来事を表す`EventRecord`を定義する。
 
 Logs設計が担当するのは、RAGScope固有`EventRecord`に失敗情報が必要な場合、その`EventRecord`が表すUseCaseまたは内部処理に対応するエラー型の値を`EventRecord`の`error.type`へ変換する規則である。
 
