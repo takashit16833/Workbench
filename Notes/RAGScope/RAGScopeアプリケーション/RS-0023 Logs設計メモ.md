@@ -52,33 +52,6 @@ RAGScopeでは、観測したい情報を次のように分ける。
 
 エラー型で表す失敗が発生したという事実だけでは`EventRecord`を自動生成しない。一方、想定外の同期Exceptionがoperation境界から外へ投げられる場合は、Semantic conventions for exceptions in logsに従うLogs側のException `EventRecord`を1件記録する。
 
-## `EventRecord`とSpan Eventは何が違うか
-
-両方とも「ある時点で起きた出来事」を表せるため名前が紛らわしいが、置かれる場所が違う。
-
-```text
-RAGScopeのTelemetry
-├─ Traces ─────────────→ Tempo
-│  └─ Span
-│     └─ Span Event
-│        └─ そのSpanの中で起きた時点情報
-│
-└─ Logs ───────────────→ Loki
-   └─ LogRecord
-      ├─ EventNameあり = EventRecord
-      │  └─ Logsとして独立して検索・集計する名前付きの出来事
-      └─ EventNameなし = 通常LogRecord
-         └─ 名前付きEventとして扱わないログ
-
-Grafana
-├─ TempoのTrace / Span / Span Eventを見る
-└─ Lokiの通常LogRecord / EventRecordを見る
-```
-
-`EventRecord`は`LogRecord`とは別の第4のsignalではない。OpenTelemetry Logsのデータモデル上、**非空の`EventName`を持つ`LogRecord`をEventとして扱う**。Semantic conventions for eventsでは、この形を`EventRecord`と呼ぶ。`EventName`を持たない`LogRecord`はEventではなく、このドラフトでは通常LogRecordと呼ぶ。
-
-一方、Span EventはTraceのSpanに直接ぶら下がる。Trace API上、Spanはtimestamp付きEventのリストを持つことができる。これはLogs signalへ送る`LogRecord` / `EventRecord`ではない。
-
 ## Semantic Conventionは何を決めるものか
 
 Semantic Conventionは、Span、Metric、Log、`EventRecord`などについて、OpenTelemetryが標準の名前、attributes、記録条件などを定める規約である。**Semantic ConventionそのものがSpanや`EventRecord`の代わりになるわけではない。**
