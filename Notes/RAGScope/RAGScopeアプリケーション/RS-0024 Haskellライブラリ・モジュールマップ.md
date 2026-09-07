@@ -14,57 +14,62 @@ created: 2026-09-08
 
 Mermaidの色分けは[[Mermaid図の色分けルール]]に従う。
 
-## library / component map
+## library / module map
 
 ```mermaid
-flowchart TB
+flowchart LR
     subgraph PKG["ragscope"]
-        PUBLIB["library: ragscope"]:::public
-        PUBEX["exposed-modules<br/>RAGScope.*<br/>具体名は未決定"]:::public
-        PUBOTHER["other-modules<br/>公開library内部実装<br/>具体名は未決定"]:::private
-        PUBLIB --> PUBEX
-        PUBLIB --> PUBOTHER
+        subgraph PUBLIC["library: ragscope"]
+            PUBEX["RAGScope.*<br/>exposed-modules<br/>具体名は未決定"]:::public
+            PUBOTHER["other-modules<br/>公開library内部実装<br/>具体名は未決定"]:::private
+            PUBEX --> PUBOTHER
+        end
 
-        APPLIB["library: application"]:::private
-        APPAPI["exposed-modules<br/>RAGScope.Application"]:::private
-        APPOTHER["other-modules<br/>RAGScope.Application.*"]:::private
-        APPLIB --> APPAPI
-        APPAPI --> APPOTHER
+        subgraph APPLICATION["library: application"]
+            APP["RAGScope.Application<br/>exposed-modules"]:::private
+            APPOTHER["RAGScope.Application.*<br/>other-modules"]:::private
+            APP --> APPOTHER
+        end
 
-        TELLIB["library: telemetry"]:::private
-        TELAPI["exposed-modules<br/>RAGScope.Telemetry<br/>Telemetry利用境界"]:::private
-        TELOTHER["other-modules<br/>RAGScope.Telemetry.*"]:::private
-        TELLIB --> TELAPI
-        TELAPI --> TELOTHER
+        subgraph TELEMETRY["library: telemetry"]
+            TEL["RAGScope.Telemetry<br/>exposed-modules<br/>Telemetry利用境界"]:::private
+            TELOTHER["RAGScope.Telemetry.*<br/>other-modules"]:::private
+            TEL --> TELOTHER
+        end
 
-        OTELLIB["library: opentelemetry"]:::private
-        OTELAPI["exposed-modules<br/>RAGScope.Telemetry.OpenTelemetry<br/>Adapter入口"]:::private
-        OTELOTHER["other-modules<br/>Lifecycle / Trace / Logs / Metrics<br/>具体module名は未決定"]:::private
-        OTELLIB --> OTELAPI
-        OTELAPI --> OTELOTHER
+        subgraph OTEL["library: opentelemetry"]
+            OTELAPI["RAGScope.Telemetry.OpenTelemetry<br/>exposed-modules<br/>Adapter入口"]:::private
+            OTELOTHER["Lifecycle / Trace / Logs / Metrics<br/>other-modules<br/>具体module名は未決定"]:::private
+            OTELAPI --> OTELOTHER
+        end
 
         MAIN["executable: ragscope<br/>Main / Composition Root"]
         TEST["test-suite(s)"]
 
-        MAIN --> APPAPI
-        MAIN --> TELAPI
+        MAIN --> APP
+        MAIN --> TEL
         MAIN --> OTELAPI
 
-        APPAPI --> TELAPI
-        OTELAPI --> TELAPI
+        APP --> TEL
+        OTELAPI --> TEL
 
-        TEST -.-> APPAPI
-        TEST -.-> TELAPI
+        TEST -.-> APP
+        TEST -.-> TEL
         TEST -.-> OTELAPI
     end
 
-    OTELPKG["OpenTelemetry Haskell packages"]:::external
-    OTELOTHER --> OTELPKG
+    SDK["OpenTelemetry Haskell packages"]:::external
+    OTELOTHER --> SDK
 
     classDef public fill:#052A59,stroke:#5EAFFF,color:#DDF0FF,stroke-width:2px
     classDef private fill:#211536,stroke:#8A5EC0,color:#DDF0FF,stroke-width:2px
     classDef external fill:#001947,stroke:#316CBD,color:#A6CAFF,stroke-width:2px
+
     style PKG fill:transparent,stroke:#153A75,color:#4C9EEB,stroke-width:2px
+    style PUBLIC fill:#052A59,stroke:#5EAFFF,color:#DDF0FF,stroke-width:2px
+    style APPLICATION fill:#211536,stroke:#8A5EC0,color:#DDF0FF,stroke-width:2px
+    style TELEMETRY fill:#211536,stroke:#8A5EC0,color:#DDF0FF,stroke-width:2px
+    style OTEL fill:#211536,stroke:#8A5EC0,color:#DDF0FF,stroke-width:2px
 ```
 
 凡例: **青** = 公開library / module、**紫** = 非公開library / module、**濃青** = 外部package
@@ -74,42 +79,6 @@ flowchart TB
 - `telemetry`はOpenTelemetry packageへ依存しない。
 - `opentelemetry`だけがOpenTelemetry packageへ依存する。
 - private libraryをまたいで利用するmoduleは`exposed-modules`、そのlibrary内だけで使うmoduleは`other-modules`に置く。
-
-## module dependency map
-
-```mermaid
-flowchart LR
-    MAIN["Main<br/>Composition Root"]
-
-    APP["RAGScope.Application"]:::private
-    APPIMPL["RAGScope.Application.*<br/>other-modules"]:::private
-
-    TEL["RAGScope.Telemetry"]:::private
-    TELIMPL["RAGScope.Telemetry.*<br/>other-modules"]:::private
-
-    OTEL["RAGScope.Telemetry.OpenTelemetry"]:::private
-    OTELIMPL["OpenTelemetry Adapter実装<br/>other-modules"]:::private
-
-    SDK["OpenTelemetry Haskell packages"]:::external
-
-    MAIN --> APP
-    MAIN --> TEL
-    MAIN --> OTEL
-
-    APP --> APPIMPL
-    APP --> TEL
-    TEL --> TELIMPL
-
-    OTEL --> OTELIMPL
-    OTEL --> TEL
-    OTELIMPL --> SDK
-
-    classDef public fill:#052A59,stroke:#5EAFFF,color:#DDF0FF,stroke-width:2px
-    classDef private fill:#211536,stroke:#8A5EC0,color:#DDF0FF,stroke-width:2px
-    classDef external fill:#001947,stroke:#316CBD,color:#A6CAFF,stroke-width:2px
-```
-
-凡例: **青** = 公開library / module、**紫** = 非公開library / module、**濃青** = 外部package
 
 禁止する依存は次のとおり。
 
