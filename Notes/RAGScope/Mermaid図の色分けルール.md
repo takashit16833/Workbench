@@ -17,7 +17,7 @@ created: 2026-09-08
 
 Mermaidでは原則として次のclassを使う。
 
-```mermaid
+```text
 classDef public fill:#052A59,stroke:#5EAFFF,color:#DDF0FF,stroke-width:2px
 classDef private fill:#211536,stroke:#8A5EC0,color:#DDF0FF,stroke-width:2px
 classDef external fill:#001947,stroke:#316CBD,color:#A6CAFF,stroke-width:2px
