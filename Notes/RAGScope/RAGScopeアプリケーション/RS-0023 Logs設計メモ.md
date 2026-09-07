@@ -81,10 +81,10 @@ flowchart TD
     D -->|No| F{"ある時点の名前付きの出来事・状態変化として<br>検索・集計したい?"}
     F -->|No| G["通常LogRecord候補<br>診断情報として残す必要がある場合だけ記録"]
     F -->|Yes| H{"適用できる標準Event定義がある?"}
-    H -->|Yes| I["標準`EventRecord`を使う"]
+    H -->|Yes| I["標準EventRecordを使う"]
     H -->|No| J{"そのoperationについて記録されるSpanから<br>同じ事実を必要な粒度で判断できる?"}
-    J -->|Yes| K["`EventRecord`を追加しない"]
-    J -->|No| L["RAGScope固有`EventRecord`を定義"]
+    J -->|Yes| K["EventRecordを追加しない"]
+    J -->|No| L["RAGScope固有EventRecordを定義"]
 ```
 
 **「標準Event定義がないならRAGScope固有`EventRecord`を出す」という設計ではない。** 標準Event定義がない場合は、その出来事を新しい`EventRecord`として残さなくても、すでにそのoperationを観測するために記録されるSpanの名前、attributes、Status、親子関係などから同じ事実を判断できないか確認する。
