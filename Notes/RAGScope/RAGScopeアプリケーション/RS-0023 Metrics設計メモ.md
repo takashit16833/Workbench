@@ -83,21 +83,19 @@ Embedding生成の論理的な依頼全体は、適用可能なGenAI embeddings 
 その中で実際に行うHTTP requestは、HTTP計装を行う場合にHTTP client Span / `http.client.request.duration`で別に観測する。
 PostgreSQL operationはDB Spanと`db.client.operation.duration`で観測する。
 
-Embedding operation全体とHTTP requestは同じ時間の別名ではない。一方から他方を導出しない。
+Embedding operation全体とHTTP requestは別の観測対象として扱い、一方から他方を導出しない。
 
 ## reranking時間をどう扱うか
 
 RAGScopeアプリケーションは検索候補をAI推論サービスへ渡し、並べ替え済み結果を受け取る。
 
-そのため、次の2つは別の時間である。
+次の2つは別の時間として扱う。
 
 - RAGScopeアプリケーションがrerankingを依頼して結果を受け取るまでの処理全体
 - AI推論サービス内部でモデルがreranking計算を行う時間
 
-現時点で確認したGenAI Semantic Conventionsには、RAGScopeのreranking処理全体へそのまま適用できる専用Metricを確認できていない。
-
+現時点で、RAGScopeのreranking処理全体へ適用する標準Metricは確定していない。
 実験比較に必要なreranking処理時間は実験結果へ保存する。
-rerankingを実装する時点で、その時点のGenAI Semantic Conventionsを再確認する。
 
 ## 回答生成時間をどう扱うか
 
@@ -122,18 +120,12 @@ flowchart LR
 ```
 
 回答生成処理全体の時間は実験結果へ保存する。
-
-`gen_ai.client.operation.duration`はGenAIへの論理的な依頼全体、`http.client.request.duration`はその中で行われる1回のHTTP request、`gen_ai.server.request.duration`はAI推論サービス側でrequestを処理する時間を表す。
-
-`gen_ai.client.operation.duration`にはHTTP通信時間が含まれる場合があるが、それでもHTTP requestの時間と同じ値ではない。一方から他方を導出しない。AI推論サービス側の値もRAGScopeアプリケーション側の観測値から導出しない。
+GenAI client operation、HTTP request、AI推論サービス側request処理は、それぞれ適用する標準Metricで別に観測し、相互に値を導出しない。
 
 ## TTFTをどう扱うか
 
-現在のOpenTelemetry GenAI Semantic Conventionsには、AI推論サービスが最初のtokenを生成するまでを表す`gen_ai.server.time_to_first_token`がある。
-RAGScopeで適用できる場合は、`REQ-NF-PERF-002`にあるTTFTを複数実行で集約観測する標準Metricとして利用する。
-
-一方、client側の`gen_ai.client.operation.time_to_first_chunk`は、streaming responseの**最初のchunkを受信するまで**を表す。
-TTFTとは開始点・終了点が異なるため、同じ値として扱わない。
+RAGScopeのTTFTを複数実行で集約観測する場合は、適用可能なら`gen_ai.server.time_to_first_token`を使う。
+client側の`gen_ai.client.operation.time_to_first_chunk`はRAGScopeのTTFTとは開始点・終了点が異なるため、同じ値として扱わない。
 
 RAGScopeの実験結果では、AI推論サービス側で計測したTTFTを評価データごとの実行結果から取得できる形で保持する。
 Telemetryの保存・集約先だけへTTFTを送り、後から取得して実験結果を補完する構造にはしない。
@@ -142,12 +134,9 @@ Telemetryの保存・集約先だけへTTFTを送り、後から取得して実�
 
 ## 生成token数をどう扱うか
 
-GenAI Semantic Conventionsには`gen_ai.client.token.usage`があり、input / output token数をHistogramで記録できる。
-RAGScopeアプリケーションがAI推論サービスの応答などから正確なtoken数を取得できる場合に利用する。Telemetryのためだけに取得できない値を推定しない。
-
 RAGScopeでは生成token数を評価データ単位で比較するため、**正確な出力token数を実験結果へ保持する経路が主**である。
 
-その上で、AI推論サービスから返された出力token数をRAGScopeアプリケーション側で取得でき、GenAI client operationの標準Metricへ記録できる場合は`gen_ai.client.token.usage`を併用する。
+AI推論サービスから返された出力token数をRAGScopeアプリケーション側で正確に取得でき、GenAI client operationの標準Metricへ記録できる場合は`gen_ai.client.token.usage`を併用する。Telemetryのためだけに取得できない値を推定しない。
 
 ```mermaid
 flowchart LR
@@ -173,35 +162,13 @@ RAGScope独自attributeは、どの集計・比較・監視で使うかを特定
 
 そのため、RS-0023の共通設計ではRAGScope固有Metricを定義しない。
 
-## Semantic Conventionsのstability
-
-2026-09-06確認時点で、OpenTelemetry core Semantic Conventionsの最新リリースは1.44.0である。GenAI Semantic Conventionsは専用リポジトリへ分離され、現在もDevelopmentとして管理されている。
-
-そのため、`gen_ai.*`の現在のMetric名・attributesを**RAGScope独自の恒久契約へコピーしない**。
-実装時には、採用するOpenTelemetry / instrumentationバージョンと対象Conventionのstabilityを再確認する。
-
-このノートで参照する代表的なMetricsは次のとおりである。
-
-| Metric | instrument | unit | stability |
-|---|---|---|---|
-| `http.client.request.duration` | Histogram | `s` | Stable |
-| `db.client.operation.duration` | Histogram | `s` | Stable |
-| `gen_ai.client.operation.duration` | Histogram | `s` | Development |
-| `gen_ai.client.token.usage` | Histogram | `{token}` | Development |
-| `gen_ai.client.operation.time_to_first_chunk` | Histogram | `s` | Development |
-| `gen_ai.server.request.duration` | Histogram | `s` | Development |
-| `gen_ai.server.time_to_first_token` | Histogram | `s` | Development |
-| `gen_ai.server.time_per_output_token` | Histogram | `s` | Development |
-
-HTTP / Databaseの文書全体にはstabilityが混在するため、「HTTPまたはDatabaseだからすべてStable」とは扱わない。このノートで採用候補としている`http.client.request.duration`と`db.client.operation.duration`はStableであり、GenAI Metricsとはstabilityが異なる。
-
 ## このMetrics共通設計では決めないこと
 
 | 論点 | 具体化する時点 |
 |---|---|
 | 回答生成処理時間の厳密な開始・終了点 | 回答生成を定義する設計時 |
 | TTFT / 出力token数をAI推論サービスから返すContract | AI通信方式・Contract設計時 |
-| rerankingのSemConv対応 | reranking実装時に現行SemConvを再確認 |
+| rerankingへ適用する標準Metric | reranking実装時に現行SemConvを確認 |
 | Metricsの具体的な計装方法 | Telemetry利用境界 / Adapter設計時 |
 | 標準Metricsをどこまで自動計装するか | 計装方法の選定時 |
 | runtime / host / acceleratorのMetrics | 外部構成と必要な集約・比較・監視を定める時 |

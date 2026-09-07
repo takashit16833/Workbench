@@ -88,8 +88,6 @@ APIへ外部Trace Contextが届いた場合の扱い、entry Span、UseCase Span
 ### Logs
 
 Logsは、Spanの開始・終了・attributes・Statusだけでは後から識別できない出来事や状態変化を記録するために使う。
-Spanですでに分かる事実を、Eventへ機械的に重複させない。
-
 EventはOpenTelemetry `EventRecord`として記録する。詳細は[[RS-0023 Logs設計メモ]]で扱う。
 
 ### Metrics
@@ -104,9 +102,7 @@ DB / HTTP / GenAIなど、観測する処理に適用できる標準Metricがあ
 Telemetryが決めるのは「何を観測して記録するか」である。
 retry、timeout、fallback、処理順序など、RAGScopeアプリケーションの振る舞いそのものはTelemetryへ移さない。
 
-たとえばretryするかどうかは、そのUseCaseまたは内部処理の設計が決める。Telemetryは、その結果として何回の処理が実際に行われ、最終的に成功したか失敗したかを、適用するSpan / Event / Metricの規則に従って記録する。
-
-同じように、Exporter / Processor / Collectorへの送信に失敗しても、RAGScopeアプリケーション本体の処理結果は変更しない。UseCaseが成功しているなら、Telemetry送信の失敗だけを理由にUseCase失敗へ変えない。
+Exporter / Processor / Collectorへの送信に失敗しても、RAGScopeアプリケーション本体の処理結果は変更しない。UseCaseが成功しているなら、Telemetry送信の失敗だけを理由にUseCase失敗へ変えない。
 
 ## 失敗理由をAPI・保存データ・Telemetryへどう渡すか
 
@@ -126,9 +122,7 @@ UseCaseまたは内部処理のエラー型で表した失敗
 各エラー型で表した失敗は、それぞれの用途に必要な表現へ直接変換する。共通分類を間に置くと、各エラー型から共通分類への変換と、共通分類から各出力先への変換を別々に維持する必要があり、UseCaseや内部処理ごとの失敗を不要に1つの分類体系へ結合するためである。
 
 RAGScopeアプリケーション / AI推論サービス間で共有する失敗コードは、その通信方式を定義するContractで扱う。
-
-OpenTelemetryの`error.type`は、Telemetry上でそのoperationやEventがどの種類のerrorを表すかを記録する属性である。
-HTTP、Database、GenAIなど、適用するSemantic Conventionが`error.type`を定めている場合はその規則に従う。RAGScope固有SpanとEventでの変換は、それぞれ[[RS-0023 Trace設計メモ]]と[[RS-0023 Logs設計メモ]]で扱う。
+RAGScope固有Spanと`EventRecord`への`error.type`変換は、それぞれ[[RS-0023 Trace設計メモ]]と[[RS-0023 Logs設計メモ]]で扱う。
 
 ## OpenTelemetry SDKとの依存境界
 
@@ -155,22 +149,7 @@ Span名、Span Kind、attributes、Event、Metric名、instrument、unitなど�
 
 RAGScope独自のTelemetry表現は、UseCase、Invocation、実験、評価データなど、既存Conventionだけでは表現できないRAGScope固有の意味に限定する。独自attributeが必要な場合も、まず既存attributeを再利用できないか確認し、OpenTelemetryが使用するnamespaceと衝突する名前は作らない。
 
-Semantic Conventionごとにstabilityが異なるため、実装時には採用するOpenTelemetry / instrumentationバージョンと対象Conventionのstabilityを確認する。
-
-2026-09-06時点で、このドラフトが直接参照する主な規約は次のとおりである。
-
-| 対象 | stability | このドラフトでの扱い |
-|---|---|---|
-| `error.type`属性 | Stable | operationがどの種類のerrorで失敗したかを表す標準属性として使う |
-| HTTP client / server Span | Stable | API / HTTP通信へ適用する |
-| SQL / PostgreSQL database client Span | Stable | PostgreSQL operationへ適用する |
-| `http.client.request.duration` | Stable | HTTP requestの所要時間を集約観測する |
-| `db.client.operation.duration` | Stable | DB operationの所要時間を集約観測する |
-| CLI Execution Span | Development | CLI entry Spanへ適用する。現在の細部をRAGScope独自の恒久契約へコピーしない |
-| Recording errors | Development | RAGScope固有operationのStatus / `error.type`を決める指針として使う |
-| Semantic conventions for events | Development | RAGScope固有Eventを設計する指針として使う |
-| Semantic conventions for exceptions in logs | Stable（個別節にDevelopmentあり） | Exception Eventの基本表現へ利用する |
-| GenAI Semantic Conventions | Development | 適用できるSpan / Event / Metricへ利用し、現在の名称やattributesをRAGScope独自契約へ固定しない |
+実装時には、採用するOpenTelemetry / instrumentationバージョンと、利用するSemantic Conventionのstabilityを確認する。
 
 ## 構築時とInvocation実行時を分ける
 

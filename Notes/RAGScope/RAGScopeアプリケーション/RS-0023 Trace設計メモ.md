@@ -69,7 +69,7 @@ APIへのリクエストにTrace Contextが含まれていても、そのContext
 - `entry Span`は、その1 Invocation全体をTrace上で観測するroot Spanである。
 - `UseCase Span`は、handlerからUseCaseを呼び出してからRAGScopeアプリケーションへ制御が戻るまでを観測するchild Spanである。
 
-entry Spanがhandlerの代わりに処理を行うわけではない。handler実行がentry Spanの計測範囲に含まれ、その途中でUseCaseが呼ばれたときだけUseCase Spanを作る。
+handler実行はentry Spanの計測範囲に含まれ、その途中でUseCaseが呼ばれたときだけUseCase Spanを作る。
 UseCaseが呼ばれる前にhandlerで処理が終了してもInvocationは発生しているため、entry Spanは残る。一方、UseCaseは実行されていないのでUseCase Spanは作らない。
 
 ## 1 InvocationはTrace上でどう見えるか
@@ -102,7 +102,7 @@ flowchart TB
 GenAI client SpanはRAGScopeアプリケーションからモデルまたはGenAIサービスへ行う論理的な依頼全体を表し、HTTP client Spanはその依頼の中で行う1回のHTTP requestを表す。両方を計装する場合は別のSpanとして扱う。
 適用可能なGenAI Spanがない場合、またはGenAI Spanを計装しない場合は、HTTP client SpanをUseCase Spanの子Spanとして記録する。
 
-現行のGenAI Semantic Conventionsではclient側のinference / embeddings Spanは定義されているが、AI推論サービス側の汎用`gen_ai.inference.server` Spanは確認できない。そのため、AI推論サービス側へRAGScope独自のGenAI server Spanを補って作らない。
+AI推論サービス側は、適用可能なserver側GenAI Semantic Conventionがない間はHTTP SERVER Spanで観測し、RAGScope独自のGenAI server Spanを追加しない。
 
 ## Spanをどこに切るか
 
@@ -131,25 +131,17 @@ RAGScopeの実行追跡にはOpenTelemetry Spanを使い、OpenTelemetry Spanと
 Span Statusと`error.type`は、そのSpanが表すoperation自身の**最終結果**から決める。
 子Spanが失敗したことだけを理由に、親Spanを`Error`にはしない。
 
-このルールが必要なのは、内部処理が途中で失敗してもretry / fallbackによって親operation全体が成功する場合があるためである。親Spanは、内部で一度失敗したかではなく、親Span自身が表すoperationが最終的にどう終わったかを表す。
-
 HTTP、CLI、Database、GenAIなど、適用するSemantic ConventionがStatusや`error.type`を定めているSpanでは、その規則を優先する。RAGScope固有Spanの規則で上書きしない。
 
-たとえばAPIのentry SpanはHTTP SERVER SpanなのでHTTP Semantic Conventionsに従う。HTTP 4xx responseはSERVER Spanでは通常`Unset`のままであり、5xx responseなどHTTP operation自身がエラーとなる場合に`Error`となる。
-CLIのentry SpanであるExecution (callee) Spanは、`process.exit.code`が0以外なら`Error`となる。
-そのため、UseCase Spanが`Error`でも、それだけを理由にAPI / CLIのentry Spanを`Error`へ変えない。
-
-RAGScope固有Spanでは、2026-09-06時点のRecording errorsの指針に沿って次のように扱う。
+RAGScope固有Spanでは次のように扱う。
 
 | operationの最終結果 | Span Status | `error.type` | その他 |
 |---|---|---|---|
 | 成功 | `Unset` | なし | — |
 | エラー型で表す失敗により最終的に失敗 | `Error` | 対応するエラー型の値から、そのoperationに対応する予測可能で低カーディナリティな値へ変換 | エラー型の値が持つ詳細値や原因は失わない |
-| 内部処理が失敗したがretry / fallbackで最終成功 | `Unset` | なし | 内部失敗だけを理由に親Spanを`Error`にしない |
+| 内部処理が失敗したがoperationは最終成功 | `Unset` | なし | — |
 | 想定外の同期Exceptionがoperation境界から外へ投げられる | `Error` | Exception型のcanonical class name | 元のExceptionを再送出する |
 | 非同期中断 / キャンセル | そのoperationにおける中断の意味に従う | 一律規則なし | 必要な後始末とTelemetry処理の後も元のExceptionを再送出する |
-
-Recording errorsはDevelopmentである。実装時に対象バージョンを再確認し、現在の細部をRAGScope独自の恒久契約として固定しない。
 
 Logを生成するかどうかはSpan Statusとは別に判断する。[[RS-0023 Logs設計メモ]]を参照する。
 
@@ -167,14 +159,11 @@ RAGScope固有Spanで使う`error.type`は、そのSpanが表すUseCaseまたは
 変換規則が必要なら、実行状態やTrace Contextへ依存しない純粋な変換を第一候補とする。
 具体的なエラー型、`Either` / `ExceptT`などの利用位置は、このTrace共通設計では決めない。
 
-HTTP、Database、GenAIなど、Semantic Conventionや計装が`error.type`を定めるSpanでは、その規則に従い、同義のRAGScope独自分類を重ねない。
-
 ## 想定外の同期Exception
 
 RAGScope固有Spanが表すoperationの境界から想定外の同期Exceptionが外へ投げられる場合は、そのSpanを`Error`とし、`error.type`へException型のcanonical class nameを設定して元のExceptionを再送出する。
 
-Exception Eventの記録と重複防止は[[RS-0023 Logs設計メモ]]で扱う。
-子SpanでExceptionが発生していても、親Spanを`Error`にするかは親Span自身が表すoperationの最終結果から判断する。これはException Eventを重複記録しないこととは別の判断である。
+Exception `EventRecord`の記録と重複防止は[[RS-0023 Logs設計メモ]]で扱う。
 
 ## 非同期中断 / キャンセル
 
@@ -185,19 +174,6 @@ Haskellでは`AsyncCancelled`、`ThreadKilled`、`UserInterrupt`、`StackOverflo
 非同期中断を捕捉する必要がある境界でも元のExceptionを飲み込まない。必要な後始末とTelemetry処理を行った後は再送出する。
 
 structured cancellation、CLIからの中断、timeoutによる打ち切りなどについて、実際に発生・捕捉するExceptionと中断されたoperationが特定できた時点で、そのSpan Statusを具体化する。
-
-## Semantic Conventionsのstability
-
-2026-09-06時点では、このTrace設計で参照する規約のstabilityは同一ではない。
-
-| 対象 | stability | 扱い |
-|---|---|---|
-| `error.type`属性 | Stable | operationがどの種類のerrorで失敗したかを表す標準属性として利用する |
-| HTTP client / server Span | Stable | API entry / HTTP通信へ適用する |
-| SQL / PostgreSQL database client Span | Stable | PostgreSQL operationへ適用する |
-| CLI Execution (callee) Span | Development | CLI entry Spanへ適用するが、現在の細部をRAGScope独自の恒久契約へコピーしない |
-| Recording errors | Development | RAGScope固有SpanのStatus / `error.type`を決める指針として利用する |
-| GenAI Semantic Conventions | Development | 適用可能なGenAIへの論理的な依頼に利用する。現在のSpan名・attributes等をRAGScope独自契約へ固定しない |
 
 ## このTrace共通設計では決めないこと
 
