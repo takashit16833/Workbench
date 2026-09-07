@@ -86,7 +86,7 @@ Semantic Conventionは、Span、Metric、Log、`EventRecord`などについて�
 
 例えば、HTTP requestという処理はHTTP SpanのSemantic Conventionで観測する。一方、ExceptionをLogsの`EventRecord`として記録する場合はSemantic conventions for exceptions in logsに従う。この2つはどちらもSemantic Conventionを使っているが、片方はSpan、もう片方はLogsの`EventRecord`である。
 
-## Span / `EventRecord` / 通常LogRecordをどう分担するか
+## Span / `EventRecord` / 通常の`LogRecord`をどう分担するか
 
 判断軸は次のとおりである。
 
@@ -97,7 +97,7 @@ flowchart TD
     B -->|No| D{"operation全体を説明する情報?<br>独立した時刻が不要?"}
     D -->|Yes| E["Span attributesへ置く"]
     D -->|No| F{"ある時点の名前付きの出来事・状態変化として<br>後から識別したい?"}
-    F -->|No| G["通常LogRecordの候補<br>EventNameを持つ出来事としては定義しない"]
+    F -->|No| G["通常のLogRecordの候補<br>EventNameを持つ出来事としては定義しない"]
     F -->|Yes| H{"適用できる標準Event SemConvがある?"}
     H -->|Yes| I["標準`EventRecord`を使う"]
     H -->|No| J{"既存Spanからその出来事を<br>必要な粒度で識別できる?"}

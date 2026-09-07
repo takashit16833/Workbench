@@ -260,10 +260,10 @@ RS-0023で必要なのは、RAGScopeアプリケーションとAI推論サービ
 | signal / 確認したいこと | 方法 |
 |---|---|
 | Traces / Spanが生成されること | Tempoへ保存し、GrafanaからTraceとSpan階層を確認する |
-| Logs / Eventが生成されること | Lokiへ保存し、GrafanaからLogRecord / Eventの内容とTrace Contextを確認する |
+| Logsが生成されること | Lokiへ保存し、Grafanaから`EventRecord` / 通常の`LogRecord`の内容とTrace Contextを確認する |
 | Metricsが生成されること | Prometheusへ保存し、GrafanaからMetricを確認する |
 | RAGScopeアプリケーション → AI推論サービスのTrace Context伝播 | Tempoへ保存されたTraceをGrafanaから確認し、両コンポーネントのSpanが同じTraceに入り、期待する親子関係になっていることを確認する |
-| LogsとTraceの関連付け | Loki上のLogRecord / Eventに対応するTrace Contextが記録され、Tempo上のTraceと関連付けられることを確認する |
+| LogsとTraceの関連付け | Loki上の`EventRecord` / 通常の`LogRecord`に対応するTrace Contextが記録され、Tempo上のTraceと関連付けられることを確認する |
 | Processor / Exporter失敗時にRAGScopeアプリケーション結果が変わらないこと | backendまたは送信経路を意図的に失敗させるテスト用構成で自動テストする |
 
 console / handle exporterは、backendへ届かない場合の切り分けやSDK単体の診断に補助的に使ってよい。ただし、console / handle exporterだけでローカルObservability確認を完了したことにはしない。
