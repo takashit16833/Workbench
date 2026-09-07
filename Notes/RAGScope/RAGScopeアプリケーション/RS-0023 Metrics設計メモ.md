@@ -57,7 +57,7 @@ OpenTelemetry Metricを出したことだけでは、正本が求める評価デ
 | `REQ-NF-PERF-002` | 生成token数 | 実験結果 | `gen_ai.client.token.usage`を適用可能なら使用 |
 | `REQ-EVAL-007` | 処理時間 / 成功率 / timeout率等 | 実験結果を集計 | Telemetry側は適用SemConvがある値だけ利用 |
 
-`REQ-NF-PERF-003`はCPU / GPU、メモリ、デバイス、`dtype`等を性能比較条件として実験結果へ記録することを要求している。この要求を満たすためだけに、これらをRAGScopeアプリケーション独自Metricへしない。
+`REQ-NF-PERF-003`が求めるCPU / GPU、メモリ、デバイス、`dtype`等の性能比較条件は実験結果へ記録する。
 
 runtime / host / acceleratorのMetricsをObservabilityとして追加するかは、外部構成と、どの集約・比較・監視で利用するかが定義された時点で判断する。
 
@@ -84,7 +84,6 @@ Embedding生成の論理的な依頼全体は、適用可能なGenAI embeddings 
 PostgreSQL operationはDB Spanと`db.client.operation.duration`で観測する。
 
 Embedding operation全体とHTTP requestは同じ時間の別名ではない。一方から他方を導出しない。
-検索処理全体を集約する`ragscope.search.duration`のような独自Metricは設けない。
 
 ## reranking時間をどう扱うか
 
@@ -97,7 +96,7 @@ RAGScopeアプリケーションは検索候補をAI推論サービスへ渡し�
 
 現時点で確認したGenAI Semantic Conventionsには、RAGScopeのreranking処理全体へそのまま適用できる専用Metricを確認できていない。
 
-実験比較に必要なreranking処理時間は実験結果へ保存し、`ragscope.reranking.duration`のような独自Metricは設けない。
+実験比較に必要なreranking処理時間は実験結果へ保存する。
 rerankingを実装する時点で、その時点のGenAI Semantic Conventionsを再確認する。
 
 ## 回答生成時間をどう扱うか
@@ -161,8 +160,7 @@ flowchart LR
 
 Metricは複数の観測値を同じ属性集合で集約するため、実行や対象ごとに値の種類が増える識別子をattributesへ入れない。
 
-実験ID、評価データID、文書ID、文書チャンクIDはMetric attributesへ入れない。
-TraceId / SpanIdもRAGScope独自attributeとして追加しない。
+実験ID、評価データID、文書ID、文書チャンクID、TraceId、SpanIdのような実行・対象単位の識別子はMetric attributesへ入れない。
 
 適用するSemantic Conventionが要求・推奨する低カーディナリティのattributesは、そのConventionに従う。
 RAGScope独自attributeは、どの集計・比較・監視で使うかを特定できた場合だけ検討する。
@@ -171,16 +169,9 @@ RAGScope独自attributeは、どの集計・比較・監視で使うかを特定
 
 ## RAGScope固有Metricを追加するか
 
-正本の性能要求を照合した結果、現時点では「RAGScope独自Metricとして持たなければ要求を満たせない性能値」は確認できていない。
+正本の性能要求は、個別実行の性能値を実験結果へ保存し、1回の詳細な所要時間と内訳をSpanで確認し、DB / HTTP / GenAIでは適用可能な標準Metricを使う構成で満たせる。
 
-- 個別実行の性能値は実験結果へ保存できる。
-- 1回の詳細な所要時間と内訳はSpanで確認できる。
-- DB / HTTP / GenAIには適用可能な標準Metricがある。
-- 検索 / rerankingについて、独自Metricで集約しなければ成立しない要求を現在確認できない。
-
-したがって、**RS-0023の共通設計ではRAGScope独自Metricを新たに定義しない（0個）**。
-
-UseCaseまたは内部処理について必要な集約・比較・監視が具体化し、Trace / 実験結果 / 標準Metricではその用途を満たせないことが確認された場合だけ、そのUseCaseまたは内部処理を定義する設計で独自Metricを定義する。
+そのため、RS-0023の共通設計ではRAGScope固有Metricを定義しない。
 
 ## Semantic Conventionsのstability
 

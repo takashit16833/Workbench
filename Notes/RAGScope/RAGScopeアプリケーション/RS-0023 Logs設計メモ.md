@@ -87,8 +87,6 @@ flowchart LR
     J -->|No| L["RAGScope固有EventRecordを定義"]
 ```
 
-**「標準Event定義がないならRAGScope固有`EventRecord`を出す」という設計ではない。** 標準Event定義がない場合は、その出来事を新しい`EventRecord`として残さなくても、すでにそのoperationを観測するために記録されるSpanの名前、attributes、Status、親子関係などから同じ事実を判断できないか確認する。
-
 ### 判断例
 
 > [!note]
@@ -148,20 +146,17 @@ RAGScope固有`EventRecord`の`EventName`には`ragscope.*` namespaceを使う�
 
 ## Trace / Spanとの関連付け
 
-`EventRecord`を現在のTrace / Spanへ関連付けるときは、`EventRecord`の基になるOpenTelemetry `LogRecord`が持つTrace Contextを使う。
-RAGScope独自の`trace_id` / `span_id` attributesは追加しない。
-
-これは、OpenTelemetryがすでに持つ関連付けと同じ情報を、RAGScope独自属性として二重管理しないためである。
+`EventRecord`を現在のTrace / Spanへ関連付けるときは、`EventRecord`の基になるOpenTelemetry `LogRecord`が持つTrace Contextを使い、同じ識別情報をRAGScope側で重複管理しない。
 
 ## severityとBody
 
-`EventRecord`のseverityにはOpenTelemetry `SeverityNumber`の意味体系を使う。RAGScope独自のログレベル体系は設けない。
+`EventRecord`のseverityにはOpenTelemetry `SeverityNumber`の意味体系を使う。
 各`EventRecord`の既定severityは、その`EventRecord`を定義するUseCaseまたは内部処理の設計で決める。
 
 severityからSpan Status、RAGScopeアプリケーションの最終結果、保存状態を導出しない。
 OpenTelemetryのseverity体系を使うことと、UseCaseや内部処理の公開型へ`hs-opentelemetry`固有型を含めることは別の問題である。
 
-すべての`EventRecord`へ同じ構造を持たせる共通`payload`は設けない。`EventRecord`固有の機械可読情報はattributesへ置く。
+`EventRecord`固有の機械可読情報はattributesへ置く。
 `Body`をどう使うかは、個別`EventRecord`または適用するSemantic Conventionを決める時点で判断する。
 
 ## 失敗1件ごとに`EventRecord`を出すわけではない
@@ -175,10 +170,6 @@ RAGScope全体の失敗理由の扱いは[[RS-0023 Observability設計メモ]]�
 必要な状態変化をそのoperationについて記録されるSpanから判断できない場合だけ、その出来事を表す`EventRecord`を定義する。
 
 Logs設計が担当するのは、RAGScope固有`EventRecord`に失敗情報が必要な場合、その`EventRecord`が表すUseCaseまたは内部処理に対応するエラー型の値を`EventRecord`の`error.type`へ変換する規則である。
-
-各エラー型とは別に、RAGScope全体で使う共通のエラー分類は設けない。共通のエラー分類を置かなくても現在要求は成立し、追加すると各エラー型との対応規則を別に維持する必要があるためである。
-
-RAGScopeアプリケーション / AI推論サービス間で共有する失敗コードが必要になった場合は、その通信Contractで定義する。Logs用の共通エラー分類として先に定義しない。
 
 ## `error.type`を`EventRecord`でどう扱うか
 
@@ -237,14 +228,7 @@ Logs側のException `EventRecord`では、実際に発生したExceptionの型�
 
 ## OpenTelemetryへ任せるログ処理
 
-RAGScope側では、OpenTelemetryと同じ責務を持つ別のログ処理基盤を作らない。
-
-| 機構 | 方針 | 理由 |
-|---|---|---|
-| RAGScope独自`LogRecord` | 設けない | Logsの記録単位にはOpenTelemetry `LogRecord`を使う |
-| OpenTelemetryとは別のログ処理基盤 | 設けない | Processor / Exporter、batching、flush / shutdownはOpenTelemetry SDKへ委ねる |
-| OpenTelemetryとは別のログ送信経路 | 設けない | Log転送はOpenTelemetryのProcessor / Exporter経路へ委ねる |
-| `LogRecord`とは別のTrace Context管理 | 設けない | `LogRecord`自身が持つTrace Contextを使う |
+Logsの記録単位にはOpenTelemetry `LogRecord`を使う。Processor / Exporter、batching、flush / shutdown、Log転送、Trace Context管理にはOpenTelemetryの機構を使う。
 
 RAGScope側で定義するのは、RAGScope固有`EventRecord`が表す意味、記録条件、`EventName`、attributes、severityと、必要な場合に対応するエラー型の値から`EventRecord`の`error.type`へ変換する規則である。
 

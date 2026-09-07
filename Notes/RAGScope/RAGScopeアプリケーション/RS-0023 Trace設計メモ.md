@@ -61,9 +61,6 @@ APIへのリクエストにTrace Contextが含まれていても、そのContext
 
 一方、RAGScopeアプリケーションからAI推論サービスへの呼び出しは、RAGScopeが開始したInvocationの内部処理である。RAGScopeアプリケーション側HTTP client SpanのTrace ContextをHTTP通信で引き継ぎ、AI推論サービス側HTTP SERVER Spanをその子Spanとして同じTraceへ記録する。
 
-将来、外部の呼び出し元からRAGScope APIまでを1本の分散Traceとして継続する要求が追加された場合は、Invocationごとに独立したTraceを開始する現在の方針と外部Trace Contextの扱いを一緒に再評価する。
-独立Traceを維持しつつ上流Traceとの因果関係だけを残す要求が追加された場合は、その時点でSpan Linkを再評価する。
-
 ## handlerとSpanは別の概念である
 
 `handler`はRAGScopeアプリケーション上の境界処理であり、`entry Span`はそのInvocationを観測するためのSpanである。両者は同じ種類の概念ではない。
@@ -105,7 +102,7 @@ flowchart TB
 GenAI client SpanはRAGScopeアプリケーションからモデルまたはGenAIサービスへ行う論理的な依頼全体を表し、HTTP client Spanはその依頼の中で行う1回のHTTP requestを表す。両方を計装する場合は別のSpanとして扱う。
 適用可能なGenAI Spanがない場合、またはGenAI Spanを計装しない場合は、HTTP client SpanをUseCase Spanの子Spanとして記録する。
 
-現行のGenAI Semantic Conventionsではclient側のinference / embeddings Spanは定義されているが、AI推論サービス側の汎用`gen_ai.inference.server` Spanは確認できない。そのため、AI推論サービス側へRAGScope独自のGenAI server Spanを補って作らない。将来、適用可能なserver側Conventionが成立した場合は、そのConventionを優先する。
+現行のGenAI Semantic Conventionsではclient側のinference / embeddings Spanは定義されているが、AI推論サービス側の汎用`gen_ai.inference.server` Spanは確認できない。そのため、AI推論サービス側へRAGScope独自のGenAI server Spanを補って作らない。
 
 ## Spanをどこに切るか
 
@@ -164,13 +161,8 @@ RAGScope全体の失敗理由の扱いは[[RS-0023 Observability設計メモ]]�
 Trace設計が担当するのは、**RAGScope固有Spanが表すoperationが最終的に失敗したとき、そのエラー型の値からSpanの`error.type`へどう変換するか**だけである。
 API / CLIで利用者へ返す失敗情報や、実験・評価データモデルへ保存するerrorは、この`error.type`から決めない。
 
-各エラー型とは別に、RAGScope全体で使う共通のエラー分類や、すべてのエラー型を中央で分類する仕組みは設けない。
-各Spanは自身が表すoperationの最終結果と適用規則からStatus / `error.type`を決めるため、子Spanのエラー分類を親Spanへそのまま引き継ぐためだけの共通型も設けない。
-
-複数のUseCaseや内部処理をまたいで、共通のエラー分類がないと必要な集計やContractを成立させられない具体的な要求が追加された場合に、共通分類の必要性を再評価する。
-
 RAGScope固有Spanで使う`error.type`は、そのSpanが表すUseCaseまたは内部処理に対応するエラー型の値から、予測可能で低カーディナリティな値へ変換する。
-`error.type`を得るために各エラー型を共通エラー型へ置き換えず、エラー型の値が持つ原因・詳細値を失わない。エラー型自身をOpenTelemetryやObservability固有型へ依存させない。
+変換時にエラー型の値が持つ原因・詳細値を失わない。エラー型自身をOpenTelemetryやObservability固有型へ依存させない。
 
 変換規則が必要なら、実行状態やTrace Contextへ依存しない純粋な変換を第一候補とする。
 具体的なエラー型、`Either` / `ExceptT`などの利用位置は、このTrace共通設計では決めない。

@@ -41,8 +41,6 @@ retry、timeout、fallback、処理順序などを決めるのはRAGScopeアプ�
 
 また、HTTP、Database、CLI、GenAIなど、観測する処理に適用できるOpenTelemetry Semantic Conventionsがある場合は、RAGScope独自の同義表現を作らず、そのConventionを優先する。
 
-Trace / Logs / Metricsと失敗時の扱いはRS-0023で決定済みとして扱う。OpenTelemetry採用に必要な主要SDK能力も確認済みだが、RAGScope固有のGHC / Cabal / Python環境での依存解決とビルドはまだ実測していない。
-
 ローカル開発環境のObservability基盤には、**Tempo / Loki / Prometheus / Grafanaを採用する**。ローカル構築時からこの4つを起動し、TraceはTempo、LogsはLoki、MetricsはPrometheusへ保存し、Grafanaから横断して確認する。console / handle exporterは補助的な診断手段として利用してよいが、ローカルでの主な確認経路にはしない。
 
 ## 全体像
@@ -125,40 +123,12 @@ UseCaseまたは内部処理のエラー型で表した失敗
                └─ 適用するSemConv / RAGScope固有Span・Eventのerror.type
 ```
 
-### RAGScope全体で共通のエラー分類は設けない
+各エラー型で表した失敗は、それぞれの用途に必要な表現へ直接変換する。共通分類を間に置くと、各エラー型から共通分類への変換と、共通分類から各出力先への変換を別々に維持する必要があり、UseCaseや内部処理ごとの失敗を不要に1つの分類体系へ結合するためである。
 
-RAGScopeでは、UseCaseや内部処理ごとのエラー型を、いったん`RAGScopeError`のような共通分類へ変換してからAPI / CLI、実験・評価結果、Telemetryへ渡す構造にはしない。
-`RAGScopeError`は、ここで作らない構造を説明するための例であり、採用する型名ではない。
+RAGScopeアプリケーション / AI推論サービス間で共有する失敗コードは、その通信方式を定義するContractで扱う。
 
-例えば、仮に`SearchError`と`GenerateAnswerError`というエラー型があるとしても、次のような中間分類は置かない。
-
-```text
-SearchErrorで表した失敗 ───────────┐
-GenerateAnswerErrorで表した失敗 ───┤
-                                     └─→ RAGScopeErrorのような共通分類
-                                             ├─→ API / CLI
-                                             ├─→ 実験・評価結果
-                                             └─→ Telemetry
-```
-
-代わりに、各エラー型で表した失敗を、それぞれの用途に必要な表現へ直接変換する。
-
-```text
-各UseCase / 内部処理のエラー型で表した失敗
-        ├─→ API / CLI向けの表現
-        ├─→ 実験・評価結果へ保存する表現
-        └─→ Telemetry向けの表現
-```
-
-現在の要求はこの構造で成立する。
-共通分類を間に置くと、各エラー型から共通分類への変換と、共通分類から各出力先への変換を別々に維持する必要がある。さらに、UseCaseや内部処理ごとの失敗を共通分類の粒度へ合わせる必要が生じ、固有の失敗定義を不要に1つの分類体系へ結合することになる。
-
-RAGScopeアプリケーション / AI推論サービス間で共有する失敗コードが通信契約として実際に必要になった場合は、その通信方式を定義するContractで扱う。その失敗コードをRAGScope全体の共通エラー分類として先に定義しない。
-
-OpenTelemetryの`error.type`もRAGScope全体の共通エラー分類ではない。Telemetry上で「そのoperationやEventがどの種類のerrorを表すか」を記録する属性である。
+OpenTelemetryの`error.type`は、Telemetry上でそのoperationやEventがどの種類のerrorを表すかを記録する属性である。
 HTTP、Database、GenAIなど、適用するSemantic Conventionが`error.type`を定めている場合はその規則に従う。RAGScope固有SpanとEventでの変換は、それぞれ[[RS-0023 Trace設計メモ]]と[[RS-0023 Logs設計メモ]]で扱う。
-
-複数のUseCaseや内部処理をまたいで、共通のエラー分類がないと必要な集計やContractを成立させられない具体的な要求が追加された場合に、共通分類の必要性を再評価する。
 
 ## OpenTelemetry SDKとの依存境界
 
@@ -276,8 +246,6 @@ Exporter、Processor、Collectorへの送信などTelemetry基盤自身の失敗
 UseCaseが成功している場合、Telemetry送信に失敗してもUseCase成功のままとする。
 
 まず採用するOpenTelemetry SDKのエラー処理と内部診断機能を利用する。SDKの診断機能では満たせない具体的な診断要求が確認された場合だけ、RAGScope側の補助経路を検討する。
-
-Telemetryの欠落をRAGScopeアプリケーション処理失敗として扱う要求が追加された場合は、この判断を見直す。
 
 ## 正本へ反映するときの責務分離
 
