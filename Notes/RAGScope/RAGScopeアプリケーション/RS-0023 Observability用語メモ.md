@@ -89,7 +89,7 @@ RAGScopeがEventをどのsignalへ記録するかという設計方針は[[RS-00
 | UseCase Span | 1 UseCase実行全体を観測するRAGScope固有Span |
 | RAGScope固有Span | 適用可能なSemantic Conventionだけでは表せないRAGScope固有operationを追跡するSpan |
 | RAGScope固有`EventRecord` | 適用できるEvent Semantic Conventionや既存Spanだけでは後から識別できない、RAGScope固有の出来事または状態変化をLogsへ記録する`EventRecord` |
-| 通常の`LogRecord` | このRS-0023ドラフトで、`EventName`を持たない`LogRecord`を`EventRecord`と区別して呼ぶための名称。OpenTelemetryの正式用語ではない |
+| 通常LogRecord | このRS-0023ドラフトで、`EventName`を持たない`LogRecord`を`EventRecord`と区別して呼ぶための名称。OpenTelemetryの正式用語ではない |
 | Telemetry利用境界 | UseCaseや内部処理がOpenTelemetry SDKを直接importせずにTelemetryを記録するため、RAGScope側に置く利用境界。具体的な名前と公開APIはRS-0023の共通設計では未決定 |
 | OpenTelemetry Adapter | Telemetry利用境界の外側でOpenTelemetry SDKへ接続するAdapter。具体的なmodule / package配置や公開APIはRS-0023の共通設計では未決定 |
 | handler | CLI / API入力をUseCaseへ渡す値へ変換し、UseCaseを呼び出し、その結果をCLI表示またはHTTP応答へ変換するRAGScopeアプリケーション上の境界処理 |
