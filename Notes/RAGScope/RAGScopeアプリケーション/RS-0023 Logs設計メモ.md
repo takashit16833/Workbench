@@ -73,7 +73,7 @@ Semantic conventions for eventsは、`EventRecord`候補を一覧にしたカタ
 判断軸は次のとおりである。
 
 ```mermaid
-flowchart TD
+flowchart LR
     A["観測したい情報"] --> B{"開始と終了を持つ処理そのもの?"}
     B -->|Yes| C["Spanで表す<br>適用できるSpan SemConvがあれば使う"]
     B -->|No| D{"あるSpanが表す処理についての情報で<br>独立した発生時刻が不要?"}
