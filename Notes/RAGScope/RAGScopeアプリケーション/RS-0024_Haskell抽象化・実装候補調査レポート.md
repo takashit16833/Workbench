@@ -24,9 +24,9 @@ created: 2026-09-08
 
 調査日は2026-09-08、日本時間。リンクは原則として確認commitへ固定した。
 
-正本のObservability設計群5ファイル、ADR-0006、RS-0024 Ticket、システムアーキテクチャ、ユースケース設計、Haskellコーディング規約、Cabal・Main・テスト入口を確認した。SDKについては第13章に記した実ソースを確認した。SDKをRAGScopeへ導入したビルド、最小実行、性能測定は行っていない。
+正本のObservability設計群5ファイル、ADR-0006、RS-0024 Ticket、システムアーキテクチャ、ユースケース設計、Haskellコーディング規約、Cabal・Main・テスト入口を確認した。SDKについては第13章に記した実ソースを確認した。その後、RAGScopeの開発環境と同じGHC / base条件で候補packageの依存解決・import smoke testを実施した。Span生成などSDK機能の動作実測と性能測定はまだ行っていない。
 
-候補SDKの確認commitではAPI / SDKのCabal上のversionは`1.0.0.0`である。ただし、**GitHubのそのcommitと公開配布物が同じ内容であることや、RAGScopeの依存解決が成功することまでは確認していない**。本レポートはそのversionの採用を確定しない。[SDK依存定義][S1] [API依存定義][S2]
+候補SDKの確認commitではAPI / SDKのCabal上のversionは`1.0.0.0`である。2026-09-08の実測では、RAGScopeのGHC `9.12.4` / `base-4.21.2.0` / Cabal `3.16.1.0`環境で、Hackageの`hs-opentelemetry-api-1.0.0.0`、`hs-opentelemetry-sdk-1.0.0.0`、`hs-opentelemetry-exporter-in-memory-1.0.0.0` revision `0`を同時に依存解決・buildし、公開moduleのimportと最小executableの実行まで成功した。**GitHubの確認commitとHackage配布物が同一内容であることは確認していない**。最終的にどのpackageを各Cabal componentの直接依存へ置くかは、Cabal境界の実装で決定する。[SDK依存定義][S1] [API依存定義][S2]
 
 追加質問を受けて、同じ正本commitとSDK commitを再確認した。追加確認で明確になった事実・提案変更条件・最小実測は、該当節へ統合している。再確認によって第3章の全体推奨を変更する必要はなかった。
 
@@ -727,9 +727,9 @@ SDKに間接依存があることと、RAGScopeの各componentが直接依存を
 
 | 項目 | 今回の状態 | 次に確認する根拠 |
 |---|---|---|
-| package versionの採用 | 未決定 | RAGScopeのCabal条件での依存解決・build |
+| package versionの採用 | `hs-opentelemetry-api`、`hs-opentelemetry-sdk`、`hs-opentelemetry-exporter-in-memory`の`1.0.0.0` revision `0`をRAGScope環境で利用可能と確認済み。各componentの直接依存は未決定 | Cabal境界の実装とbuild |
 | 調査commitと配布版の同一性 | 確認不能 | 選択した配布ソースまたは固定git revision |
-| 対象GHC / OSでの動作 | 確認不能 | 実際の開発・CI環境での最小実行 |
+| 対象GHC / OSでの動作 | GHC `9.12.4` / `base-4.21.2.0` / `aarch64-linux`で依存packageのbuild、import、最小executable実行を確認済み。SDK機能の動作は未実測 | 後続のSpan / Logs / Context / lifecycle実測 |
 | helperと低水準APIの選択 | 提案まで | `inSpan'`抑制案と低水準API案で、例外・Context復元・Span Event・本体実行回数を比較 |
 | キャンセルの具体的な判別 | 未決定 | 採用するruntime・並行処理libraryの型と実行結果 |
 | 例外記録担当の最終APIと配置 | 提案まで | root / UseCase / 内部処理の入れ子と標準計装でowner scopeを実測 |
@@ -748,6 +748,19 @@ SDKに間接依存があることと、RAGScopeの各componentが直接依存を
 最低限、候補となる`hs-opentelemetry-api`、`hs-opentelemetry-sdk`、`hs-opentelemetry-exporter-in-memory`と、実際に必要なPropagator / Exporter packageをRAGScopeのGHC / base条件で解決・buildできるか確認する。
 
 ここで失敗する場合、境界APIを先に詳細化しない。採用package / version / revisionの判断へ戻る。
+
+2026-09-08にこの実測を行い、次を確認した。
+
+- branch / HEAD: `RS-0024/sdk-cabal-boundary` / `a829713bca576b01278351bf30cac20d06f2b94a`
+- GHC `9.12.4`、`base-4.21.2.0`、Cabal `3.16.1.0`
+- Hackage index-state `2026-09-08T05:30:34Z`
+- `hs-opentelemetry-api-1.0.0.0` revision `0`
+- `hs-opentelemetry-sdk-1.0.0.0` revision `0`
+- `hs-opentelemetry-exporter-in-memory-1.0.0.0` revision `0`
+- `OpenTelemetry.Trace.Core`、`OpenTelemetry.Trace`、`OpenTelemetry.Exporter.InMemory`をimportする最小executableのcompile、link、実行が成功した
+- smoke testはRAGScopeリポジトリ外で行い、終了後もRAGScope作業ツリーはcleanだった
+
+これにより、上記3 packageの`1.0.0.0` revision `0`は現在のRAGScope開発環境で依存解決・import可能な候補として確認済みである。GitHubの調査commitとHackage配布物の同一性や、Span / Logs / Metrics等のSDK機能の実動作はこの実測では確認していない。
 
 #### 2. Span scope・最終結果・例外
 
@@ -840,12 +853,12 @@ Trace / Logs / Metricsを制御可能なProcessor / Exporter / Readerで構成�
 ## 16. 後続の実装で判断する順序
 
 1. **本レポートの基準commitからの変更を確認する。** 正本設計・Ticket・実装が変わっていれば、関係する結論を再評価する。Workbenchの案を正本として上書きしない。
-2. **RAGScope環境でSDK候補の依存解決・import smoke testを行う。** package / revision候補とin-memory exporterを実際にbuildできることを先に確認する。
-3. **Spanの最小実測でhelper抑制案と低水準API案を比較する。** Status、`error.type`、Span Event、Context復元、本体1回、元例外保存を確認してSpan boundaryの基本形を決める。
-4. **nested exceptionでEventRecord ownerを実測する。** root / UseCase / internalのStatusとLogs 1件の両立、相関するSpan、標準計装との重複を確認する。
-5. **Contextのthread間伝播と復元を実測する。** fresh childと既存workerを分け、outbound injectまで確認して公開操作を決める。
-6. **SDK lifecycleと失敗隔離を実測する。** 部分初期化、flush / shutdown、controlled exporter failure、Metrics接続を確認してAdapter入口を決める。
-7. **Cabalの依存境界と最小moduleを具体化する。** applicationとboundaryからSDKが参照できず、Adapterがapplicationへ依存しないことを確認する。
+2. **RAGScope環境でSDK候補の依存解決・import smoke testを行う。** 2026-09-08に完了。`hs-opentelemetry-api`、`hs-opentelemetry-sdk`、`hs-opentelemetry-exporter-in-memory`の`1.0.0.0` revision `0`を現在環境でbuild・import・実行できることを確認した。
+3. **Cabalの依存境界と最小moduleを具体化する。** applicationとboundaryからSDKが参照できず、Adapterがapplicationへ依存しないことを確認する。
+4. **Spanの最小実測でhelper抑制案と低水準API案を比較する。** Status、`error.type`、Span Event、Context復元、本体1回、元例外保存を確認してSpan boundaryの基本形を決める。
+5. **nested exceptionでEventRecord ownerを実測する。** root / UseCase / internalのStatusとLogs 1件の両立、相関するSpan、標準計装との重複を確認する。
+6. **Contextのthread間伝播と復元を実測する。** fresh childと既存workerを分け、outbound injectまで確認して公開操作を決める。
+7. **SDK lifecycleと失敗隔離を実測する。** 部分初期化、flush / shutdown、controlled exporter failure、Metrics接続を確認してAdapter入口を決める。
 8. **純粋な入力型・結果分類と、必要な関数レコードを決める。** 成功・失敗、名前付きイベント、管理対象属性の不正な組み合わせを減らす。現時点で根拠のないMetric emit操作は追加しない。
 9. **同じAdapterを本番構成とテスト構成へつなぐ。** in-memoryのSpan / Logs / Metrics出力を使い、戻り値・Context・出力内容・終了結果を検査する。利用側の記録用recordテストとは分ける。
 10. **採用した判断だけを正本のコード・設定・テストへ反映する。** 必要な設計判断は正本へ内容そのものを記録し、Workbenchへの必須参照を作らない。
