@@ -18,7 +18,7 @@ created: 2026-09-08
 
 | 対象 | branch / 確認commit | 用途 |
 |---|---|---|
-| RAGScope正本リポジトリ | `RS-0024/telemetry-boundary-sdk-lifecycle` / `a829713bca576b01278351bf30cac20d06f2b94a` | 現在要求・設計・実装状態の根拠 |
+| RAGScope正本リポジトリ | `RS-0024/sdk-cabal-boundary` / `a829713bca576b01278351bf30cac20d06f2b94a` | 現在要求・設計・実装状態の根拠 |
 | Workbench | `feat/RS-0024-opentelemetry-observability-foundation` / `17e8403be6835c4bf1e910c371c75bc1d62b75cc` | ライブラリ・モジュールマップという検討案 |
 | `iand675/hs-opentelemetry` | 調査時の`main` / `5a267e690941bc3817b1de8dbd496cb35bb4788c` | 候補SDKの型・関数・処理の確認 |
 
