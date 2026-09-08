@@ -20,9 +20,9 @@ Mermaidの色分けは[[Mermaid図の色分けルール]]に従う。
 flowchart LR
     subgraph PKG["ragscope"]
         subgraph APPLICATION["library: application<br/>役割: UseCase / 内部処理を置き、Telemetry利用境界を使う"]
-            USECASE["RAGScope.UseCase.*<br/>exposed-modules<br/>各UseCase本体"]:::private
-            UCERROR["RAGScope.UseCase.*.Error<br/>other-modules<br/>具体的なUseCase error type"]:::private
-            UCTEL["RAGScope.UseCase.*.Telemetry<br/>other-modules<br/>機能固有Telemetry定義"]:::private
+            USECASE["RAGScope.UseCase.*<br/>各UseCase本体"]:::public
+            UCERROR["RAGScope.UseCase.*.Error<br/>具体的なUseCase error type"]:::private
+            UCTEL["RAGScope.UseCase.*.Telemetry<br/>機能固有Telemetry定義"]:::private
 
             USECASE --> UCERROR
             USECASE --> UCTEL
@@ -30,11 +30,11 @@ flowchart LR
         end
 
         subgraph TELEMETRY["library: telemetry<br/>役割: OpenTelemetry SDKを隠すTelemetry利用境界"]
-            TEL["RAGScope.Telemetry<br/>exposed-modules<br/>Telemetry利用境界のまとめ役"]:::private
-            TELTRACE["RAGScope.Telemetry.Trace<br/>exposed-modules<br/>Span操作の境界"]:::private
-            TELLOGS["RAGScope.Telemetry.Logs<br/>exposed-modules<br/>LogRecord / EventRecord操作の境界"]:::private
-            TELMETRICS["RAGScope.Telemetry.Metrics<br/>exposed-modules<br/>Metric操作の境界"]:::private
-            TELCONTEXT["RAGScope.Telemetry.Context<br/>exposed-modules<br/>Context引き継ぎの境界"]:::private
+            TEL["RAGScope.Telemetry<br/>Telemetry利用境界のまとめ役"]:::public
+            TELTRACE["RAGScope.Telemetry.Trace<br/>Span操作の境界"]:::public
+            TELLOGS["RAGScope.Telemetry.Logs<br/>LogRecord / EventRecord操作の境界"]:::public
+            TELMETRICS["RAGScope.Telemetry.Metrics<br/>Metric操作の境界"]:::public
+            TELCONTEXT["RAGScope.Telemetry.Context<br/>Context引き継ぎの境界"]:::public
 
             TEL --> TELTRACE
             TEL --> TELLOGS
@@ -43,12 +43,12 @@ flowchart LR
         end
 
         subgraph OTEL["library: opentelemetry<br/>役割: Telemetry利用境界をOpenTelemetry SDKへ接続し、SDK lifecycleを扱う"]
-            OTELAPI["RAGScope.Telemetry.OpenTelemetry<br/>exposed-modules<br/>Adapter生成 / 初期化入口"]:::private
-            OTELLIFECYCLE["RAGScope.Telemetry.OpenTelemetry.Lifecycle<br/>other-modules<br/>SDK初期化 / flush / shutdown"]:::private
-            OTELTRACE["RAGScope.Telemetry.OpenTelemetry.Trace<br/>other-modules<br/>Trace境界をSDKへ接続"]:::private
-            OTELLOGS["RAGScope.Telemetry.OpenTelemetry.Logs<br/>other-modules<br/>Logs境界をSDKへ接続"]:::private
-            OTELMETRICS["RAGScope.Telemetry.OpenTelemetry.Metrics<br/>other-modules<br/>Metrics境界をSDKへ接続"]:::private
-            OTELCONTEXT["RAGScope.Telemetry.OpenTelemetry.Context<br/>other-modules<br/>Context境界をSDKへ接続"]:::private
+            OTELAPI["RAGScope.Telemetry.OpenTelemetry<br/>Adapter生成 / 初期化入口"]:::public
+            OTELLIFECYCLE["RAGScope.Telemetry.OpenTelemetry.Lifecycle<br/>SDK初期化 / flush / shutdown"]:::private
+            OTELTRACE["RAGScope.Telemetry.OpenTelemetry.Trace<br/>Trace境界をSDKへ接続"]:::private
+            OTELLOGS["RAGScope.Telemetry.OpenTelemetry.Logs<br/>Logs境界をSDKへ接続"]:::private
+            OTELMETRICS["RAGScope.Telemetry.OpenTelemetry.Metrics<br/>Metrics境界をSDKへ接続"]:::private
+            OTELCONTEXT["RAGScope.Telemetry.OpenTelemetry.Context<br/>Context境界をSDKへ接続"]:::private
 
             OTELAPI --> OTELLIFECYCLE
             OTELAPI --> OTELTRACE
@@ -83,6 +83,7 @@ flowchart LR
     OTELMETRICS --> SDK
     OTELCONTEXT --> SDK
 
+    classDef public fill:#052A59,stroke:#5EAFFF,color:#DDF0FF,stroke-width:2px
     classDef private fill:#211536,stroke:#8A5EC0,color:#DDF0FF,stroke-width:2px
     classDef external fill:#001947,stroke:#316CBD,color:#A6CAFF,stroke-width:2px
 
@@ -92,7 +93,9 @@ flowchart LR
     style OTEL fill:#211536,stroke:#8A5EC0,color:#DDF0FF,stroke-width:2px
 ```
 
-凡例: **紫** = 非公開library / module、**濃青** = 外部package、**実線** = 本体の依存
+凡例: **青** = 公開library / module、**紫** = 非公開library / module、**濃青** = 外部package、**実線** = 本体の依存
+
+現在の`application`、`telemetry`、`opentelemetry`はprivate libraryなのでlibrary枠は紫とする。別componentからimportする`exposed-modules`は青、そのlibrary内部だけで使う`other-modules`は紫で表す。
 
 `RAGScope.UseCase.*`、`RAGScope.UseCase.*.Error`、`RAGScope.UseCase.*.Telemetry`の`*`は図上の省略表記であり、実際のHaskell module名ではない。例えば`RAGScope.UseCase.IndexDocument`、`RAGScope.UseCase.IndexDocument.Error`、`RAGScope.UseCase.IndexDocument.Telemetry`のような具体名になる。
 
