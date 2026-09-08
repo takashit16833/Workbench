@@ -140,3 +140,69 @@ git worktree add --track -b feat/foo ../feat-foo origin/feat/foo
 2. `w` — New worktree
 3. `b` — New local branch + worktree
 4. ブランチ名と作成先を確認
+
+# SSH
+
+## devcontainer で `Permission denied (publickey)` が出る
+
+`git pull` などで次のエラーが出る場合。
+
+```text
+git@github.com: Permission denied (publickey).
+fatal: Could not read from remote repository.
+```
+
+VS Code の devcontainer では、Mac の SSH agent がコンテナへ転送される。
+
+Mac 再起動後などに SSH agent から鍵が外れていると、Mac では GitHub に接続できても devcontainer では認証に失敗することがある。
+
+### 確認
+
+**Mac**
+
+```bash
+ssh -T git@github.com
+ssh-add -l
+```
+
+GitHub への接続は成功するのに、
+
+```text
+The agent has no identities.
+```
+
+となる場合は、SSH agent に鍵を追加する。
+
+```bash
+ssh-add ~/.ssh/id_ed25519
+```
+
+登録されたことを確認する。
+
+```bash
+ssh-add -l
+```
+
+**devcontainer**
+
+```bash
+echo "$SSH_AUTH_SOCK"
+ssh-add -l
+```
+
+Mac で追加した鍵が表示されれば、SSH agent の転送も正常。
+
+最後に確認する。
+
+```bash
+ssh -T git@github.com
+git pull
+```
+
+### 使用している鍵を確認する
+
+Mac では接続できるが、どの鍵を使っているか分からない場合。
+
+```bash
+ssh -vT git@github.com 2>&1 | grep -E 'Offering public key|Server accepts key'
+```
