@@ -1,14 +1,16 @@
 ---
-status: todo
+status: doing
 projects:
   - "[[RS-0024 RAGScopeアプリケーションへOpenTelemetry Observability最小基盤を実装する]]"
 blockedBy:
-  - "[[RS-0024 subtask OpenTelemetry依存とCabal境界を実装する]]"
+  - uid: "[[RS-0024 subtask OpenTelemetry依存とCabal境界を実装する]]"
+    reltype: FINISHTOSTART
 branch: RS-0024/trace-span
 dateCreated: 2026-09-08T15:43:45+09:00
-dateModified: 2026-09-08T15:43:45+09:00
+dateModified: 2026-09-09T07:31:26.860+09:00
 tags:
   - task
+priority: normal
 ---
 
 ## Scope
