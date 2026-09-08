@@ -28,6 +28,8 @@ created: 2026-09-08
 
 候補SDKの確認commitではAPI / SDKのCabal上のversionは`1.0.0.0`である。ただし、**GitHubのそのcommitと公開配布物が同じ内容であることや、RAGScopeの依存解決が成功することまでは確認していない**。本レポートはそのversionの採用を確定しない。[SDK依存定義][S1] [API依存定義][S2]
 
+追加質問を受けて、同じ正本commitとSDK commitを再確認した。追加確認で明確になった事実・提案変更条件・最小実測は、該当節へ統合している。再確認によって第3章の全体推奨を変更する必要はなかった。
+
 ### 1.2 事実と提案を区別する
 
 | 表記 | 意味 |
@@ -102,6 +104,8 @@ Metricsは複数実行の集約であり、評価データごとの正確な実�
 | 資源管理 | SDKごとの取得・解放を安全に合成するAdapter入口 | 一度に取得した扱いにして部分初期化の解放を失う形 |
 | テスト | 利用側は記録用レコード、Adapterは本物のSDKとテスト用Processor / Exporter | no-opだけでSDK接続まで検証したとすること |
 
+追加確認で、これらの推奨を変更する新しい事実は確認されなかった。変わったのは、SDK helperと低水準APIの比較条件、Contextの適用範囲、部分初期化時のcleanup、例外EventRecordの所有範囲、Metric操作を追加する条件を、より具体的に記述できるようになった点である。
+
 ## 4. 依存の抽象化はCabal境界まで含める
 
 ### 4.1 型の所有者を利用側へ置く
@@ -171,6 +175,15 @@ Trace・Logs・Metrics・Contextを各々小さなrecordとし、全体recordは
 SDKを呼ぶproduction実装と記録内容をメモリへ保持するテスト実装は、どちらも`IO`で表現できる。実装の差し替えと、実行の型を変えることは別問題である。error分類・属性生成・最終結果の観測値への変換を純粋に保てば、全体を任意の`m`へ一般化しなくてもHaskellの利点を得られる。
 
 将来、Reader環境が有用なら`ReaderT Env IO`またはそのnewtypeを検討できる。これは依存の受け渡しを簡潔にする仕組みであり、Contextの保持方式を変更する話ではない。
+
+この推奨は実測で変更し得る提案である。次のいずれかが実装・実測で確認された場合は再評価する。
+
+1. Application入口が安定した独自monadへ統一され、Telemetryの`IO`操作を都度出し入れすることで例外・Context semanticsが壊れる、または責務が著しく読みにくくなる。
+2. 採用する安全なSpan実装が`MonadUnliftIO`のscopeを利用側へ露出させないと成立せず、Adapter内部の`IO` closureへ閉じ込める方が不自然になる。
+3. Telemetry以外も含む依存が増え、関数recordの明示受け渡しより`ReaderT Env IO`等へまとめる方が、具体的な呼び出し側・テスト・変更影響で有利になる。
+4. 型クラスを使うことで実際の複数実装選択が簡潔になり、record injectionより静的制約・テスト容易性で明確な利益が出る。
+
+「Haskellらしいから」「将来effectを変えるかもしれないから」だけでは推奨を変更しない。
 
 ## 6. Spanは高階操作として捉える
 
@@ -341,7 +354,23 @@ Contextを捕捉した処理を後で実行する形なら、SDK Contextはclosu
 
 大切なのは、**親スレッドで捕捉する段階と、子スレッドで実行する段階を分けること**である。子が始まってから`getContext`しても親のContextは得られない。
 
-候補SDKには`propagateContext :: IO a → IO (IO a)`、`tracedAsync`、`tracedForkIO`等がある。ただし確認commitの`propagateContext`は、返す処理でContextをattachした後、以前のContextへdetachする処理を含まない。新しく作るスレッド向けの補助関数と、既存スレッドへ一時適用する汎用的な囲み操作を同一視しない。後者が必要ならAdapterでSDKのattach / detachを対にする候補を検討する。[SDK Propagation][S7]
+候補SDKの`OpenTelemetry.Context.ThreadLocal.Propagation`は、green threadがthread-local Contextを継承しないため、子threadへ現在Contextを持ち込む目的のmoduleとして実装されている。`propagateContext :: IO a → IO (IO a)`は、親側で`getContext`し、返す処理の先頭で`attachContext`してから本体を実行する。同じ処理内では`attachContext`が返すTokenを保持せず、`detachContext`も呼ばない。[SDK Propagation][S7]
+
+したがって`propagateContext`、`tracedAsync`、`tracedForkIO`等は、**新しく作る子thread向けの補助関数**として扱う。すでに別Contextがあるthread、thread pool worker、同一thread上の一時scopeへそのまま使うと、処理終了後に以前のContextへ戻らない。
+
+既存threadへ一時的にContextを適用する必要がある場合は、SDKのToken付き`attachContext` / `detachContext`を例外安全に対にする囲み操作をAdapter内部へ置く案を比較する。[SDK ThreadLocal][S6]
+
+```text
+source thread:
+  captured <- getContext
+
+target thread:
+  attachContext captured
+  ├─ action
+  └─ detachContext token
+```
+
+ここでの囲み方は説明用であり、実装では成功・同期例外・キャンセルの全経路で復元するよう`bracket` / `mask`相当の配置を確認する。
 
 Contextを捕捉しても、そのSpanやSDK Providerの寿命が延長されるとは限らない。子処理の完了を待つ責務は呼び出し側の実行制御にあり、Telemetry Adapterに業務スレッドの実行順序を決めさせない。
 
@@ -365,9 +394,13 @@ callback形式も、通常の`IO`上では操作recordを外へ保存したり�
 
 3つのProviderが揃った状態は直積で表せるが、3つを順に取得する途中では失敗し得る。第1の取得後に第2が失敗した場合、第1を解放する必要がある。
 
-全体を1つの`bracket`で包むだけでは、取得処理全体が完了する前の失敗に対して、その全体のreleaseは呼ばれない。各取得段階で解放責務を登録する構造、またはSDKがその保証を持つ初期化APIを使う必要がある。[Control.Exception][E5]
+確認commitの`initializeOpenTelemetry`は、TracerProvider、MeterProvider、LoggerProviderを順に取得した後で、3つをまとめて終了する`otelShutdown`を組み立てる。[SDK入口][S12]
 
-固定個数のProviderを組み立てる今回の候補では、`bracket`等による段階ごとの資源管理から始める。資源の数や取得順が動的になった場合は`ResourceT`等を再評価できるが、それだけのために新たな独自資源管理frameworkを作らない。
+この統合helper自身には、第2または第3Providerの初期化が例外で失敗した場合に、それ以前に取得済みのProviderをrollbackする明示的なcleanup経路がない。`withOpenTelemetry = bracket initializeOpenTelemetry otelShutdown`の外側`bracket`も、acquireである`initializeOpenTelemetry`が値を返す前に例外になった場合は`otelShutdown`を呼べない。
+
+したがって、ここは単なる「cleanupを証明できない」という確認不足ではなく、**統合helperのソース上、部分取得失敗に対する明示的rollbackが存在しないことを確認済み**とする。ただし、どの実設定で後段初期化が例外になり、thread / socket / queueやglobal stateが具体的にどう残るかは未実測である。
+
+各取得段階で解放責務を登録できる構造、またはその保証を持つSDK APIを使う必要がある。固定個数のProviderを組み立てる今回の候補では、段階的な資源管理を第一比較候補とする。資源の数や取得順が動的になった場合は`ResourceT`等を再評価できるが、それだけのために新たな独自資源管理frameworkを作らない。
 
 ### 10.3 どの失敗でどの結果を返すか
 
@@ -435,9 +468,25 @@ Telemetry操作を無害化するために「Span開始、本体、ログ記録�
 | 例外を独自wrapperで包む | 元の例外と記録済み情報を伝える | 通知を明示できる | `fromException`等のcatch契約を変える。元の例外をそのまま再throwする要件に反するおそれ |
 | 文字列・型名・アドレスで重複排除 | 比較キーを蓄積する | 表面的には共通化しやすい | 同じ種類の別発生を潰す、同一性を保証できない、状態保持が増える |
 
-**初期候補は、例外Logsを記録する担当範囲を明示する方式**とする。ただし「すべてUseCaseへ任せれば完了」とはしない。UseCaseを呼ばないInvocation、UseCaseを呼ぶ前後の例外、複数の観測範囲が入れ子になる場合を列挙し、記録担当を決める必要がある。rootが担当する区間とUseCaseが担当する区間を重ねず、外側のSpanは伝播した例外のStatusだけ更新する、という分担が候補になる。
+**初期候補は、例外Logsを記録する担当範囲を明示する方式**とする。さらに、各SpanのStatus更新と例外EventRecordの所有を構造上分ける案を第一候補として実測する。
 
-例外の発生した最内側SpanとLogsの相関を一致させたい場合、外側で記録するだけでは、子Spanが終了してContextが復元された後になる。どのSpanへ関連付けるべきかは、担当範囲の選択と同時に具体化する。本レポートは「必ず最内側Spanへ付ける」を新しい正本要求として追加しない。
+概念上は次の形である。
+
+```text
+withSpan root $
+  withUnhandledExceptionEventOwner $
+    withSpan useCase $
+      withSpan internal $
+        action
+```
+
+ここで`withSpan`は、自身の外へ逃げる同期例外について自分のSpanを`Error`にし、`error.type`を設定し、Logs EventRecordは作らず、元の例外を再throwする。internal、UseCase、rootの各Spanから同じ例外が未処理で逃げるなら、各Spanがそれぞれ自身の失敗として`Error`になる。
+
+`withUnhandledExceptionEventOwner`は、内側から逃げる例外についてLogs EventRecordを1件だけemitし、Span Statusは担当せず、元の例外を再throwする。これによりwrapper例外や文字列・アドレスによるglobal dedupを導入せず、EventRecord生成箇所を構造上1箇所にできる。
+
+owner scopeをroot Spanの内側、UseCase Spanの外側へ置けば、inner Span終了後でもroot Spanがcurrent Contextとして残るため、そのEventRecordはrootへ相関し得る。ただし正本は「必ず最内側Spanへ関連付ける」とは定めていない。ownerの最終配置と、どのSpanへの相関が診断上適切かは実測後に決める。
+
+UseCaseを呼ばないInvocation、UseCaseを呼ぶ前後の例外、複数の観測範囲が入れ子になる場合も列挙し、担当範囲に漏れ・重複がないことを確認する。
 
 標準計装が同じ例外EventRecordを既に記録した場合の重複も、任意のlibraryについて自動検出できるとは確認できていない。利用する計装ごとに、自動記録を止める設定または担当の分担を確認する。制御も既記録の把握もできない計装については、そのままで完了条件を満たしたとしない。
 
@@ -447,12 +496,35 @@ Telemetry操作を無害化するために「Span開始、本体、ログ記録�
 
 確認したSDKの`inSpan`系列では、例外分類が`ErrorException`なら`setStatus`と`recordException`、`RecordedException`なら`recordException`、`IgnoredException`ならどちらも行わない。`recordException`はSpan Eventを作る。[SDK Trace][S3] [ExceptionHandler][S4]
 
-つまり「Errorだけ付けて例外Span Eventを作らない」というRAGScopeの組み合わせは、この分類設定だけではそのまま得られない。
+つまり「Errorだけ付けて例外Span Eventを作らない」というRAGScopeの組み合わせは、この分類設定だけではそのまま得られない。これは候補SDKソースから確認済みの事実である。
 
-| 実装候補 | 選ぶ条件 |
-|---|---|
-| SDK helperの自動処理を抑制し、RAGScope側がStatusとLogsを明示 | helperがContextと終了を必要どおり保証し、抑制対象の例外・キャンセルを確認できる |
-| `createSpan`、Context操作、`setStatus`、`endSpan`をAdapter内で組み合わせる | helperの副作用が要件に合わず、必要な低水準APIが公開されている |
+ただし、ここから`inSpan`系列を直ちに不採用とする必要はない。最小実測では次の2案を比較する。
+
+| 実装候補 | 具体的な形 | 選ぶ条件 |
+|---|---|---|
+| helperの自動例外処理を抑制 | `inSpan'`等の例外分類を`IgnoredException`相当にし、callback内部でRAGScopeが`setStatus`、`error.type`、Logs EventRecordを明示して元例外を再throw | helperがContext復元・Span終了・キャンセルを必要どおり保証し、抑制後に自動Span Eventが0件になる |
+| 低水準APIをAdapter内で合成 | `createSpan`、`getContext`、`insertSpan`、`attachContext` / `detachContext`、`setStatus`、`endSpan`を組み合わせる | helperの副作用が要件に合わず、低水準APIで本体1回・元例外保存・Context復元を安全に実装できる |
+
+低水準案の概念的な処理順は次のとおりである。これは採用済みAPIではなく、実測用の候補である。
+
+```text
+parentContext <- getContext
+span <- createSpan tracer parentContext spanName spanArguments
+token <- attachContext (insertSpan span parentContext)
+
+bodyを1回だけ実行
+  ├─ 成功: 必要な最終観測を反映
+  ├─ 通常の返り値による最終失敗: Error + error.type
+  ├─ 未処理同期例外: Error + canonical exception class name
+  │                    + ownerならLogs EventRecord 1件
+  │                    + 元例外を再throw
+  └─ cancellation / interruption: 通常失敗と分けてcleanup後に再throw
+
+endSpan span
+detachContext token
+```
+
+実装ではこの字面の順序をそのまま採るのではなく、`mask` / `restore` / `bracket`相当の配置を決める。特に、本体が1回しか実行されないこと、Telemetry cleanup失敗が元例外を置き換えないこと、成功・同期例外・キャンセルの各経路でContextが復元されることを確認する。
 
 後者はSDKを置き換える独自Trace実装ではない。SpanとContextの実体はSDKへ委ね、RAGScopeの終了規則をSDK APIの呼び分けで実現する。安全性の検証範囲は広がるため、第14章の例外・Context・cleanup検証が選択条件になる。
 
@@ -485,12 +557,16 @@ Traceは処理範囲と親子関係、Logsは時点の記録、Metricsは測定�
 | 候補 | 利点 | 問題 | 評価 |
 |---|---|---|---|
 | 任意のMetric名・値・属性を受ける万能操作 | 一見拡張しやすい | CounterとHistogram、単位、許可属性を区別しにくい | 非推奨 |
-| instrument種別と値の意味を区別する小さな操作 | `add`と`record`を区別でき、SDK型を隠せる | 初期の公開範囲を実需要から選ぶ必要 | 明示的なMetric操作が必要な箇所の候補 |
+| instrument種別と値の意味を区別する小さな操作 | `add`と`record`を区別でき、SDK型を隠せる | 初期の公開範囲を実需要から選ぶ必要 | 具体的な明示Metric操作が必要になった箇所の候補 |
 | 標準計装が持つMetricをそのまま使う | Semantic Conventionとの整合を保ちやすい | 使用componentとProviderの共有を確認する必要 | 標準計装が適用できる機能で優先 |
 
 RS-0024ではMetricsのSDK初期化・終了と後続から利用可能な構成が必要である。これは「いま使う業務MetricがないからMetricsを未接続にしてよい」という意味ではない。一方、完了条件を満たすために新しい`ragscope.*` Metricを作る必要もない。
 
-初期実装では標準Metricを扱うSDK構成と接続経路を用意し、必要な明示操作だけを境界へ出す。テストでは選択した標準Metricまたはテスト限定の測定定義で記録から取得まで確認し、検証用定義を本番の共通Metricとして公開しない。
+現在の正本には、applicationから手動で記録するRAGScope独自Metricや、特定の標準Metric用の具体的な記録操作は定義されていない。したがって、**RS-0024の初期application-facing boundaryへ、`addMetric`、`recordMetric`、汎用Counter / Histogram生成などの万能操作を先行追加する根拠はない**。
+
+初期実装では、Adapter側にMeterProvider、Reader / Exporterの差し替え、flush / shutdown、後続の標準計装が同じSDK構成を利用できる接続を用意する。後続で具体的な標準Metricを手動記録する必要が生じた時点で、そのMetricに必要な狭い操作だけを境界へ追加する。
+
+テストでは、選択した標準Metricまたはテスト限定の測定定義でProvider / Reader / Exporterの接続を確認し、検証用定義を本番の共通Metricとして公開しない。
 
 ### 12.4 属性の数は型と生成箇所で抑える
 
@@ -526,11 +602,17 @@ READMEやHaddockの例をコピーする前に、実際の型定義を確認す�
 
 ### 13.2 初期化helperを無条件採用しない根拠
 
-確認commitの`initializeOpenTelemetry`は、TracerProvider、MeterProvider、LoggerProviderを順に初期化し、その後にまとめたshutdown処理を作る。`withOpenTelemetry`はその全体を`bracket`で囲む。外側の`bracket`だけでは途中まで初期化したProviderの解放を証明できないため、各初期化APIの保証も含めた確認が必要である。[SDK入口][S12]
+確認commitの`initializeOpenTelemetry`は、TracerProvider、MeterProvider、LoggerProviderを順に初期化し、その後にまとめたshutdown処理を作る。`withOpenTelemetry`はその全体を`bracket`で囲む。[SDK入口][S12]
 
-同じ関数のshutdown処理は各Providerの終了を`SomeException`で捕捉して捨てる形で、返す`otelPropagators`は`mempty`である。これらを確認せずに「キャンセルを保つ」「このhandleから目的のPropagatorが得られる」とは主張できない。
+追加確認により、統合helper自身には、第2または第3Providerの初期化が例外で失敗した場合に、先に取得済みのProviderをrollbackする明示的なcleanup経路がないことを確認した。外側の`bracket`も、acquireである`initializeOpenTelemetry`が返る前の例外にはreleaseを実行できない。
 
-これはSDK全体が要件を満たさないという結論ではない。RAGScope Adapterが使用する入口を選ぶための観測項目である。**段階的にProviderを取得する構成と、採用するPropagatorを明示する構成を第一候補として比較する。**
+さらに`initializeGlobalTracerProvider`はTracerProviderを初期化した後、globalへ設定して返す。後続Providerの初期化で失敗した場合、取得済みProviderだけでなくglobal stateが既に変更済みである可能性も考慮する必要がある。[SDK Trace][S3]
+
+同じ`initializeOpenTelemetry`のshutdown処理は各Providerの終了を`SomeException`で捕捉して捨てる形で、返す`otelPropagators`は`mempty`である。これらを確認せずに「終了失敗を呼び出し側が観測できる」「このhandleから目的のPropagatorが得られる」とは主張できない。
+
+ここで確認済みなのは**統合helperに部分取得失敗の明示的rollbackがないというソース上の構造**である。実際にRAGScopeの設定でどの初期化が失敗し、thread / socket / queue、global Provider等がどう残るかは未実測である。
+
+これはSDK全体が要件を満たさないという結論ではない。RAGScope Adapterが使用する入口を選ぶための観測項目である。**段階的にProviderを取得して取得済み資源のcleanupを登録できる構成と、採用するPropagatorを明示する構成を第一候補として比較する。**
 
 ### 13.3 本番とテストを切り替える場所は二つある
 
@@ -541,6 +623,14 @@ READMEやHaddockの例をコピーする前に、実際の型定義を確認す�
 
 production用Adapterとtest用Adapterを別々に実装すると、後者だけ正しく動く可能性を残す。Adapter本体は同じにし、SDK構成を差し替える。
 
+候補SDKには、Adapterテストで利用できる次のin-memory実装がある。
+
+- Span: `inMemoryListExporter`が`SpanProcessor`と記録参照を返す。[Spanテスト出力][S13]
+- Logs: `inMemoryLogRecordExporter`が`LogRecordExporter`と記録参照を返す。LoggerProviderへ接続するProcessorは別途構築する。[Logsテスト出力][S14]
+- Metrics: `inMemoryMetricExporter`が`MetricExporter`と記録参照を返す。Reader / collection / exportの段階も含めて接続する。[Metricテスト出力][S15]
+
+これらを使い、productionと同じAdapter実装へテスト用SDK構成を差し込む。
+
 ただしテスト用実装が常に例外を投げる場合、それは「記録失敗を外へ漏らさない」という境界契約に適合しない可能性がある。UseCaseテストで安易に契約違反のrecordを渡して失敗を握りつぶす実装を要求しない。**SDK呼び出しの失敗をAdapterの内側へ注入し、境界の外へどう現れるかを確認するテスト**と分ける。
 
 ### 13.4 MainへSDK型を渡さない構成の候補
@@ -549,9 +639,29 @@ production用Adapterとtest用Adapterを別々に実装すると、後者だけ�
 
 第一候補は、Adapterが所有するSDK非依存の構成値・構成生成関数をMainが選び、内部でProcessor / Exporterを構築する方法である。必要な送信先、標準環境変数の利用、テスト構成への切り替え等を表す。OTel設定全体を独自型へ網羅的に複製しない。
 
-Adapterテストから任意のSDK Processor等を差し込む必要が生じた場合、SDK型を受ける低水準の構築入口を別moduleへ限定公開する方法を比較する。その入口はapplicationへ渡す境界には含めない。Mainは高水準の入口だけを使い、SDK依存を持つテストcomponentが低水準の入口を使う。
+Adapterテストから任意のSDK Processor / Exporter / Readerを差し込む必要があるため、production向け高水準入口とは別に、SDK型を受ける狭い低水準構築入口をAdapter library内の限定moduleへ置く案を第一候補とする。その入口はapplicationへ渡す境界には含めない。
 
-ここには公開範囲の判断が伴う。`other-modules`の内部関数は別test-suiteからそのままimportできない。必要な場合だけ`exposed-modules`へ狭い構築入口を置くか、テスト支援componentを設ける。検証のために同じ実装ソースをtest-suiteへ二重に取り込む方法を既定にしない。
+概念上は次の分離である。module名は未決定である。
+
+```text
+RAGScope.Telemetry.OpenTelemetry
+  -> Main / production向けのSDK非依存な高水準入口
+
+RAGScope.Telemetry.OpenTelemetry.Construction
+  -> Adapter test等が使う低水準入口
+     Processor / Exporter / Reader等のSDK型を受ける
+```
+
+ここには公開範囲の判断が伴う。`other-modules`の内部関数は別test-suiteからそのままimportできない。必要な場合だけprivate Adapter sublibraryの`exposed-modules`へ狭い構築入口を置くか、テスト支援componentを設ける。
+
+避けるのは次である。
+
+- テストのためだけにAdapter内部moduleをすべて公開する。
+- production用Adapterとtest用Adapterを別実装にする。
+- applicationのtest-suiteへSDK依存を入れる。
+- 同じAdapterソースをtest-suiteの`hs-source-dirs`から二重コンパイルすることを既定案にする。
+
+現在の`ragscope.cabal`はまだ無名library、executable、test-suiteのみであり、named sublibraryやOpenTelemetry依存は実装されていない。[Cabal][R7] したがって、ここで述べるcomponent構成は実装提案である。
 
 ### 13.5 追加libraryの採否
 
@@ -620,11 +730,70 @@ SDKに間接依存があることと、RAGScopeの各componentが直接依存を
 | package versionの採用 | 未決定 | RAGScopeのCabal条件での依存解決・build |
 | 調査commitと配布版の同一性 | 確認不能 | 選択した配布ソースまたは固定git revision |
 | 対象GHC / OSでの動作 | 確認不能 | 実際の開発・CI環境での最小実行 |
-| helperと低水準APIの選択 | 提案まで | 例外、Context復元、非記録Span、cleanup失敗を含む検証 |
+| helperと低水準APIの選択 | 提案まで | `inSpan'`抑制案と低水準API案で、例外・Context復元・Span Event・本体実行回数を比較 |
 | キャンセルの具体的な判別 | 未決定 | 採用するruntime・並行処理libraryの型と実行結果 |
-| 例外記録担当の最終API | 未決定 | root / UseCase / 内部処理の呼び出し経路と標準計装 |
+| 例外記録担当の最終APIと配置 | 提案まで | root / UseCase / 内部処理の入れ子と標準計装でowner scopeを実測 |
 | 初期化失敗・終了timeoutの運用 | 未決定 | Adapter構成と機能結果・終了結果の実装方針 |
-| 必要なMetricの明示操作 | 未決定 | 採用する標準計装と実際に必要な測定操作 |
+| 部分初期化時の具体的な残存資源 | 確認不能 | 第2・第3Providerの制御された初期化失敗 |
+| 必要なMetricの明示操作 | 現時点では追加しない提案 | 後続の標準Metric利用で手動記録が必要になった具体的箇所 |
+
+`initializeOpenTelemetry`に部分取得失敗時の明示的rollbackがないこと自体は、実測待ちではなく第10.2・13.2節のソース確認済み事実である。実測待ちなのは、その失敗をRAGScope環境でどう起こし、何が残り、どのcleanup構成が十分かである。
+
+### 14.5 境界APIを決める前の最小実測
+
+最初の実装では、広い検証項目を一度に実装せず、次の5件をこの順で行うことを推奨する。
+
+#### 1. RAGScope環境での依存解決・import smoke test
+
+最低限、候補となる`hs-opentelemetry-api`、`hs-opentelemetry-sdk`、`hs-opentelemetry-exporter-in-memory`と、実際に必要なPropagator / Exporter packageをRAGScopeのGHC / base条件で解決・buildできるか確認する。
+
+ここで失敗する場合、境界APIを先に詳細化しない。採用package / version / revisionの判断へ戻る。
+
+#### 2. Span scope・最終結果・例外
+
+同じケースを次の2方式で比較する。
+
+- `inSpan'` + 自動例外記録抑制 + callback内の明示処理
+- `createSpan`等の低水準API
+
+確認するのは、親子関係、Span内current Context、終了後のContext復元、成功時`Unset`、通常失敗時`Error + error.type`、同期例外時`Error + canonical exception class name`、例外Span Eventが0件、元例外がそのまま外へ出ること、本体実行回数が1回であること。
+
+この結果でSpan boundaryの基本形を決める。
+
+#### 3. nested exceptionとLogs EventRecord exactly-once
+
+```text
+root
+└─ UseCase
+   └─ internal
+      └─ 同期例外
+```
+
+例外が外へ逃げた各Spanの`Error`と`error.type`、Logsの例外EventRecordが1件だけであること、例外Span Eventが0件であること、EventRecordのTraceId / SpanId、owner scopeの位置との相関、最終的に同じ元例外が外へ出ることを確認する。
+
+この結果で例外EventRecord ownerのAPIと配置を決める。
+
+#### 4. Contextのthread間伝播と復元
+
+新しく作るchild threadと、すでに別Contextを持つ既存worker相当を分ける。親Contextの捕捉、子/worker内のcurrent Span、成功・同期例外・キャンセル後の元Context復元、outbound propagatorのinjectでcurrent Trace Contextをcarrierへ書けることを確認する。
+
+この結果でContext boundaryに必要な操作を決める。
+
+#### 5. SDK lifecycle・失敗隔離
+
+Trace / Logs / Metricsを制御可能なProcessor / Exporter / Readerで構成し、Provider取得・終了、flush / shutdown結果、第2・第3Provider取得失敗時のcleanup、終了の一部失敗後も残りを終了すること、controlled exporter failureで成功した機能結果が変わらないこと、Telemetry失敗を同じ経路へ再帰記録しないこと、MetricsのProvider / Reader / Exporter接続を確認する。
+
+この結果でLifecycle入口とAdapter testの低水準構築入口を決める。
+
+```text
+実測1 -> 採用package / revision候補
+実測2 -> Span boundaryの基本形
+実測3 -> 例外EventRecord ownerのAPIと配置
+実測4 -> Context伝播の公開操作
+実測5 -> Adapter lifecycle / test構築入口
+```
+
+関数レコード + `IO`という大枠は実測1〜4を通して再評価する。細かなrecord fieldや公開moduleは、これらの実測前に固定しない。
 
 ## 15. モジュールマップへの評価と具体化候補
 
@@ -645,12 +814,13 @@ SDKに間接依存があることと、RAGScopeの各componentが直接依存を
 | `RAGScope.Telemetry` | 必要なSignal操作recordをまとめる。Providerの寿命や機能結果の意味を所有しない |
 | `RAGScope.Telemetry.Trace` | Span要求・対象処理・最終結果の観測方法を受け、元の結果を返す囲み操作 |
 | `RAGScope.Telemetry.Logs` | 通常ログと名前付きイベントの入力、記録操作。SDKが現在Contextを読むための接続先 |
-| `RAGScope.Telemetry.Metrics` | 実需要のある標準Metric操作を表す最小の型と操作。集約実装は持たない |
+| `RAGScope.Telemetry.Metrics` | 初期段階では汎用emitを前提にしない。具体的な標準Metricの手動操作が必要になった場合だけ、その最小の型と操作を置く候補 |
 | `RAGScope.Telemetry.Context` | 子処理・通信へ引き継ぐための必要な操作。独自Context値の貯蔵場所にしない |
 | `RAGScope.UseCase.*.Telemetry` | 機能固有の定義と純粋変換。Spanの対象範囲・EventRecordの記録条件を機能本体と接続 |
-| `RAGScope.Telemetry.OpenTelemetry` | 構成からSDK資源と操作を組み立て、使用期間を囲む入口 |
+| `RAGScope.Telemetry.OpenTelemetry` | 構成からSDK資源と操作を組み立て、使用期間を囲む高水準入口 |
 | `RAGScope.Telemetry.OpenTelemetry.Lifecycle` | 段階的取得、部分失敗の解放、終了処理。SDKの実際の戻り値を処理 |
-| Adapter内のTrace / Logs | Status更新と例外記録の接続を構築時に受け、重複を避ける |
+| Adapter内のTrace / Logs | 各SpanのStatus更新と例外EventRecord ownerを分離し、重複を避ける |
+| Adapter内の限定構築入口 | Processor / Exporter / Reader等を受けるAdapterテスト用の低水準入口。applicationへは公開しない |
 
 この表はmoduleを必ずすべて独立した大きさで作る命令ではない。型も処理も存在しない空moduleを増やす必要はない。実際のexportと責務ができた時点で、マップの境界を保つ最小構成へ落とす。
 
@@ -663,19 +833,22 @@ SDKに間接依存があることと、RAGScopeの各componentが直接依存を
 - SDKと同じqueue、batching、filtering、配送、再送のRuntime。
 - 実際の必要がない自由モナド、効果framework、型レベルの汎用属性Schema。
 - 配送先の切り替えだけを目的とした複数の本番Adapter実装。
+- 現在要求のない汎用Metric名・値・属性emit API。
 
 独自型を一切持たないという意味ではない。**必要な利用操作と不変条件を表す型は持ち、外部SDKの機構を再実装する型・処理は持たない**という区別である。
 
 ## 16. 後続の実装で判断する順序
 
 1. **本レポートの基準commitからの変更を確認する。** 正本設計・Ticket・実装が変わっていれば、関係する結論を再評価する。Workbenchの案を正本として上書きしない。
-2. **候補SDKを固定して、必要な公開APIを確認する。** Trace、LogsのEventNameとContext、Metrics、テスト用Processor / Exporter、終了APIを対象にする。
-3. **Cabalの依存境界を先に具体化する。** applicationとboundaryからSDKが参照できず、Adapterがapplicationへ依存しないことを確認する。
-4. **純粋な入力型と結果分類を決める。** 成功・失敗、名前付きイベント、時刻・単位、管理対象属性の不正な組み合わせを減らす。
-5. **関数レコードと`IO`の最小形を選ぶ。** Spanを囲む操作、必要なLogs操作、Context伝播、Metricsの接続を定める。任意の`m`やclassは実需要があれば追加比較する。
-6. **例外記録担当と資源管理を、SDKを使って確認する。** 最小の入れ子Span、複数の例外経路、キャンセル、部分初期化失敗、終了失敗で成立を確認する。
-7. **同じAdapterを本番構成とテスト構成へつなぐ。** 戻り値・Context・出力内容・終了結果を検査する。利用側の記録用recordテストとは分ける。
-8. **採用した判断だけを正本のコード・設定・テストへ反映する。** 必要な設計判断は正本へ内容そのものを記録し、Workbenchへの必須参照を作らない。
+2. **RAGScope環境でSDK候補の依存解決・import smoke testを行う。** package / revision候補とin-memory exporterを実際にbuildできることを先に確認する。
+3. **Spanの最小実測でhelper抑制案と低水準API案を比較する。** Status、`error.type`、Span Event、Context復元、本体1回、元例外保存を確認してSpan boundaryの基本形を決める。
+4. **nested exceptionでEventRecord ownerを実測する。** root / UseCase / internalのStatusとLogs 1件の両立、相関するSpan、標準計装との重複を確認する。
+5. **Contextのthread間伝播と復元を実測する。** fresh childと既存workerを分け、outbound injectまで確認して公開操作を決める。
+6. **SDK lifecycleと失敗隔離を実測する。** 部分初期化、flush / shutdown、controlled exporter failure、Metrics接続を確認してAdapter入口を決める。
+7. **Cabalの依存境界と最小moduleを具体化する。** applicationとboundaryからSDKが参照できず、Adapterがapplicationへ依存しないことを確認する。
+8. **純粋な入力型・結果分類と、必要な関数レコードを決める。** 成功・失敗、名前付きイベント、管理対象属性の不正な組み合わせを減らす。現時点で根拠のないMetric emit操作は追加しない。
+9. **同じAdapterを本番構成とテスト構成へつなぐ。** in-memoryのSpan / Logs / Metrics出力を使い、戻り値・Context・出力内容・終了結果を検査する。利用側の記録用recordテストとは分ける。
+10. **採用した判断だけを正本のコード・設定・テストへ反映する。** 必要な設計判断は正本へ内容そのものを記録し、Workbenchへの必須参照を作らない。
 
 最初の実装で必要なのは、高度な抽象化の網羅ではない。操作の差し替え、結果と例外の保存、範囲と資源の安全な終了、SDK依存の隔離という、今回の契約を具体的に守る構造である。
 
