@@ -100,6 +100,43 @@ flowchart LR
 
 凡例: **紫** = 非公開library / module、**濃青** = 外部package、**実線** = 本体の依存、**点線** = テスト時の依存
 
+## library / moduleの役割
+
+### `application`
+
+RAGScopeアプリケーションのUseCaseと、そのUseCaseを構成する内部処理を置く。Telemetryが必要な場合は`telemetry`を使い、OpenTelemetry SDKや`opentelemetry`には直接依存しない。
+
+- `RAGScope.UseCase.IndexDocument`: 「文書を検索可能にする」UseCaseを実行する。文書の読み込み、チャンク化、Embedding生成、保存までの処理順序を制御する。
+- `RAGScope.UseCase.DenseSearch`: 「dense検索する」UseCaseを実行する。質問Embeddingを生成し、vector searchを行い、順位付きの文書チャンクを返す処理を制御する。
+- `RAGScope.Document.Reader`: 指定されたMarkdown文書をUTF-8として読み込み、本文を後続処理へ渡す。チャンク化やEmbedding生成は担当しない。
+- `RAGScope.Document.Chunking`: 文書本文を1,000 Unicodeコードポイントごとに、重複範囲なしで文書チャンクへ分割する。ファイル読み込みやEmbedding生成は担当しない。
+
+### `telemetry`
+
+UseCaseや内部処理から使うTelemetry利用境界を提供する。OpenTelemetry SDKの型やAPIをApplication側へ出さず、Span、Logs、Metrics、Contextに必要な操作をRAGScope側の入口としてまとめる。
+
+- `RAGScope.Telemetry`: `application`や他の利用側へ公開するTelemetryの入口。下位のTrace / Logs / Metrics / Context操作を利用側から扱える形で提供する。
+- `RAGScope.Telemetry.Trace`: Spanの開始・終了、Status、`error.type`など、Trace / Spanに関する操作を担当する。
+- `RAGScope.Telemetry.Logs`: 通常LogRecordとEventRecordの記録に関する操作を担当する。
+- `RAGScope.Telemetry.Metrics`: OpenTelemetry Metricsを利用するための操作を担当する。RS-0024では新しいRAGScope独自Metricを定義しない。
+- `RAGScope.Telemetry.Context`: 現在のContextを子処理や通信境界へ引き継ぐための受け渡しを担当する。
+
+### `opentelemetry`
+
+`telemetry`で定義した利用境界をOpenTelemetry Haskell SDKへ接続するAdapterを置く。OpenTelemetry packageへ直接依存するのはこのlibraryだけとする。
+
+- `RAGScope.Telemetry.OpenTelemetry`: executableから使うAdapterの入口。SDKを使ったTelemetry実装の生成と初期化へつなぐ。
+- `RAGScope.Telemetry.OpenTelemetry.Lifecycle`: Trace / Logs / Metricsに必要なSDK初期化、Processor / Exporter構成、flush / shutdownを担当する。
+- `RAGScope.Telemetry.OpenTelemetry.Trace`: `telemetry`のSpan操作をOpenTelemetry SDKのTrace APIへ接続する。
+- `RAGScope.Telemetry.OpenTelemetry.Logs`: `telemetry`のLogRecord / EventRecord操作をOpenTelemetry SDKのLogs APIへ接続する。
+- `RAGScope.Telemetry.OpenTelemetry.Metrics`: `telemetry`のMetric操作をOpenTelemetry SDKのMetrics APIへ接続する。
+- `RAGScope.Telemetry.OpenTelemetry.Context`: OpenTelemetry ContextをSDK上で保持・取得し、`telemetry`側のContext受け渡しへ接続する。
+
+### その他のcomponent
+
+- `executable: ragscope` / `Main`: ApplicationとTelemetry Adapterを組み立てるComposition Root。起動時にSDKを初期化し、終了時にflush / shutdownする。
+- `test-suite: ragscope-test` / `Main`: `application`、`telemetry`、`opentelemetry`の振る舞いと依存境界を検証するテストの実行入口。
+
 ## module分割の考え方
 
 - `RAGScope.UseCase.IndexDocument`は、現在設計の「文書を検索可能にする」UseCaseに対応する提案名である。
