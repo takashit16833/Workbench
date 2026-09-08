@@ -130,3 +130,28 @@ zellij attach
 ```bash
 zellij list-sessions
 ```
+
+### 溜まったセッションを掃除する
+
+動作中のセッションをすべて終了する:
+
+```bash
+zellij kill-all-sessions
+```
+
+実行中のプロセスも終了するため、溜まったセッションによるメモリ使用を解放したい場合はこちら。現在接続中のセッションも対象になる。
+
+終了済みで復元可能なセッション情報をすべて削除する:
+
+```bash
+zellij delete-all-sessions
+```
+
+こちらはセッション復元用に保存された情報の削除が中心で、主にディスク上の掃除になる。
+
+すべて掃除する場合:
+
+```bash
+zellij kill-all-sessions
+zellij delete-all-sessions
+```
