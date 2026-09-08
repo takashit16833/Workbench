@@ -43,7 +43,10 @@ flowchart LR
             OTELAPI --> OTELOTHER
         end
 
-        MAIN["executable: ragscope<br/>Main / Composition Root"]
+        subgraph EXECUTABLE["executable: ragscope"]
+            MAIN["Main<br/>Composition Root"]
+        end
+
         TEST["test-suite(s)"]
 
         MAIN --> APP
