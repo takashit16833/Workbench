@@ -4,7 +4,7 @@ projects:
   - "[[RS-0024 RAGScopeアプリケーションへOpenTelemetry Observability最小基盤を実装する]]"
 branch: RS-0024/sdk-cabal-boundary
 dateCreated: 2026-09-08T15:43:45+09:00
-dateModified: 2026-09-08T16:43:14+09:00
+dateModified: 2026-09-08T20:50:42+09:00
 tags:
   - task
 ---
@@ -16,22 +16,26 @@ tags:
 - 3 packageはいずれもHackage revision `0`であることを確認した
 - `OpenTelemetry.Trace.Core`、`OpenTelemetry.Trace`、`OpenTelemetry.Exporter.InMemory`をimportする最小executableのcompile、link、実行が成功した
 - smoke testはRAGScopeリポジトリ外の一時ディレクトリで実施し、RAGScope作業ツリーがcleanであることを確認した
-- 次は、実測したpackageを前提にCabal component / `build-depends`境界を実装し、SDK参照の許可・禁止をbuildで確認する
+- `RS-0024/sdk-cabal-boundary`の現在HEAD `cff0193c20fce89b7ddd9effd7151c39f6681bd6`で、RAGScopeアプリケーションを1 Cabal packageのまま、無名main library `ragscope`を公開Facade、機能実装を`document`、`retrieval`、`evaluation-data`、`experiment-evaluation`のprivate named libraryへ分ける構成を正本へ反映した
+- RS-0024の`telemetry-boundary` / `opentelemetry-adapter`というcomponent名と具体的なmodule構成は、Workbenchの[[RS-0024 Haskellライブラリ・モジュールマップ]]で実装候補として整理している
+- 次は、確定した機能側library構成を前提にTelemetry利用境界とOpenTelemetry AdapterのCabal component / `build-depends`境界を実装し、SDK参照の許可・禁止をbuildで確認する
 
 ## Scope
 
 - RAGScopeのGHC / base条件で、候補の`hs-opentelemetry-api`、`hs-opentelemetry-sdk`、`hs-opentelemetry-exporter-in-memory`と必要なPropagator / Exporter packageの依存解決・import smoke testを行う
-- 実測した依存を前提に、UseCase / 内部処理からSDKを参照できず、AdapterだけがSDKへ依存するCabal component / `build-depends`境界を実装する
+- 実測した依存を前提に、機能側UseCase / 内部処理からSDKを参照できず、AdapterだけがSDKへ依存するCabal component / `build-depends`境界を実装する
 - 後続SubtaskがTrace / Logs / MetricsのSDK非依存境界を追加できる最小module構成を用意する
 
 ## Verification
 
 - RAGScopeアプリケーションが依存解決・buildできる
-- Application / Telemetry境界からOpenTelemetry SDK packageを直接参照できないことをCabal設定とimportで確認できる
+- Telemetryを利用するfeature libraryとTelemetry境界からOpenTelemetry SDK packageを直接参照できないことをCabal設定とimportで確認できる
 - Adapter側から必要なSDK packageを参照できる
+- main library `ragscope`を全機能実装の受け皿にせず、機能側の依存がprivate named libraryごとの`build-depends`に分離されている
 
 ## Squash merge commit body
 
+- RAGScopeアプリケーションを1 packageのままmain libraryを公開Facade、機能実装をprivate named libraryへ分けるHaskell構成を設計した
 - RAGScope環境で利用するOpenTelemetry packageの依存解決とimportを確認した
 - OpenTelemetry SDK依存をAdapter側のCabal境界へ閉じ込めた
 - 後続のTelemetry境界実装に必要な最小module構成を追加した
