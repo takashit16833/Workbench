@@ -4,7 +4,7 @@ projects:
   - "[[RS-0024 RAGScopeアプリケーションへOpenTelemetry Observability最小基盤を実装する]]"
 branch: RS-0024/sdk-cabal-boundary
 dateCreated: 2026-09-08T15:43:45+09:00
-dateModified: 2026-09-08T20:50:42+09:00
+dateModified: 2026-09-08T21:04:00+09:00
 tags:
   - task
 ---
@@ -29,9 +29,9 @@ tags:
 ## Verification
 
 - RAGScopeアプリケーションが依存解決・buildできる
-- Telemetryを利用するfeature libraryとTelemetry境界からOpenTelemetry SDK packageを直接参照できないことをCabal設定とimportで確認できる
-- Adapter側から必要なSDK packageを参照できる
-- main library `ragscope`を全機能実装の受け皿にせず、機能側の依存がprivate named libraryごとの`build-depends`に分離されている
+- このSubtaskで追加するSDK非依存のTelemetry境界componentがOpenTelemetry SDK packageを`build-depends`に持たず、SDK moduleを直接importできないことを確認できる
+- OpenTelemetry Adapter componentだけが必要なSDK packageを`build-depends`に持ち、必要なSDK moduleをimportできることを確認できる
+- executableとTelemetry境界からOpenTelemetry SDK packageを直接参照せず、Adapterを介する依存方向をCabal設定とimportで確認できる
 
 ## Squash merge commit body
 
