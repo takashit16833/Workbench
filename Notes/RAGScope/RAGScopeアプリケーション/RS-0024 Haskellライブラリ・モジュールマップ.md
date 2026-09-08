@@ -19,12 +19,6 @@ Mermaidの色分けは[[Mermaid図の色分けルール]]に従う。
 ```mermaid
 flowchart LR
     subgraph PKG["ragscope"]
-        subgraph PUBLIC["library: ragscope<br/>役割: 未確定"]
-            PUBEX["RAGScope.*<br/>exposed-modules<br/>具体名は未決定"]:::public
-            PUBOTHER["other-modules<br/>公開library内部実装<br/>具体名は未決定"]:::private
-            PUBEX --> PUBOTHER
-        end
-
         subgraph APPLICATION["library: application<br/>役割: UseCase / 内部処理を置き、Telemetry利用境界を使う"]
             APP["RAGScope.Application<br/>exposed-modules"]:::private
             APPOTHER["RAGScope.Application.*<br/>other-modules"]:::private
@@ -64,20 +58,18 @@ flowchart LR
     SDK["OpenTelemetry Haskell packages"]:::external
     OTELOTHER --> SDK
 
-    classDef public fill:#052A59,stroke:#5EAFFF,color:#DDF0FF,stroke-width:2px
     classDef private fill:#211536,stroke:#8A5EC0,color:#DDF0FF,stroke-width:2px
     classDef external fill:#001947,stroke:#316CBD,color:#A6CAFF,stroke-width:2px
 
     style PKG fill:transparent,stroke:#153A75,color:#4C9EEB,stroke-width:2px
-    style PUBLIC fill:#052A59,stroke:#5EAFFF,color:#DDF0FF,stroke-width:2px
     style APPLICATION fill:#211536,stroke:#8A5EC0,color:#DDF0FF,stroke-width:2px
     style TELEMETRY fill:#211536,stroke:#8A5EC0,color:#DDF0FF,stroke-width:2px
     style OTEL fill:#211536,stroke:#8A5EC0,color:#DDF0FF,stroke-width:2px
 ```
 
-凡例: **青** = 公開library / module、**紫** = 非公開library / module、**濃青** = 外部package
+凡例: **紫** = 非公開library / module、**濃青** = 外部package
 
-- `library: ragscope`は現在のCabalに存在するが、公開するmoduleと役割はまだ決まっていない。
+- 現在のCabalにある無名の`library` componentは、このターゲット設計には含めない。
 - `application`は`telemetry`へ依存する。
 - `application`は`opentelemetry`とOpenTelemetry packageへ依存しない。
 - `telemetry`はOpenTelemetry packageへ依存しない。
