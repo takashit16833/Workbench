@@ -541,21 +541,9 @@
   "enableDebugLogging": false,
   "lastSeenVersion": "4.12.3",
   "pomodoroState": {
-    "isRunning": true,
+    "isRunning": false,
     "timeRemaining": 1500,
-    "currentSession": {
-      "id": "1788902012149",
-      "taskPath": "Tasks/RS-0024 subtask OpenTelemetry依存とCabal境界を実装する.md",
-      "startTime": "2026-09-09T06:13:32.149+09:00",
-      "plannedDuration": 25,
-      "type": "work",
-      "completed": false,
-      "activePeriods": [
-        {
-          "startTime": "2026-09-09T06:13:32.149+09:00"
-        }
-      ]
-    }
+    "nextSessionType": "work"
   },
   "lastPomodoroDate": "2026-09-08",
   "pomodoroHistory": [
@@ -4953,6 +4941,35 @@
         {
           "startTime": "2026-09-07T17:00:12.022+09:00",
           "endTime": "2026-09-07T17:05:12.022+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1788902012149",
+      "startTime": "2026-09-09T06:13:32.149+09:00",
+      "endTime": "2026-09-09T06:38:32.149+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "taskPath": "Tasks/RS-0024 subtask OpenTelemetry依存とCabal境界を実装する.md",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-09-09T06:13:32.149+09:00",
+          "endTime": "2026-09-09T06:38:32.149+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1788903513395",
+      "startTime": "2026-09-09T06:38:33.395+09:00",
+      "endTime": "2026-09-09T06:43:33.395+09:00",
+      "plannedDuration": 5,
+      "type": "short-break",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-09-09T06:38:33.395+09:00",
+          "endTime": "2026-09-09T06:43:33.395+09:00"
         }
       ]
     }
