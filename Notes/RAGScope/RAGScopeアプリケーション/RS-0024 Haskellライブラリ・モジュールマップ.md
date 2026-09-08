@@ -96,6 +96,8 @@ library枠は公開・非公開で色分けしない。色はmoduleが別compone
 
 `RAGScope.UseCase.*`、`RAGScope.UseCase.*.Error`、`RAGScope.UseCase.*.Telemetry`の`*`は図上の省略表記であり、実際のHaskell module名ではない。例えば`RAGScope.UseCase.IndexDocument`、`RAGScope.UseCase.IndexDocument.Error`、`RAGScope.UseCase.IndexDocument.Telemetry`のような具体名になる。
 
+`RAGScope.UseCase.*.Error` / `.Telemetry`はUseCaseの場合の配置例である。独立した内部処理が具体的なerror typeや機能固有Telemetry定義を持つ場合、それらまでUseCase配下へ置くことを意味しない。内部処理の具体的なmodule名と配置は、その処理の責務と共有範囲を確認して実装時に決める。
+
 テスト用componentは今回のlibrary / module構成レビューから一旦省略する。テストを作成しないという意味ではない。
 
 ## library / moduleの役割
@@ -103,6 +105,8 @@ library枠は公開・非公開で色分けしない。色はmoduleが別compone
 ### `application`
 
 RAGScopeアプリケーションのUseCaseと、そのUseCaseを構成する内部処理を置く。機能上の処理順序、再試行、timeout、fallback、成功・失敗の最終判断はこのlibraryが所有する。Telemetryはその判断結果や途中で起きた事実を記録するために利用するだけで、Telemetryの失敗によってUseCaseの成功を失敗へ変更しない。
+
+ここでの`application`は、このNoteでUseCase / 内部処理をまとめるlibrary名の提案である。正本でいうRAGScopeアプリケーション全体のmoduleをこのlibraryだけへ置く、と現時点で決めるものではない。
 
 `application`は`telemetry-boundary`には依存するが、`opentelemetry-adapter`とOpenTelemetry packageには依存しない。UseCaseや内部処理から見えるのはRAGScope側のTelemetry型・操作だけであり、SDKのTracer、Span、LoggerProvider、MeterProvider、Context、Processor / Exporterなどは参照しない。
 
@@ -186,7 +190,8 @@ OpenTelemetry MetricsをApplication側から利用するためのSDK非依存の
 現在のOpenTelemetry Contextを子処理や通信境界へ引き継ぐためにApplication側から必要な操作を定義する。RAGScope独自ContextをSDK Contextの代わりとして保持するmoduleではない。
 
 - 現在のContextを子処理へ引き継ぐことと、後続のHTTP通信境界からTrace Contextをinjectできる状態にするために必要な操作だけを公開する。
-- SDKのContext型をそのままApplicationへ漏らすのか、opaqueなRAGScope側の値を使うのか、Context値自体を公開せず操作だけを公開するのかは実装時に決める。
+- 実装時は、まずContext値そのものをApplicationへ渡さず、必要な操作だけを境界として公開できるかを検討する。Context値をUseCaseの業務値として複数処理へ持ち回る形は、具体的な必要性がない限り採用しない。
+- 操作だけでは要件を満たせない場合に限り、SDK型を漏らさないopaqueなRAGScope側の値など別の表現を検討する。exactなContext APIは実装時に決める。
 - Trace ID / Span IDやContext stackをRAGScope側で重複管理しない。
 - 実際のContext保持、attach / detach、Propagatorによるinjectなどは`opentelemetry-adapter`からSDKへ委ねる。
 
@@ -194,7 +199,9 @@ OpenTelemetry MetricsをApplication側から利用するためのSDK非依存の
 
 ### `opentelemetry-adapter`
 
-`telemetry-boundary`で定義した利用境界をOpenTelemetry Haskell SDKへ接続するAdapterを置く。OpenTelemetry packageへ直接依存するのはこのlibraryだけとする。Applicationから渡されたSDK非依存の値をSDKの型・APIへ変換し、SDKが提供するContext、Processor / Exporter、batching、flush / shutdown、送信を利用する。
+`telemetry-boundary`で定義した利用境界をOpenTelemetry Haskell SDKへ接続するAdapterを置く。RS-0024で実装する共通TelemetryのSDK接続処理はこのlibraryに置き、UseCase / 内部処理と`telemetry-boundary`はOpenTelemetry SDKへ依存しない。Applicationから渡されたSDK非依存の値をSDKの型・APIへ変換し、SDKが提供するContext、Processor / Exporter、batching、flush / shutdown、送信を利用する。
+
+後続機能でHTTP、DB、GenAIなどの標準instrumentation packageをどのcomponentが利用するかは、その機能を実装する時点で決める。このNoteは、それらの後続componentまで`opentelemetry-adapter`経由に固定したり、OpenTelemetry関連packageへの依存を全面禁止したりするものではない。
 
 Adapter本体を環境ごとに別実装するのではなく、同じAdapter実装へ渡すProcessor / ExporterなどのSDK構成をproduction、ローカル、自動テストで切り替えられる形にする。どの設定型・constructorで表すかは実装時に決める。
 
@@ -266,22 +273,39 @@ Processor / Exporter設定を独立moduleへ分ける必要が実装上明確に
 - Adapterから得た`RAGScope.Telemetry`の実装をApplicationへ渡し、UseCase実行時はApplicationがその境界だけを利用するようにする。
 - 終了時にはAdapterが提供するlifecycle APIを通してflush / shutdownを行う。
 - production / ローカルのProcessor / Exporter構成差はComposition Rootから渡す設定またはその設定生成処理で表し、Adapter本体の実装を環境別に複製しない。
-- OpenTelemetry packageへ直接依存せず、SDK型をApplicationへ渡さない。
+- このRS-0024のtarget構成ではOpenTelemetry packageへ直接依存せず、SDK型をApplicationへ渡さない。
+
+## 実装前に確認するOpenTelemetry API
+
+exactな`RAGScope.Telemetry.Trace` / `Logs` / `Context`の関数signatureは、採用する`hs-opentelemetry`のversionと実APIを確認してから決める。特に例外処理は、正本が「SpanをErrorにして再throwし、Logsには同じ例外を表すEventRecordを1件だけ記録する」ことを要求しているため、便利なSDK helperをそのまま採用できるとは限らない。
+
+実装開始時に最小コードで次を確認する。
+
+- Spanを開始し、未処理の同期Exceptionが外へ伝播したときにStatus Errorと必要な`error.type`を設定できること。
+- 同じExceptionについてSpan Eventを追加せず、LogsのEventRecordを1件だけ記録できること。
+- 元のExceptionを変更せず再throwできること。
+- EventRecord / LogRecordをcurrent Trace Contextへ関連付けられること。
+- test用Processor / Exporter構成で、flush / shutdownとExporter失敗時の挙動を制御して確認できること。
+
+採用versionのexception helperが`recordException`などでSpan Eventを自動記録する場合は、そのhelperを無条件に使わず、重複しないSDK APIの組み合わせを確認してAdapter実装を決める。
 
 ## Cabalへ落としたときの依存
 
+`ragscope.cabal`は`cabal-version: 3.4`を使用するため、同一package内のnamed sublibraryへの依存も`package-name:internal-library-name`で明示する。
+
 | component | `build-depends`で必要なRAGScope内依存 | OpenTelemetry package |
 |---|---|---|
-| `library: application` | `telemetry-boundary` | 依存しない |
+| `library: application` | `ragscope:telemetry-boundary` | 依存しない |
 | `library: telemetry-boundary` | なし | 依存しない |
-| `library: opentelemetry-adapter` | `telemetry-boundary` | 依存する |
-| `executable: ragscope` | `application`, `telemetry-boundary`, `opentelemetry-adapter` | 直接依存しない |
+| `library: opentelemetry-adapter` | `ragscope:telemetry-boundary` | 依存する |
+| `executable: ragscope` | `ragscope:application`, `ragscope:telemetry-boundary`, `ragscope:opentelemetry-adapter` | このRS-0024のtargetでは直接依存しない |
 
-OpenTelemetryの具体的なpackage名とversionは、このNoteではまだ固定しない。
+OpenTelemetryの具体的なpackage名とversionは、このNoteではまだ固定しない。後続機能で利用する標準instrumentation packageの依存先componentも、その機能実装時に決める。
 
 ## module分割の考え方
 
 - Application側の個別UseCaseは`RAGScope.UseCase.*`で代表する。Application全体の詳細なmodule分割はこのNoteでは行わない。
+- `RAGScope.UseCase.*.Error` / `.Telemetry`はUseCaseの場合の配置例であり、独立した内部処理のerror / Telemetry定義をUseCase配下へ集約する規則ではない。内部処理の配置は、その処理の責務と共有範囲に合わせて決める。
 - 機能固有Telemetryは`RAGScope.UseCase.*.Telemetry`へまとめる。現時点で`Spans`、`Events`、`Attributes`などへさらに分割する根拠はないため、必要になるまで増やさない。
 - 具体的なUseCase error typeは`RAGScope.UseCase.*.Error`へ置き、`RAGScope.UseCase.*.Telemetry`から参照してもmodule cycleが発生しない構造にする。
 - SDK非依存の共通操作は`RAGScope.Telemetry.*`、SDK接続処理は`RAGScope.Telemetry.OpenTelemetry.*`へ分ける。
@@ -291,14 +315,16 @@ OpenTelemetryの具体的なpackage名とversionは、このNoteではまだ固�
 
 ## 依存方向
 
+このマップに含めるRS-0024のtarget componentでは、次の依存方向を採用する。
+
 - 現在のCabalにある無名の`library` componentは、このターゲット設計には含めない。
 - `application`は`telemetry-boundary`へ依存する。
 - `application`は`opentelemetry-adapter`とOpenTelemetry packageへ依存しない。
 - `telemetry-boundary`は`application`、`opentelemetry-adapter`、OpenTelemetry packageへ依存しない。
 - `opentelemetry-adapter`は`telemetry-boundary`とOpenTelemetry packageへ依存し、`application`へ依存しない。
-- `Main`はApplicationとAdapterを組み立てるため`application`、`telemetry-boundary`、`opentelemetry-adapter`へ依存するが、OpenTelemetry packageへ直接依存しない。
+- `Main`はApplicationとAdapterを組み立てるため`application`、`telemetry-boundary`、`opentelemetry-adapter`へ依存するが、このRS-0024のtargetではOpenTelemetry packageへ直接依存しない。
 
-禁止する依存は次のとおり。
+このtargetで禁止する依存は次のとおり。
 
 ```text
 application -X-> opentelemetry-adapter
@@ -309,3 +335,5 @@ telemetry-boundary -X-> OpenTelemetry packages
 opentelemetry-adapter -X-> application
 executable -X-> OpenTelemetry packages
 ```
+
+この禁止は、後続機能でHTTP / DB / GenAIなどの標準instrumentation packageを利用するcomponentまで`opentelemetry-adapter`経由に固定するものではない。後続機能固有のOpenTelemetry関連package依存は、その機能の責務と実際に呼ぶinstrumentation APIを確認して決める。
