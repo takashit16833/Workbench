@@ -88,14 +88,11 @@ flowchart LR
     classDef external fill:#001947,stroke:#316CBD,color:#A6CAFF,stroke-width:2px
 
     style PKG fill:transparent,stroke:#153A75,color:#4C9EEB,stroke-width:2px
-    style APPLICATION fill:#211536,stroke:#8A5EC0,color:#DDF0FF,stroke-width:2px
-    style TELEMETRY fill:#211536,stroke:#8A5EC0,color:#DDF0FF,stroke-width:2px
-    style OTEL fill:#211536,stroke:#8A5EC0,color:#DDF0FF,stroke-width:2px
 ```
 
-凡例: **青** = 公開library / module、**紫** = 非公開library / module、**濃青** = 外部package、**実線** = 本体の依存
+凡例: **青** = `exposed-modules`、**紫** = `other-modules`、**濃青** = 外部package、**実線** = 本体の依存
 
-現在の`application`、`telemetry`、`opentelemetry`はprivate libraryなのでlibrary枠は紫とする。別componentからimportする`exposed-modules`は青、そのlibrary内部だけで使う`other-modules`は紫で表す。
+library枠は公開・非公開で色分けしない。色はmoduleが別componentからimport可能か、そのlibrary内部だけで使うかを示すために使う。
 
 `RAGScope.UseCase.*`、`RAGScope.UseCase.*.Error`、`RAGScope.UseCase.*.Telemetry`の`*`は図上の省略表記であり、実際のHaskell module名ではない。例えば`RAGScope.UseCase.IndexDocument`、`RAGScope.UseCase.IndexDocument.Error`、`RAGScope.UseCase.IndexDocument.Telemetry`のような具体名になる。
 
