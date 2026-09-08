@@ -4,9 +4,12 @@ projects:
   - "[[RS-0024 RAGScopeアプリケーションへOpenTelemetry Observability最小基盤を実装する]]"
 branch: RS-0024/sdk-cabal-boundary
 dateCreated: 2026-09-08T15:43:45+09:00
-dateModified: 2026-09-08T21:04:00+09:00
+dateModified: 2026-09-09T06:13:32.153+09:00
 tags:
   - task
+timeEntries:
+  - startTime: 2026-09-08T21:13:32.153Z
+    description: Work session
 ---
 
 ## Current state
