@@ -20,13 +20,7 @@ Mermaidの色分けは[[Mermaid図の色分けルール]]に従う。
 flowchart LR
     subgraph PKG["ragscope"]
         subgraph APPLICATION["library: application<br/>役割: UseCase / 内部処理を置き、Telemetry利用境界を使う"]
-            INDEX["RAGScope.UseCase.IndexDocument<br/>exposed-modules<br/>文書を検索可能にする"]:::private
-            DENSE["RAGScope.UseCase.DenseSearch<br/>exposed-modules<br/>dense検索する"]:::private
-            READER["RAGScope.Document.Reader<br/>exposed-modules<br/>UTF-8 Markdown文書を読み込む"]:::private
-            CHUNKING["RAGScope.Document.Chunking<br/>exposed-modules<br/>本文を文書チャンクへ分割する"]:::private
-
-            INDEX --> READER
-            INDEX --> CHUNKING
+            INDEX["RAGScope.UseCase.IndexDocument<br/>exposed-modules<br/>代表例: 文書を検索可能にする"]:::private
         end
 
         subgraph TELEMETRY["library: telemetry<br/>役割: OpenTelemetry SDKを隠すTelemetry利用境界"]
@@ -61,25 +55,13 @@ flowchart LR
             MAIN["Main<br/>Composition Root"]
         end
 
-        subgraph TESTSUITE["test-suite: ragscope-test<br/>役割: application / telemetry / opentelemetryを検証する"]
-            TESTMAIN["Main"]
-        end
-
         MAIN --> INDEX
-        MAIN --> DENSE
         MAIN --> TEL
         MAIN --> OTELAPI
 
         INDEX --> TEL
-        DENSE --> TEL
 
         OTELAPI --> TEL
-
-        TESTMAIN -.-> INDEX
-        TESTMAIN -.-> DENSE
-        TESTMAIN -.-> CHUNKING
-        TESTMAIN -.-> TEL
-        TESTMAIN -.-> OTELAPI
     end
 
     SDK["OpenTelemetry Haskell packages"]:::external
@@ -98,7 +80,11 @@ flowchart LR
     style OTEL fill:#211536,stroke:#8A5EC0,color:#DDF0FF,stroke-width:2px
 ```
 
-凡例: **紫** = 非公開library / module、**濃青** = 外部package、**実線** = 本体の依存、**点線** = テスト時の依存
+凡例: **紫** = 非公開library / module、**濃青** = 外部package、**実線** = 本体の依存
+
+Applicationのmoduleは、図を簡単にするため`RAGScope.UseCase.IndexDocument`だけを代表例として載せる。ほかのUseCase / 内部処理moduleを作らないという意味ではない。
+
+テスト用componentは今回のlibrary / module構成レビューから一旦省略する。テストを作成しないという意味ではない。
 
 ## library / moduleの役割
 
@@ -106,10 +92,7 @@ flowchart LR
 
 RAGScopeアプリケーションのUseCaseと、そのUseCaseを構成する内部処理を置く。Telemetryが必要な場合は`telemetry`を使い、OpenTelemetry SDKや`opentelemetry`には直接依存しない。
 
-- `RAGScope.UseCase.IndexDocument`: 「文書を検索可能にする」UseCaseを実行する。文書の読み込み、チャンク化、Embedding生成、保存までの処理順序を制御する。
-- `RAGScope.UseCase.DenseSearch`: 「dense検索する」UseCaseを実行する。質問Embeddingを生成し、vector searchを行い、順位付きの文書チャンクを返す処理を制御する。
-- `RAGScope.Document.Reader`: 指定されたMarkdown文書をUTF-8として読み込み、本文を後続処理へ渡す。チャンク化やEmbedding生成は担当しない。
-- `RAGScope.Document.Chunking`: 文書本文を1,000 Unicodeコードポイントごとに、重複範囲なしで文書チャンクへ分割する。ファイル読み込みやEmbedding生成は担当しない。
+- `RAGScope.UseCase.IndexDocument`: Application側moduleの代表例。「文書を検索可能にする」UseCaseを実行し、必要な内部処理の順序を制御する。
 
 ### `telemetry`
 
@@ -132,17 +115,13 @@ UseCaseや内部処理から使うTelemetry利用境界を提供する。OpenTel
 - `RAGScope.Telemetry.OpenTelemetry.Metrics`: `telemetry`のMetric操作をOpenTelemetry SDKのMetrics APIへ接続する。
 - `RAGScope.Telemetry.OpenTelemetry.Context`: OpenTelemetry ContextをSDK上で保持・取得し、`telemetry`側のContext受け渡しへ接続する。
 
-### その他のcomponent
+### `executable: ragscope`
 
-- `executable: ragscope` / `Main`: ApplicationとTelemetry Adapterを組み立てるComposition Root。起動時にSDKを初期化し、終了時にflush / shutdownする。
-- `test-suite: ragscope-test` / `Main`: `application`、`telemetry`、`opentelemetry`の振る舞いと依存境界を検証するテストの実行入口。
+- `Main`: ApplicationとTelemetry Adapterを組み立てるComposition Root。起動時にSDKを初期化し、終了時にflush / shutdownする。
 
 ## module分割の考え方
 
-- `RAGScope.UseCase.IndexDocument`は、現在設計の「文書を検索可能にする」UseCaseに対応する提案名である。
-- `RAGScope.UseCase.DenseSearch`は、現在設計の「dense検索する」UseCaseに対応する。
-- `RAGScope.Document.Reader`と`RAGScope.Document.Chunking`は、文書処理設計で独立した責務として定義されている文書読み込みとチャンク化に対応する。
-- dense検索内部のEmbedding生成やvector searchは、現在の設計だけでは独立moduleへ分ける根拠が足りないため、この図ではまだ分割しない。
+- `RAGScope.UseCase.IndexDocument`は、Application側moduleの代表例として載せる。この図ではApplication内部の詳細なmodule分割はレビュー対象から外す。
 - `RAGScope.Telemetry`をUseCase / 内部処理から使う入口とし、Trace / Logs / Metrics / Contextごとの実装詳細を`other-modules`へ分ける。
 - `RAGScope.Telemetry.OpenTelemetry`をAdapterの入口とし、SDK初期化・終了、Trace、Logs、Metrics、ContextのSDK接続を`other-modules`へ分ける。
 - Processor / Exporterの設定は現時点では`Lifecycle`の責務に含め、実装時に独立した責務が必要になった場合だけmoduleを追加する。
