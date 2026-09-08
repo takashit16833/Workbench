@@ -10,14 +10,14 @@ created: 2026-09-08
 
 > [!note]
 > これはRS-0024の実装前にレビューするためのWorkbench上の設計ドラフトであり、RAGScopeの正本ではない。
-> 機能側のCabal library構成は、RAGScope正本リポジトリの`project-docs/design/RAGScopeアプリケーションHaskell構成設計.md`とADR-0008で決定済みである。
+> 機能側のCabal library構成は、RAGScope正本リポジトリのADR-0008で採用済みである。実装後の正確なcomponent名、`build-depends`、公開module、型、関数は`ragscope.cabal`とHaskellコード・テストを正本とする。このNoteには、実装前に必要な構成整理と候補を置く。
 > `telemetry-boundary`、`opentelemetry-adapter`、`RAGScope.Telemetry.*`などTelemetry側のcomponent名・module名・APIは、このNoteでレビューする実装候補である。
 
 Mermaidの色分けは[[Mermaid図の色分けルール]]に従う。
 
 ## 現在確定している機能側Cabal構成
 
-RAGScope正本では、`ragscope-app/`を1つのCabal package `ragscope`として維持し、無名main library `ragscope`を公開Facade、主要な機能実装をprivate named libraryへ分ける構成を採用した。
+以下はADR-0008で採用済みの内容をRS-0024の実装前マップとして要約したものであり、このNote自体は正本ではない。`ragscope-app/`を1つのCabal package `ragscope`として維持し、無名main library `ragscope`を公開Facade、主要な機能実装をprivate named libraryへ分ける構成を採用している。
 
 ```text
 ragscope package
@@ -130,7 +130,7 @@ flowchart LR
 
 凡例: **青** = 別componentから利用するmodule / API候補、**紫** = private componentまたは内部module、**濃青** = 外部package、**実線** = 想定する静的依存
 
-機能側4 libraryとmain libraryの役割は正本で決定済みである。一方、Telemetry側のlibrary名、module名、export範囲、exactな依存は、このSubtaskでCabalとSDK APIを実測しながら確定する。
+機能側4 libraryとmain libraryの役割はADR-0008で採用済みである。一方、Telemetry側のlibrary名、module名、export範囲、exactな依存は、このSubtaskでCabalとSDK APIを実測しながら確定する。
 
 テスト用componentはこのマップから省略する。テストを作成しないという意味ではない。
 
@@ -362,7 +362,7 @@ OpenTelemetryの具体的なpackage名とversionは、実測結果を`ragscope.c
 
 ## 依存方向
 
-機能側について正本で決定済みの依存方向は次のとおり。
+機能側についてADR-0008で採用済みの依存方向は次のとおり。
 
 ```text
 main library ragscope
