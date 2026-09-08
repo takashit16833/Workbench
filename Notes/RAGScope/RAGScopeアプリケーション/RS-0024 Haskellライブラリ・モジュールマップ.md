@@ -20,7 +20,10 @@ Mermaidの色分けは[[Mermaid図の色分けルール]]に従う。
 flowchart LR
     subgraph PKG["ragscope"]
         subgraph APPLICATION["library: application<br/>役割: UseCase / 内部処理を置き、Telemetry利用境界を使う"]
-            INDEX["RAGScope.UseCase.IndexDocument<br/>exposed-modules<br/>代表例: 文書を検索可能にする"]:::private
+            USECASE["RAGScope.UseCase.*<br/>exposed-modules<br/>各UseCase"]:::private
+            EVENTS["RAGScope.UseCase.*.Events<br/>other-modules<br/>機能固有EventRecordの定義"]:::private
+
+            USECASE --> EVENTS
         end
 
         subgraph TELEMETRY["library: telemetry<br/>役割: OpenTelemetry SDKを隠すTelemetry利用境界"]
@@ -55,11 +58,12 @@ flowchart LR
             MAIN["Main<br/>Composition Root"]
         end
 
-        MAIN --> INDEX
+        MAIN --> USECASE
         MAIN --> TEL
         MAIN --> OTELAPI
 
-        INDEX --> TEL
+        USECASE --> TEL
+        EVENTS --> TEL
 
         OTELAPI --> TEL
     end
@@ -82,7 +86,7 @@ flowchart LR
 
 凡例: **紫** = 非公開library / module、**濃青** = 外部package、**実線** = 本体の依存
 
-Applicationのmoduleは、図を簡単にするため`RAGScope.UseCase.IndexDocument`だけを代表例として載せる。ほかのUseCase / 内部処理moduleを作らないという意味ではない。
+`RAGScope.UseCase.*`と`RAGScope.UseCase.*.Events`の`*`は図上の省略表記であり、実際のHaskell module名ではない。各UseCaseでは`RAGScope.UseCase.IndexDocument`、`RAGScope.UseCase.IndexDocument.Events`のような具体名になる想定である。
 
 テスト用componentは今回のlibrary / module構成レビューから一旦省略する。テストを作成しないという意味ではない。
 
@@ -92,7 +96,8 @@ Applicationのmoduleは、図を簡単にするため`RAGScope.UseCase.IndexDocu
 
 RAGScopeアプリケーションのUseCaseと、そのUseCaseを構成する内部処理を置く。Telemetryが必要な場合は`telemetry`を使い、OpenTelemetry SDKや`opentelemetry`には直接依存しない。
 
-- `RAGScope.UseCase.IndexDocument`: Application側moduleの代表例。「文書を検索可能にする」UseCaseを実行し、必要な内部処理の順序を制御する。
+- `RAGScope.UseCase.*`: 各UseCase本体を表す。処理順序と最終結果を決め、必要なSpan / Logs / Metrics操作を`telemetry`経由で行う。
+- `RAGScope.UseCase.*.Events`: そのUseCase固有のEventRecordを定義する。何が起きたイベントか、記録条件、EventName、timestamp、Severity、attributes、必要な`error.type`変換を機能側の責務として持つ。
 
 ### `telemetry`
 
@@ -100,7 +105,7 @@ UseCaseや内部処理から使うTelemetry利用境界を提供する。OpenTel
 
 - `RAGScope.Telemetry`: `application`や他の利用側へ公開するTelemetryの入口。下位のTrace / Logs / Metrics / Context操作を利用側から扱える形で提供する。
 - `RAGScope.Telemetry.Trace`: Spanの開始・終了、Status、`error.type`など、Trace / Spanに関する操作を担当する。
-- `RAGScope.Telemetry.Logs`: 通常LogRecordとEventRecordの記録に関する操作を担当する。
+- `RAGScope.Telemetry.Logs`: 通常LogRecordとEventRecordの記録に関する操作を担当する。機能固有EventRecordの意味や記録条件は定義しない。
 - `RAGScope.Telemetry.Metrics`: OpenTelemetry Metricsを利用するための操作を担当する。RS-0024では新しいRAGScope独自Metricを定義しない。
 - `RAGScope.Telemetry.Context`: 現在のContextを子処理や通信境界へ引き継ぐための受け渡しを担当する。
 
@@ -121,7 +126,8 @@ UseCaseや内部処理から使うTelemetry利用境界を提供する。OpenTel
 
 ## module分割の考え方
 
-- `RAGScope.UseCase.IndexDocument`は、Application側moduleの代表例として載せる。この図ではApplication内部の詳細なmodule分割はレビュー対象から外す。
+- Application側の個別UseCaseは`RAGScope.UseCase.*`で代表している。各UseCaseの具体名は機能実装時に決める。
+- 機能固有EventRecordは`RAGScope.UseCase.*.Events`に置く案とし、EventNameや記録条件などの意味をTelemetry共通libraryへ移さない。
 - `RAGScope.Telemetry`をUseCase / 内部処理から使う入口とし、Trace / Logs / Metrics / Contextごとの実装詳細を`other-modules`へ分ける。
 - `RAGScope.Telemetry.OpenTelemetry`をAdapterの入口とし、SDK初期化・終了、Trace、Logs、Metrics、ContextのSDK接続を`other-modules`へ分ける。
 - Processor / Exporterの設定は現時点では`Lifecycle`の責務に含め、実装時に独立した責務が必要になった場合だけmoduleを追加する。
