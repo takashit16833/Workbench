@@ -4,7 +4,7 @@ projects:
   - "[[RS-0024 RAGScopeアプリケーションへOpenTelemetry Observability最小基盤を実装する]]"
 branch: RS-0024/sdk-cabal-boundary
 dateCreated: 2026-09-08T15:43:45+09:00
-dateModified: 2026-09-08T19:00:00+09:00
+dateModified: 2026-09-08T16:43:14+09:00
 tags:
   - task
 ---
@@ -16,38 +16,22 @@ tags:
 - 3 packageはいずれもHackage revision `0`であることを確認した
 - `OpenTelemetry.Trace.Core`、`OpenTelemetry.Trace`、`OpenTelemetry.Exporter.InMemory`をimportする最小executableのcompile、link、実行が成功した
 - smoke testはRAGScopeリポジトリ外の一時ディレクトリで実施し、RAGScope作業ツリーがcleanであることを確認した
-- 正本で、無名main libraryまたは1つの`application` libraryを今後の全機能moduleの包括的な受け皿にしない方針を採用した
-- 今回のSubtaskではprivate named library `telemetry-boundary`と`opentelemetry-adapter`の2つだけをまず構築し、Cabalの`build-depends`によるSDK依存境界を実測で確認する
-- 将来の文書・検索・評価・実験などのlibrary構成は先に固定せず、各実装時の型、import、API、package依存、禁止したい依存方向から決める
-- 正本の現在設計は`project-docs/design/RAGScopeアプリケーションHaskell構成設計.md`、判断理由はADR-0007を参照する
+- 次は、実測したpackageを前提にCabal component / `build-depends`境界を実装し、SDK参照の許可・禁止をbuildで確認する
 
 ## Scope
 
-- `library telemetry-boundary`をprivate named libraryとして追加し、OpenTelemetry packageへ依存させない
-- `library opentelemetry-adapter`をprivate named libraryとして追加し、`ragscope:telemetry-boundary`と、実際にimportする`hs-opentelemetry-api` / `hs-opentelemetry-sdk`へ依存させる
-- `telemetry-boundary`に`RAGScope.Telemetry`、`opentelemetry-adapter`に`RAGScope.Telemetry.OpenTelemetry`の最小moduleを用意し、今回の依存境界をbuild/importで確認できる状態にする
-- `hs-opentelemetry-exporter-in-memory`はこのproduction Adapterの依存へ入れず、後続で実際に利用するtest componentへ追加する
-- Telemetryの具体的な操作、SDK lifecycle、Context、Trace、Logs、Metricsの実装はこのSubtaskでは行わない
-- 無名main libraryをApplication全体の受け皿として残すことも、代わりに包括的な`application` libraryを追加することもしない
+- RAGScopeのGHC / base条件で、候補の`hs-opentelemetry-api`、`hs-opentelemetry-sdk`、`hs-opentelemetry-exporter-in-memory`と必要なPropagator / Exporter packageの依存解決・import smoke testを行う
+- 実測した依存を前提に、UseCase / 内部処理からSDKを参照できず、AdapterだけがSDKへ依存するCabal component / `build-depends`境界を実装する
+- 後続SubtaskがTrace / Logs / MetricsのSDK非依存境界を追加できる最小module構成を用意する
 
 ## Verification
 
-1. `ragscope-app/`で`cabal target all:libs`を実行し、実際のlibrary target名を取得する
-2. `cabal build all:libs`と`cabal build all`が成功することを確認する
-3. `telemetry-boundary`のREPLで次を確認する
-   - `import RAGScope.Telemetry ()`は成功する
-   - `import OpenTelemetry.Trace ()`は失敗する
-   - `import OpenTelemetry.Trace.Core ()`は失敗する
-4. `opentelemetry-adapter`のREPLで次を確認する
-   - `import RAGScope.Telemetry ()`は成功する
-   - `import OpenTelemetry.Trace ()`は成功する
-   - `import OpenTelemetry.Trace.Core ()`は成功する
-5. REPL targetには`cabal target all:libs`が出力した完全修飾targetを使用する
-6. `cabal repl --build-depends=...`はpackage露出を変更して境界検証にならないため使用しない
+- RAGScopeアプリケーションが依存解決・buildできる
+- Application / Telemetry境界からOpenTelemetry SDK packageを直接参照できないことをCabal設定とimportで確認できる
+- Adapter側から必要なSDK packageを参照できる
 
 ## Squash merge commit body
 
 - RAGScope環境で利用するOpenTelemetry packageの依存解決とimportを確認した
-- `telemetry-boundary`と`opentelemetry-adapter`をprivate named libraryとして追加した
-- OpenTelemetry SDK依存を`opentelemetry-adapter`側のCabal境界へ閉じ込めた
-- `telemetry-boundary`ではSDK importが失敗し、`opentelemetry-adapter`では成功することを確認した
+- OpenTelemetry SDK依存をAdapter側のCabal境界へ閉じ込めた
+- 後続のTelemetry境界実装に必要な最小module構成を追加した
