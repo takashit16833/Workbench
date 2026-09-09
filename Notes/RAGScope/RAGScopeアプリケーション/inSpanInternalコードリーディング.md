@@ -8,16 +8,48 @@ created: 2026-09-09
 
 ```mermaid
 flowchart TD
-    A[元のcurrent Contextを保存] --> B[Spanを作る]
-    B --> C[Spanをcurrent Contextへ入れる]
-    C --> D[bodyを実行]
-    D -->|成功| E[Spanを終了]
-    E --> F[元のContextを復元]
-    F --> G[結果を返す]
-    D -->|例外| H[例外を分類・記録]
-    H --> I[Spanを終了]
-    I --> J[元のContextを復元]
-    J --> K[元の例外を再throw]
+    A{SpanProcessorがある?}
+
+    subgraph FAST[1. processorがない場合]
+      direction TB
+      F1[getContext<br/>current Context取得]
+      F2[createSpanHelper<br/>Span作成]
+      F3[f s<br/>body実行]
+      F1 --> F2 --> F3
+    end
+
+    subgraph NORMAL[2〜9. 通常経路]
+      direction TB
+      N1[2. 通常経路の入口<br/>withRunInIO + mask]
+      N2[3. 元のcurrent Contextを保存<br/>ctxRef / entry / ctx]
+      N3[4. Spanを作る<br/>createSpanHelper]
+      N4[5. 作ったSpanをcurrentにする<br/>insertSpan + writeIORef]
+      N5[6. bodyを実行<br/>restore + catch]
+
+      subgraph EXCEPTION[7〜8. 例外経路]
+        direction TB
+        E1[7. 例外を分類する<br/>resolveException]
+        E2[8. 例外時のcleanup<br/>endSpan]
+        E3[元Contextを復元]
+        E4[元の例外を再throw]
+        E1 --> E2 --> E3 --> E4
+      end
+
+      subgraph SUCCESS[9. 成功経路]
+        direction TB
+        S1[9. 成功時のcleanup<br/>endSpan]
+        S2[元Contextを復元]
+        S3[結果を返す]
+        S1 --> S2 --> S3
+      end
+
+      N1 --> N2 --> N3 --> N4 --> N5
+      N5 -->|例外| E1
+      N5 -->|成功| S1
+    end
+
+    A -->|なし| F1
+    A -->|あり| N1
 ```
 
 ## 型
@@ -39,7 +71,7 @@ inSpanInternal
 - `AttributeMap`: caller情報など追加属性
 - `(Span -> m a)`: 作成したSpanを受け取って実行するbody
 
-## processorがない場合
+## 1. processorがない場合
 
 ```haskell
 | not (tracerProviderHasProcessor (tracerProvider t)) =
@@ -52,7 +84,7 @@ SpanProcessorがない場合は通常のContext差し替えや例外記録を省
 2. そのContextを使ってSpanを作る
 3. 作ったSpanを`f`へ渡す
 
-## 通常経路の入口
+## 2. 通常経路の入口
 
 ```haskell
 | otherwise = withRunInIO $ \run -> EUnsafe.mask $ \restore -> do
@@ -62,7 +94,7 @@ SpanProcessorがない場合は通常のContext差し替えや例外記録を省
 
 `mask`はSpan作成やContext差し替えの途中で非同期例外が割り込むのを防ぐ。bodyは後で`restore`して通常の例外受付状態で実行する。
 
-## 元のcurrent Contextを保存
+## 3. 元のcurrent Contextを保存
 
 ```haskell
 (!tidInt, ctxRef) <- ensureContextRefFast
@@ -77,7 +109,7 @@ let ctx = ceContext entry
 
 `entry`を残しておくことで、body終了後に元のContextへ戻せる。
 
-## Spanを作る
+## 4. Spanを作る
 
 ```haskell
 s <- createSpanHelper t ctx n args extraAttrs tidInt
@@ -85,7 +117,7 @@ s <- createSpanHelper t ctx n args extraAttrs tidInt
 
 現在の`ctx`を使ってSpan `s`を作る。この時点ではcurrent Contextはまだ元のまま。
 
-## 作ったSpanをcurrentにする
+## 5. 作ったSpanをcurrentにする
 
 ```haskell
 writeIORef ctxRef $! entry {ceContext = insertSpan s ctx}
@@ -95,7 +127,7 @@ writeIORef ctxRef $! entry {ceContext = insertSpan s ctx}
 
 ここからbody終了まで、`getContext` / `getActiveSpan`から見えるcurrent Spanは`s`になる。
 
-## bodyを実行
+## 6. bodyを実行
 
 ```haskell
 a <- restore (run $ f s) `EUnsafe.catch` \someEx@(SomeException inner) -> do
@@ -106,7 +138,7 @@ a <- restore (run $ f s) `EUnsafe.catch` \someEx@(SomeException inner) -> do
 - `restore`: bodyでは通常通り例外を受けられるようにする
 - `catch`: bodyから外へ出た例外を捕捉する
 
-## 例外を分類する
+## 7. 例外を分類する
 
 ```haskell
 let ExceptionResponse classification exAttrs = resolveException t someEx
@@ -122,7 +154,7 @@ IgnoredException  -> 何もしない
 
 RAGScopeが欲しい`Error + exception Span Eventなし`という組み合わせは、この3分類にはない。
 
-## 例外時のcleanup
+## 8. 例外時のcleanup
 
 ```haskell
 endSpan s Nothing
@@ -136,7 +168,7 @@ EUnsafe.throwIO someEx
 
 `catch`は例外を握りつぶすためではなく、Telemetryの後始末をしてから同じ例外を外へ返すために使っている。
 
-## 成功時のcleanup
+## 9. 成功時のcleanup
 
 ```haskell
 endSpan s Nothing
