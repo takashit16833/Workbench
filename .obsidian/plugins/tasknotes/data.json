@@ -542,16 +542,17 @@
   "lastSeenVersion": "4.12.3",
   "pomodoroState": {
     "isRunning": true,
-    "timeRemaining": 300,
+    "timeRemaining": 1500,
     "currentSession": {
-      "id": "1788990687790",
-      "startTime": "2026-09-10T06:51:27.789+09:00",
-      "plannedDuration": 5,
-      "type": "short-break",
+      "id": "1788992384447",
+      "taskPath": "Tasks/RS-0024 subtask Trace境界とSpan実行を実装する.md",
+      "startTime": "2026-09-10T07:19:44.447+09:00",
+      "plannedDuration": 25,
+      "type": "work",
       "completed": false,
       "activePeriods": [
         {
-          "startTime": "2026-09-10T06:51:27.789+09:00"
+          "startTime": "2026-09-10T07:19:44.447+09:00"
         }
       ]
     }
@@ -5199,6 +5200,20 @@
         {
           "startTime": "2026-09-10T06:26:26.638+09:00",
           "endTime": "2026-09-10T06:51:26.638+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1788990687790",
+      "startTime": "2026-09-10T06:51:27.789+09:00",
+      "endTime": "2026-09-10T06:56:27.789+09:00",
+      "plannedDuration": 5,
+      "type": "short-break",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-09-10T06:51:27.789+09:00",
+          "endTime": "2026-09-10T06:56:27.789+09:00"
         }
       ]
     }
