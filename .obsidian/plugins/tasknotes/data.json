@@ -542,17 +542,16 @@
   "lastSeenVersion": "4.12.3",
   "pomodoroState": {
     "isRunning": true,
-    "timeRemaining": 1500,
+    "timeRemaining": 300,
     "currentSession": {
-      "id": "1788933293509",
-      "taskPath": "Tasks/RS-0024 subtask Trace境界とSpan実行を実装する.md",
-      "startTime": "2026-09-09T14:54:53.509+09:00",
-      "plannedDuration": 25,
-      "type": "work",
+      "id": "1788937868330",
+      "startTime": "2026-09-09T16:11:08.330+09:00",
+      "plannedDuration": 5,
+      "type": "short-break",
       "completed": false,
       "activePeriods": [
         {
-          "startTime": "2026-09-09T14:54:53.509+09:00"
+          "startTime": "2026-09-09T16:11:08.330+09:00"
         }
       ]
     }
@@ -5040,6 +5039,50 @@
         {
           "startTime": "2026-09-09T14:49:48.639+09:00",
           "endTime": "2026-09-09T14:54:48.639+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1788933293509",
+      "startTime": "2026-09-09T14:54:53.509+09:00",
+      "endTime": "2026-09-09T15:19:53.509+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "taskPath": "Tasks/RS-0024 subtask Trace境界とSpan実行を実装する.md",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-09-09T14:54:53.509+09:00",
+          "endTime": "2026-09-09T15:19:53.509+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1788934794602",
+      "startTime": "2026-09-09T15:19:54.602+09:00",
+      "endTime": "2026-09-09T15:34:54.602+09:00",
+      "plannedDuration": 15,
+      "type": "long-break",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-09-09T15:19:54.602+09:00",
+          "endTime": "2026-09-09T15:34:54.602+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1788936367228",
+      "startTime": "2026-09-09T15:46:07.228+09:00",
+      "endTime": "2026-09-09T16:11:07.228+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "taskPath": "Tasks/RS-0024 subtask Trace境界とSpan実行を実装する.md",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-09-09T15:46:07.228+09:00",
+          "endTime": "2026-09-09T16:11:07.228+09:00"
         }
       ]
     }
