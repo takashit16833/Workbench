@@ -541,11 +541,22 @@
   "enableDebugLogging": false,
   "lastSeenVersion": "4.12.3",
   "pomodoroState": {
-    "isRunning": false,
-    "timeRemaining": 1500,
-    "nextSessionType": "work"
+    "isRunning": true,
+    "timeRemaining": 300,
+    "currentSession": {
+      "id": "1788990687790",
+      "startTime": "2026-09-10T06:51:27.789+09:00",
+      "plannedDuration": 5,
+      "type": "short-break",
+      "completed": false,
+      "activePeriods": [
+        {
+          "startTime": "2026-09-10T06:51:27.789+09:00"
+        }
+      ]
+    }
   },
-  "lastPomodoroDate": "2026-09-08",
+  "lastPomodoroDate": "2026-09-09",
   "pomodoroHistory": [
     {
       "id": "1786413262882",
@@ -5173,6 +5184,21 @@
         {
           "startTime": "2026-09-09T17:58:05.013+09:00",
           "endTime": "2026-09-09T18:13:05.013+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1788989186639",
+      "startTime": "2026-09-10T06:26:26.638+09:00",
+      "endTime": "2026-09-10T06:51:26.638+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "taskPath": "Tasks/RS-0024 subtask Trace境界とSpan実行を実装する.md",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-09-10T06:26:26.638+09:00",
+          "endTime": "2026-09-10T06:51:26.638+09:00"
         }
       ]
     }

@@ -5,6 +5,146 @@ projects:
   - "[[RAGScope]]"
 created: 2026-09-09
 ---
+```haskell
+{- |
+`inSpan`系の内部実装。
+
+追加属性（例: callerAttributes）は遅延評価され、
+Spanが実際に記録される場合にのみ評価される。
+
+主な処理:
+
+1. 現在のContextを取得する
+2. そのContextを親としてSpanを作成する
+3. 作成したSpanをcurrent Contextへ設定する
+4. bodyを実行する
+5. 成功時・例外時の後処理を行う
+6. 元のContextへ戻す
+-}
+inSpanInternal
+  :: MonadUnliftIO m
+  => Tracer
+  -> Text
+  -> SpanArguments
+  -> AttributeMap
+  -> (Span -> m a)
+  -> m a
+inSpanInternal tracer spanName spanArgs extraAttributes body
+  -- SpanProcessorが存在しない場合、すべてのSpanはDroppedになる。
+  --
+  -- この場合はContextの差し替えや例外記録などを省略する。
+  -- ただし、子SpanへTrace IDを引き継げるように
+  -- 軽量なDropped Span自体は作成する。
+  | not (tracerProviderHasProcessor (tracerProvider tracer)) =
+      liftIO
+        ( getContext >>= \currentContext ->
+            createSpanHelper
+              tracer
+              currentContext
+              spanName
+              spanArgs
+              extraAttributes
+              (-1)
+        )
+        >>= body
+
+  | otherwise =
+      withRunInIO $ \runInIO ->
+        EUnsafe.mask $ \restoreMaskingState -> do
+          -- 現在の実行スレッドに対応するContextの保存先を取得する。
+          --
+          -- ensureContextRefFastはCurrentTSO.idの取得とContext探索を
+          -- 高速化した内部実装。
+          (!currentThreadId, contextRef) <- ensureContextRefFast
+
+          -- body実行前のContextを保存しておく。
+          -- body終了後はこの値を使って元のContextへ戻す。
+          originalContextEntry <- readIORef contextRef
+          let parentContext = ceContext originalContextEntry
+
+          -- 現在のContextを親として新しいSpanを作成する。
+          span <-
+            createSpanHelper
+              tracer
+              parentContext
+              spanName
+              spanArgs
+              extraAttributes
+              currentThreadId
+
+          -- 作成したSpanをContextへ追加し、
+          -- body実行中のcurrent Spanとして扱われるようにする。
+          writeIORef contextRef $
+           ! originalContextEntry
+              { ceContext = insertSpan span parentContext
+              }
+
+          -- bodyだけはmaskを解除して通常の状態で実行する。
+          --
+          -- bodyから例外が外へ出た場合はここで捕捉し、
+          -- Spanへの記録とcleanupを行ったあと同じ例外を再throwする。
+          result <-
+            restoreMaskingState (runInIO $ body span)
+              `EUnsafe.catch` \someException@(SomeException exception) -> do
+                let ExceptionResponse
+                      exceptionClassification
+                      exceptionAttributes =
+                        resolveException tracer someException
+
+                -- ExceptionHandlerによる分類に従って
+                -- Spanへ例外情報を反映する。
+                case exceptionClassification of
+                  ErrorException -> do
+                    setStatus span $
+                      Error $
+                        T.pack $
+                          displayException exception
+
+                    recordException
+                      span
+                      ( H.union
+                          [ ( unkey SC.exception_escaped
+                            , toAttribute True
+                            )
+                          ]
+                          exceptionAttributes
+                      )
+                      Nothing
+                      exception
+
+                  RecordedException ->
+                    recordException
+                      span
+                      ( H.union
+                          [ ( unkey SC.exception_escaped
+                            , toAttribute True
+                            )
+                          ]
+                          exceptionAttributes
+                      )
+                      Nothing
+                      exception
+
+                  IgnoredException ->
+                    pure ()
+
+                -- 例外時もSpanを必ず終了し、
+                -- current Contextをbody実行前の状態へ戻す。
+                endSpan span Nothing
+                writeIORef contextRef originalContextEntry
+
+                -- Telemetry処理後、元の例外をそのまま外へ返す。
+                EUnsafe.throwIO someException
+
+          -- 正常終了時のcleanup。
+          --
+          -- この部分はmaskされた状態なので、
+          -- Span終了とContext復元の途中へ非同期例外が割り込まない。
+          endSpan span Nothing
+          writeIORef contextRef originalContextEntry
+
+          pure result
+```
 
 ```mermaid
 flowchart TD
