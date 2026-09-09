@@ -141,6 +141,23 @@ git worktree add --track -b feat/foo ../feat-foo origin/feat/foo
 3. `b` — New local branch + worktree
 4. ブランチ名と作成先を確認
 
+## devcontainer で `fatal: not a git repository: (null)` が出る
+
+ホストと devcontainer で worktree のルートパスが異なる場合、worktree の `.git` がホストの絶対パスを指していると Git が参照先を見つけられない。
+
+```bash
+cat .git
+```
+
+絶対パスになっている場合は、メインの worktree 側で相対パスを有効にして修復する。
+
+```bash
+git config worktree.useRelativePaths true
+git worktree repair --relative-paths ../feat-foo
+```
+
+以後に作る worktree も相対パスになる。
+
 # SSH
 
 ## devcontainer で `Permission denied (publickey)` が出る
