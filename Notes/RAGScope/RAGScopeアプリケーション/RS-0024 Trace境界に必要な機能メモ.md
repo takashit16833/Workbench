@@ -23,6 +23,4 @@ created: 2026-09-09
 - 不要な例外Span Eventを重複して記録しない
 - 現在のTrace Contextを後続処理へ引き継げる
 
-## Haddockを読むときの方針
-
-上の機能をOpenTelemetryでどう実現できるか、自分でAPIを探す。関数名や実装方法は先に決めず、必要な機能ごとに候補を比較する。
+### root Spanを作成できる
