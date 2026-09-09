@@ -5,16 +5,9 @@ projects:
   - "[[RAGScope]]"
 created: 2026-09-09
 ---
-
-# RS-0024 Trace境界に必要な機能メモ
-
-> [!note]
-> RS-0024のTrace境界を検討するためのWorkbench上の学習メモ。RAGScopeの正本ではない。
-
 ## RAGScopeとして欲しい機能
 
 - TracerPraviderを作成する
-	- `createTracerProvider :: MonadIO m => [SpanProcessor] -> TracerProviderOptions -> m TracerProvider`
 - root Spanを作成する
 - child Spanを作成できる
 - Spanの実行範囲を開始・終了できる
