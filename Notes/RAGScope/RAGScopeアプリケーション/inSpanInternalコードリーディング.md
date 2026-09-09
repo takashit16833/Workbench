@@ -6,6 +6,20 @@ projects:
 created: 2026-09-09
 ---
 
+```mermaid
+flowchart TD
+    A[元のcurrent Contextを保存] --> B[Spanを作る]
+    B --> C[Spanをcurrent Contextへ入れる]
+    C --> D[bodyを実行]
+    D -->|成功| E[Spanを終了]
+    E --> F[元のContextを復元]
+    F --> G[結果を返す]
+    D -->|例外| H[例外を分類・記録]
+    H --> I[Spanを終了]
+    I --> J[元のContextを復元]
+    J --> K[元の例外を再throw]
+```
+
 ## 型
 
 ```haskell
@@ -133,17 +147,3 @@ pure a
 1. Span終了
 2. 元のContextを復元
 3. bodyの結果`a`を返す
-
-## 全体の流れ
-
-```text
-元のcurrent Contextを保存
-  ↓
-Spanを作る
-  ↓
-Spanをcurrent Contextへ入れる
-  ↓
-bodyを実行
-  ├─ 成功 -> Span終了 -> 元Context復元 -> 結果を返す
-  └─ 例外 -> 例外を分類・記録 -> Span終了 -> 元Context復元 -> 再throw
-```
