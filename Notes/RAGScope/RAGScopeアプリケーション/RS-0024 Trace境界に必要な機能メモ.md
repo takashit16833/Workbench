@@ -5,155 +5,123 @@ projects:
   - "[[RAGScope]]"
 created: 2026-09-09
 ---
+
 ## RAGScopeとして欲しい機能
 
-- TracerPraviderを作成する
-- root Spanを作成する
-- child Spanを作成できる
-- Spanの実行範囲を開始・終了できる
-- Span実行中はそのSpanを現在のSpanとして扱い、終了後は元へ戻せる
-- Spanを`Unset`または`Error`として扱える
-- `error.type`など必要な属性をSpanへ付けられる
-- 未処理の同期例外がSpan外へ出るとき、Spanへ失敗情報を残しつつ元の例外を再throwできる
-- 不要な例外Span Eventを重複して記録しない
-- 現在のTrace Contextを後続処理へ引き継げる
+- TracerProvider / Tracerを用意する
+- root / child Spanを作成する
+- Spanの実行範囲を開始・終了する
+- Span実行中はそのSpanをcurrentにし、終了後は元へ戻す
+- Spanを`Unset` / `Error`として扱う
+- `error.type`など必要な属性を付ける
+- 未処理の同期例外ではSpanへ失敗情報を残し、元の例外を再throwする
+- 同じ例外をSpan EventとLogs EventRecordへ重複記録しない
+- 現在のTrace Contextを後続処理へ引き継ぐ
 
-### TracerProvider関連
-#### TracerProviderを作成する
-Initialize a new tracer provider
-You should generally use getGlobalTracerProvider for most applications.
+## API調査メモ
+
+### TracerProvider
+
 ```haskell
 createTracerProvider
-:: MonadIO m
-=> [SpanProcessor]
--> TracerProviderOptions
--> m TracerProvider
-```
+  :: MonadIO m
+  => [SpanProcessor]
+  -> TracerProviderOptions
+  -> m TracerProvider
 
-```haskell
 getGlobalTracerProvider :: MonadIO m => m TracerProvider
 ```
- Access the globally configured TracerProvider. Once the the global tracer provider is initialized via the OpenTelemetry SDK, Tracers created from this TracerProvider will export spans to their configured exporters. Prior to that, any Tracers acquired from the uninitialized TracerProvider will create no-op spans.
-#### TracerProviderをシャットダウンする
-```haskell
-shutdownTracerProviderSource#
-:: MonadIO m	 
-=> TracerProvider	 
--> Maybe Int           Optional timeout in microseconds, defaults to 5,000,000 (5s)
--> m ShutdownResult
-```
-This method provides a way for provider to do any cleanup required.
-This will also trigger shutdowns on all internal processors.
-### Tracer関連
-#### Tracerを作成する
+
+Tracerを作る元。processors / sampler / resource / limits / propagatorsなど、Tracer群で共有する設定を持つ。
+
+### Tracer
+
 ```haskell
 makeTracer :: TracerProvider -> InstrumentationLibrary -> TracerOptions -> Tracer
+
+getTracer
+  :: MonadIO m
+  => TracerProvider
+  -> InstrumentationLibrary
+  -> TracerOptions
+  -> m Tracer
 ```
-Construct a Tracer from a provider, library, and options.
 
-Prefer a non-empty libraryName per the OpenTelemetry specification; use getTracer if you want a warning when the name is empty.
-```haskell
-getTracer :: MonadIO m => TracerProvider -> InstrumentationLibrary -> TracerOptions -> m Tracer
-```
-Like makeTracer but caches by InstrumentationLibrary, so repeated calls with the same scope return the same Tracer instance. Spec: implementations SHOULD return a single Tracer per InstrumentationScope.
-### root Spanを作成する
+Spanを作る入口。Instrumentation Scopeは、このTracerがどの計装コードに属するかを表す。
 
+### `inSpan`
 
-
-
-The action to perform. inSpan will record the time spent on the action without forcing strict evaluation of the result. Any uncaught exceptions will be recorded and rethrown.
 ```haskell
 inSpan
-:: (MonadUnliftIO m, HasCallStack)
-=> Tracer
--﻿> Text                 The name of the span. This may be updated later via updateName
--﻿> SpanArguments        Additional options for creating the span, such as Spankind, span links, 
-                        astarting attributes, etc.
--﻿> m a                  The action to perform. inSpan will record the time spent on the action
-                        without forcing strict evaluation of the result. Any uncaught exceptions 
-                        will be recorded and rethrown 
--> m a
+  :: (MonadUnliftIO m, HasCallStack)
+  => Tracer
+  -> Text
+  -> SpanArguments
+  -> m a
+  -> m a
 ```
-The simplest function for annotating code with trace information.
 
+Spanの開始・action実行・終了をまとめて行うbracket-styleの関数。未処理例外は記録して再throwする。
 
----
+#### 例外処理で分かったこと
+
+`ExceptionHandler`は、`inSpan`などが捕捉した例外の扱いを変更する。
+
+```haskell
+ExceptionHandler = SomeException -> Maybe ExceptionResponse
+```
+
+`ExceptionResponse`の分類は次の3つ。
+
+- `ErrorException`: SpanをErrorにしてexception Span Eventも記録
+- `RecordedException`: Eventだけ記録
+- `IgnoredException`: どちらも行わない
+
+RAGScopeが欲しい **「Errorにはするがexception Span Eventは記録しない」** を、この分類だけでは表現できなさそう。
+
+### manual Span lifecycle
+
+Haddockには次の案内がある。
+
+> For manual span lifecycle management, use createSpan and endSpan.
+
+`createSpan`で開始し、`endSpan`で終了する。`createSpan`へ渡すContextにSpanがあれば、そのSpanをparentとして扱える。
+
+現時点の実装候補イメージ:
+
+```text
+createSpan
+  ↓
+bodyを実行
+  ↓ 例外なら
+setStatus Error + error.typeを設定
+  ↓
+endSpan
+  ↓
+元の例外を再throw
+```
+
+Spanをリソースとしてbracket-styleに管理し、例外時の処理だけRAGScope要件に合わせて自前で制御する方向を検討中。
+
 ## 必要な知識
-### 用語
 
-#### Telemetry
+### Telemetry
 
-システムの実行状態を観測するためのデータの総称。
-RAGScopeでは主にTrace・Logs・Metricsを指す。
+システムの実行状態を観測するためのデータの総称。RAGScopeでは主にTrace・Logs・Metrics。
 
-#### Instrumentation Scope
+### Instrumentation Scope
 
-Telemetryを生成した計装コードを識別する情報。
-Tracerに紐づき、名前やversionなどを持つ。
+Telemetryを生成した計装コードを識別する情報。Tracerに紐づく。
 
 - Instrumentation Scope: 誰がTelemetryを生成したか
 - Trace Context: どのTrace / Spanの親子関係にいるか
 
-両者は別の概念。
-#### TracerProvider
-ここは **TracerProvider が全Tracerに共通で持たせる設定** ですね。
+### Span Event
 
-それぞれかなりざっくり言うと、
+Spanの途中で起きた、ある時点の出来事。RAGScope独自イベントには使わず、名前付きイベントはLogsのEventRecordへ記録する。
 
-- **processors**  
-    Spanが終わったとき等に、そのSpanをどう処理するか。たとえばExporterへ渡す前段。
-    
-- **sampler**  
-    そのTrace/Spanを記録対象にするかどうかを決めるもの。
-    
-- **resource**  
-    そのTelemetryが「どの実行環境・サービスから出たか」を表す共通属性。サービス名や環境情報など。
-    
-- **limits**  
-    Spanに持てる属性数やEvent数などの上限。
-    
-- **propagators**  
-    Trace ContextなどをHTTP header等へ載せたり、取り出したりする仕組み。
-    
-
-つまり、
-
-> TracerProvider = Tracerを作るFactory + 全Tracerで共有するObservability設定の置き場
-
-という理解でいいです。
-#### Tracer
-**Tracer = Spanを作るための入口となるオブジェクト**です。
-
-ざっくり関係はこうです。
-
-```text
-TracerProvider
-  ↓ Tracerを作る
-Tracer
-  ↓ Spanを作る
-Span
-```
-
-Tracer自体が「1回の処理」ではありません。**同じ計装コードからSpanを作るための生成元**です。
-
-今回の文脈だと、
-
-```text
-RAGScope.Telemetry.OpenTelemetry
-  ↓
-Tracerを持つ
-  ↓
-必要な場所でSpanを作る
-```
-
-というイメージです。
-
-あと、さっきのInstrumentation ScopeはこのTracerに紐づく、と考えるとつながります。
-
-> Tracer = Spanを作るもの  
-> Instrumentation Scope = そのTracerがどの計装コードに属するかを表す情報
-### 型・関数など
 ---
+
 ## ChatGPTへ質問するときのプロンプト
 
 次の用語・型・関数について、Haddockを自分で読みながら理解したいです。
