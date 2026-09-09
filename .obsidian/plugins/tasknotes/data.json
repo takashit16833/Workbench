@@ -4974,5 +4974,6 @@
       ]
     }
   ],
-  "lastNotifiedReleaseVersion": "4.12.5"
+  "lastNotifiedReleaseVersion": "4.12.5",
+  "lastSelectedTaskPath": "Tasks/RS-0024 subtask Trace境界とSpan実行を実装する.md"
 }
