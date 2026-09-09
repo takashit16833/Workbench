@@ -27,67 +27,32 @@ created: 2026-09-09
 
 
 ---
-### 必要な知識
+## 必要な知識
+
 ### Telemetry
-**Telemetry = システムの実行状態を外から観測するために収集・送信する情報の総称**です。
 
-今回のRAGScope / OpenTelemetry文脈だと、主に
+システムの実行状態を観測するためのデータの総称。
+RAGScopeでは主にTrace・Logs・Metricsを指す。
 
-- **Trace**：処理がどの経路を通ったか
-    
-- **Logs**：何が起きたかという記録
-    
-- **Metrics**：回数・時間・量などの数値
-    
-
-をまとめてTelemetryと呼んでいます。
-
-かなり短く言うなら、
-
-> **Telemetry = システムが自分の動きを外へ知らせるための観測データ**
-
-です。
 ### Instrumentation Scope
-**Instrumentation Scope = 「このTelemetryを誰が生成したか」を表す識別情報**です。
 
-例えば、
+Telemetryを生成した計装コードを識別する情報。
+Tracerに紐づき、名前やversionなどを持つ。
 
-```text
-RAGScope application
-  └─ OpenTelemetry Adapter
-       └─ Tracer
-            └─ Span
-```
+- Instrumentation Scope: 誰がTelemetryを生成したか
+- Trace Context: どのTrace / Spanの親子関係にいるか
 
-というとき、その`Tracer`に
+両者は別の概念。
 
-```text
-name    = "ragscope"
-version = "0.0.1"
-```
+---
+## ChatGPTへ質問するときのプロンプト
 
-のような情報を持たせて、
+次の用語・型・関数について、Haddockを自分で読みながら理解したいです。
+質問した範囲だけ、必要最小限で説明してください。
 
-> このSpanは`ragscope`という計装コードが生成しました
-
-と識別できるようにします。
-
-OpenTelemetryの説明でも、`Tracer`は`TracerProvider`から取得され、**instrumentation library / application component単位にscopeされ、library名やversionを持つ**とされています。
-
-大事なのは、**Spanの親子関係を作るscopeではない**ことです。
-
-```text
-Instrumentation Scope
-→ 誰がTelemetryを生成したか
-
-Trace Context
-→ どのTrace/Spanの親子関係にいるか
-```
-
-この2つは別物です。
-
-RAGScopeならまず、
-
-> `RAGScope.Telemetry.OpenTelemetry`が使うTracerのInstrumentation Scopeを何にするか
-
-というところで登場する概念ですね。
+- まず一文で何かを説明する
+- RAGScopeでなぜ関係するかを短く説明する
+- 正確な理解に必要なら、混同しやすい概念との差を1つだけ補足する
+- 私が求めるまで、候補関数名・検索語・実装方法などのネタバレは出さない
+- 次に調べるものを先回りして列挙しない
+- 私の理解が誤っている場合は、その点だけ明確に指摘する
