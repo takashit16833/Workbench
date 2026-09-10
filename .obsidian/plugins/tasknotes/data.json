@@ -541,21 +541,9 @@
   "enableDebugLogging": false,
   "lastSeenVersion": "4.12.3",
   "pomodoroState": {
-    "isRunning": true,
+    "isRunning": false,
     "timeRemaining": 1500,
-    "currentSession": {
-      "id": "1788992384447",
-      "taskPath": "Tasks/RS-0024 subtask Trace境界とSpan実行を実装する.md",
-      "startTime": "2026-09-10T07:19:44.447+09:00",
-      "plannedDuration": 25,
-      "type": "work",
-      "completed": false,
-      "activePeriods": [
-        {
-          "startTime": "2026-09-10T07:19:44.447+09:00"
-        }
-      ]
-    }
+    "nextSessionType": "work"
   },
   "lastPomodoroDate": "2026-09-09",
   "pomodoroHistory": [
@@ -5214,6 +5202,180 @@
         {
           "startTime": "2026-09-10T06:51:27.789+09:00",
           "endTime": "2026-09-10T06:56:27.789+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1788992384447",
+      "startTime": "2026-09-10T07:19:44.447+09:00",
+      "endTime": "2026-09-10T07:44:44.447+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "taskPath": "Tasks/RS-0024 subtask Trace境界とSpan実行を実装する.md",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-09-10T07:19:44.447+09:00",
+          "endTime": "2026-09-10T07:44:44.447+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1788993885556",
+      "startTime": "2026-09-10T07:44:45.556+09:00",
+      "endTime": "2026-09-10T07:49:45.556+09:00",
+      "plannedDuration": 5,
+      "type": "short-break",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-09-10T07:44:45.556+09:00",
+          "endTime": "2026-09-10T07:49:45.556+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1788994235964",
+      "startTime": "2026-09-10T07:50:35.963+09:00",
+      "endTime": "2026-09-10T08:15:35.963+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "taskPath": "Tasks/RS-0024 subtask Trace境界とSpan実行を実装する.md",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-09-10T07:50:35.963+09:00",
+          "endTime": "2026-09-10T08:15:35.963+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1788995737048",
+      "startTime": "2026-09-10T08:15:37.047+09:00",
+      "endTime": "2026-09-10T08:20:37.047+09:00",
+      "plannedDuration": 5,
+      "type": "short-break",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-09-10T08:15:37.047+09:00",
+          "endTime": "2026-09-10T08:20:37.047+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1789000138407",
+      "startTime": "2026-09-10T09:28:58.406+09:00",
+      "endTime": "2026-09-10T09:53:58.406+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "taskPath": "Tasks/RS-0024 subtask Trace境界とSpan実行を実装する.md",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-09-10T09:28:58.406+09:00",
+          "endTime": "2026-09-10T09:53:58.406+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1789001640265",
+      "startTime": "2026-09-10T09:54:00.265+09:00",
+      "endTime": "2026-09-10T10:02:04.345+09:00",
+      "plannedDuration": 15,
+      "type": "long-break",
+      "completed": false,
+      "activePeriods": [
+        {
+          "startTime": "2026-09-10T09:54:00.265+09:00",
+          "endTime": "2026-09-10T10:02:04.345+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1789002125939",
+      "startTime": "2026-09-10T10:02:05.939+09:00",
+      "endTime": "2026-09-10T10:27:05.939+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "taskPath": "Tasks/RS-0024 subtask Trace境界とSpan実行を実装する.md",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-09-10T10:02:05.939+09:00",
+          "endTime": "2026-09-10T10:27:05.939+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1789003627223",
+      "startTime": "2026-09-10T10:27:07.223+09:00",
+      "endTime": "2026-09-10T10:32:07.223+09:00",
+      "plannedDuration": 5,
+      "type": "short-break",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-09-10T10:27:07.223+09:00",
+          "endTime": "2026-09-10T10:32:07.223+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1789003953431",
+      "startTime": "2026-09-10T10:32:33.431+09:00",
+      "endTime": "2026-09-10T10:57:33.431+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "taskPath": "Tasks/RS-0024 subtask Trace境界とSpan実行を実装する.md",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-09-10T10:32:33.431+09:00",
+          "endTime": "2026-09-10T10:57:33.431+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1789005454549",
+      "startTime": "2026-09-10T10:57:34.549+09:00",
+      "endTime": "2026-09-10T11:02:34.549+09:00",
+      "plannedDuration": 5,
+      "type": "short-break",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-09-10T10:57:34.549+09:00",
+          "endTime": "2026-09-10T11:02:34.549+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1789007592879",
+      "startTime": "2026-09-10T11:33:12.879+09:00",
+      "endTime": "2026-09-10T11:58:12.879+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "taskPath": "Tasks/RS-0024 subtask Trace境界とSpan実行を実装する.md",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-09-10T11:33:12.879+09:00",
+          "endTime": "2026-09-10T11:58:12.879+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1789009094022",
+      "startTime": "2026-09-10T11:58:14.022+09:00",
+      "endTime": "2026-09-10T12:03:14.022+09:00",
+      "plannedDuration": 5,
+      "type": "short-break",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-09-10T11:58:14.022+09:00",
+          "endTime": "2026-09-10T12:03:14.022+09:00"
         }
       ]
     }
