@@ -77,31 +77,61 @@ ExceptionHandler = SomeException -> Maybe ExceptionResponse
 - `RecordedException`: Eventだけ記録
 - `IgnoredException`: どちらも行わない
 
-RAGScopeが欲しい **「Errorにはするがexception Span Eventは記録しない」** を、この分類だけでは表現できなさそう。
+この分類だけでは、RAGScopeが欲しい **「Errorにはするがexception Span Eventは記録しない」** を直接は表現できない。
+一方、`IgnoredException`とcallback側の`setStatus` / `addAttribute`を組み合わせれば、SDKの自動exception Span Eventを抑制しつつ、RAGScopeが必要なStatus / `error.type`を設定できることを確認した。
+
+### `inSpan'`の挙動検証
+
+`hs-opentelemetry`へ依存する前提を固定するため、`OpenTelemetryBehaviorSpec`で次を確認した。
+
+- Span実行中は作成したSpanがcurrentになる
+- child Span実行中はchildがcurrentになり、終了後はparentがcurrentへ戻る
+- exportされたchild Spanにはcurrentだったparentが記録される
+- actionが通常終了した場合、返り値はそのまま返り、Span Statusは`Unset`のままで`error.type`は付かない
+- `Either`の`Left`を通常の返り値として返しても、`inSpan'`自身は失敗として解釈せず、Span Statusは`Unset`のままで`error.type`は付かない
+- 既定の例外処理では、未処理例外によりSpan Statusが`Error`になり、exception Span Eventが1件記録され、元の例外が再throwされる
+- `ignoreExceptionType`で対象例外を`IgnoredException`にすると、SDKはその例外についてStatus変更やexception Span Event追加を行わない
+- callback側で先に設定したStatus / `error.type`は、その後`IgnoredException`として処理されても保持される
+- `IgnoredException`の場合でも、`inSpan'`はSpanを終了し、元のContextを復元したうえで元の例外を再throwする
+
+### Trace Adapterの現時点の実装方針
+
+Trace Adapterは`inSpan'`をSpan実行の基礎として使用する方向とする。
+
+```text
+inSpan'
+  ↓
+RAGScope側のcallbackでactionを実行
+  ↓
+通常の返り値
+  ├─ 成功: Status Unset / error.typeなし
+  └─ 具体的なerror typeによる失敗:
+       Adapter側でStatus Error / error.typeを設定
+
+未処理の対象例外
+  ↓
+callback側でStatus Error / error.typeを設定
+  ↓
+同じ例外を再throw
+  ↓
+TracerOptionsのignoreExceptionTypeでSDKの自動exception記録を抑制
+  ↓
+inSpan'がSpan終了 / Context復元
+  ↓
+同じ例外を外へ再throw
+```
+
+`inSpan'`はactionの返り値を解釈しないため、具体的なerror typeを返す処理をSpanの失敗として扱う変換はRAGScope Adapter側で実装する必要がある。
+
+Spanの開始・終了、current Contextの切り替え・復元、例外時のSpan終了と再throwは`inSpan'`へ任せる。これにより、OpenTelemetry Context管理をRAGScope側で重複実装しない。
 
 ### manual Span lifecycle
 
-Haddockには次の案内がある。
+Haddockにはmanual lifecycle向けに`createSpan` / `endSpan`が案内されているが、現時点ではこれを採用する必要はない。
 
-> For manual span lifecycle management, use createSpan and endSpan.
+`inSpan'`について、RAGScopeがTrace Adapterで必要とするSpan lifecycle、Context復元、例外再throw、SDKの自動exception Span Event抑制に必要な挙動を確認できたため、`createSpan` / `endSpan`による自前のlifecycle管理との追加比較は行わない。
 
-`createSpan`で開始し、`endSpan`で終了する。`createSpan`へ渡すContextにSpanがあれば、そのSpanをparentとして扱える。
-
-現時点の実装候補イメージ:
-
-```text
-createSpan
-  ↓
-bodyを実行
-  ↓ 例外なら
-setStatus Error + error.typeを設定
-  ↓
-endSpan
-  ↓
-元の例外を再throw
-```
-
-Spanをリソースとしてbracket-styleに管理し、例外時の処理だけRAGScope要件に合わせて自前で制御する方向を検討中。
+今後の実装で`inSpan'`では満たせない具体的な要求または制約が判明した場合にのみ、manual lifecycleを代替案として再検討する。
 
 ## 必要な知識
 
