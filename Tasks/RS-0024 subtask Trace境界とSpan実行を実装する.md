@@ -7,7 +7,7 @@ blockedBy:
     reltype: FINISHTOSTART
 branch: RS-0024/trace-span
 dateCreated: 2026-09-08T15:43:45+09:00
-dateModified: 2026-09-11T11:05:00.417+09:00
+dateModified: 2026-09-11T12:50:51.690+09:00
 tags:
   - task
 priority: normal
@@ -77,6 +77,13 @@ timeEntries:
     endTime: 2026-09-11T01:30:01.202Z
   - startTime: 2026-09-11T02:05:00.417Z
     description: Work session
+    endTime: 2026-09-11T02:30:00.447Z
+  - startTime: 2026-09-11T02:49:03.485Z
+    description: Work session
+    endTime: 2026-09-11T03:14:03.479Z
+  - startTime: 2026-09-11T03:25:51.552Z
+    description: Work session
+    endTime: 2026-09-11T03:50:51.690Z
 ---
 
 ## Squash merge commit body
