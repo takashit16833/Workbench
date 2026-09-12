@@ -1,15 +1,18 @@
 ---
-status: todo
+status: doing
 projects:
   - "[[RS-0024 RAGScopeアプリケーションへOpenTelemetry Observability最小基盤を実装する]]"
 blockedBy:
-  - "[[RS-0024 subtask Trace境界とSpan実行を実装する]]"
-  - "[[RS-0024 subtask Logs境界とLogRecord・EventRecord記録を実装する]]"
+  - uid: "[[RS-0024 subtask Trace境界とSpan実行を実装する]]"
+    reltype: FINISHTOSTART
+  - uid: "[[RS-0024 subtask Logs境界とLogRecord・EventRecord記録を実装する]]"
+    reltype: FINISHTOSTART
 branch: RS-0024/exception-event-once
 dateCreated: 2026-09-08T15:43:45+09:00
-dateModified: 2026-09-08T15:43:45+09:00
+dateModified: 2026-09-12T10:45:26.590+09:00
 tags:
   - task
+priority: normal
 ---
 
 ## Squash merge commit body

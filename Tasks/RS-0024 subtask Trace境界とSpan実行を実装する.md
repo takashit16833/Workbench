@@ -1,5 +1,5 @@
 ---
-status: doing
+status: done
 projects:
   - "[[RS-0024 RAGScopeアプリケーションへOpenTelemetry Observability最小基盤を実装する]]"
 blockedBy:
@@ -7,7 +7,7 @@ blockedBy:
     reltype: FINISHTOSTART
 branch: RS-0024/trace-span
 dateCreated: 2026-09-08T15:43:45+09:00
-dateModified: 2026-09-11T17:06:04.406+09:00
+dateModified: 2026-09-12T10:45:31.888+09:00
 tags:
   - task
 priority: normal
@@ -90,6 +90,28 @@ timeEntries:
   - startTime: 2026-09-11T07:41:04.348Z
     description: Work session
     endTime: 2026-09-11T08:06:04.406Z
+  - startTime: 2026-09-11T20:49:44.658Z
+    description: Work session
+    endTime: 2026-09-11T21:14:44.746Z
+  - startTime: 2026-09-11T21:29:26.730Z
+    description: Work session
+    endTime: 2026-09-11T21:54:26.791Z
+  - startTime: 2026-09-11T21:59:57.287Z
+    description: Work session
+    endTime: 2026-09-11T22:24:58.158Z
+  - startTime: 2026-09-11T22:40:22.803Z
+    description: Work session
+    endTime: 2026-09-11T23:05:22.944Z
+  - startTime: 2026-09-11T23:25:14.226Z
+    description: Work session
+    endTime: 2026-09-11T23:50:14.298Z
+  - startTime: 2026-09-12T00:03:23.969Z
+    description: Work session
+    endTime: 2026-09-12T00:28:24.020Z
+  - startTime: 2026-09-12T00:36:04.924Z
+    description: Work session
+    endTime: 2026-09-12T01:01:05.148Z
+completedDate: 2026-09-12
 ---
 
 ## Squash merge commit body
