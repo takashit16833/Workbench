@@ -5929,6 +5929,34 @@
           "endTime": "2026-09-12T10:06:06.223+09:00"
         }
       ]
+    },
+    {
+      "id": "1789197327453",
+      "startTime": "2026-09-12T16:15:27.453+09:00",
+      "endTime": "2026-09-12T16:40:27.453+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-09-12T16:15:27.453+09:00",
+          "endTime": "2026-09-12T16:40:27.453+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1789198828524",
+      "startTime": "2026-09-12T16:40:28.524+09:00",
+      "endTime": "2026-09-12T16:55:28.524+09:00",
+      "plannedDuration": 15,
+      "type": "long-break",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-09-12T16:40:28.524+09:00",
+          "endTime": "2026-09-12T16:55:28.524+09:00"
+        }
+      ]
     }
   ],
   "lastNotifiedReleaseVersion": "4.12.5",
