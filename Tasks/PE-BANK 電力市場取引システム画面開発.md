@@ -1,14 +1,15 @@
 ---
-status: todo
+status: dropped
 projects:
   - "[[案件管理]]"
 agent: PE-BANK
 priority: medium
 dateCreated: 2026-09-14T14:48:00+09:00
-dateModified: 2026-09-14T14:48:00+09:00
+dateModified: 2026-09-14T15:29:19.659+09:00
 tags:
   - task
   - job
+completedDate: 2026-09-14
 ---
 
 # 電力市場取引システム画面開発

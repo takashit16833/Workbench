@@ -539,13 +539,12 @@
     "defaultReminderMinutes": null
   },
   "enableDebugLogging": false,
-  "lastSeenVersion": "4.12.3",
+  "lastSeenVersion": "4.13.0",
   "pomodoroState": {
     "isRunning": false,
-    "timeRemaining": 1500,
-    "nextSessionType": "work"
+    "timeRemaining": 1500
   },
-  "lastPomodoroDate": "2026-09-11",
+  "lastPomodoroDate": "2026-09-13",
   "pomodoroHistory": [
     {
       "id": "1786413262882",
@@ -5959,6 +5958,7 @@
       ]
     }
   ],
-  "lastNotifiedReleaseVersion": "4.12.5",
-  "lastSelectedTaskPath": "Tasks/RS-0024 subtask Trace境界とSpan実行を実装する.md"
+  "lastNotifiedReleaseVersion": "4.13.0",
+  "lastSelectedTaskPath": "Tasks/RS-0024 subtask Trace境界とSpan実行を実装する.md",
+  "completionMenuAsSubmenu": true
 }

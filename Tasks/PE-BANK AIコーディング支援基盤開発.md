@@ -1,14 +1,15 @@
 ---
-status: todo
+status: done
 projects:
   - "[[案件管理]]"
 agent: PE-BANK
 priority: high
 dateCreated: 2026-09-14T14:48:00+09:00
-dateModified: 2026-09-14T14:48:00+09:00
+dateModified: 2026-09-14T15:28:46.223+09:00
 tags:
   - task
   - job
+completedDate: 2026-09-14
 ---
 
 # AIコーディング支援基盤 開発エンジニア
