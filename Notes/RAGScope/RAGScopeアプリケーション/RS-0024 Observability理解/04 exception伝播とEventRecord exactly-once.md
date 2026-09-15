@@ -344,18 +344,29 @@ exception propagation自体を止める
 
 ## 現時点の検証状態
 
-commit `e40a998a...`では`SpanExit`方式のproduction変更が入っている。
+commit `e40a998a...`の`SpanExit`方式について、変更後のテストは成功済みである（ユーザー確認）。
 
-ただし、このノート更新時点では変更後の`make check-app`結果をまだ確認していない。
-
-したがって、
+したがって現在は、少なくとも既存テストが確認している範囲で、次が成立している。
 
 ```text
-設計・実装上の狙い
-  = exactly-onceを成立させる
+nested exception
+  → internal / use-case / root がError
+  → exception EventRecordは1件
+  → ownerはinternal-span
+  → exception Span Eventは0件
+  → 元のTestExceptionを維持
 
-実測結果
-  = これから既存テストで確認
+recovery
+  → internalのみError
+  → use-case / rootはUnset
+  → EventRecordは1件
 ```
 
-と分けて扱う。
+以前の、
+
+```text
+21 examples, 1 failure
+expected exactly one exported LogRecord, but got 3
+```
+
+は`SpanExit`導入前の観測結果であり、現在のテスト状態ではない。
