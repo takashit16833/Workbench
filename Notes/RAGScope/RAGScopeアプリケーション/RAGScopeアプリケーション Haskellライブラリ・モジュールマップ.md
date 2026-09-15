@@ -72,8 +72,6 @@ flowchart LR
 
 凡例: 公開library / module = 青、非公開library / module = 紫、別package / 外部package = 濃青。
 
-`Trace` はSpan lifecycleを担当し、exception固有の `ExceptionContext`、exactly-once claim、exception EventRecord schemaは `Exception` が担当する。`Trace` から `Logs` への依存は `mkOpenTelemetryTraceBoundary` が受け取る `EventRecordEmitter` の型に限定する。
-
 ## exception処理の依存
 
 ```mermaid
