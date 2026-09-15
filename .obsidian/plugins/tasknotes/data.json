@@ -542,9 +542,10 @@
   "lastSeenVersion": "4.13.0",
   "pomodoroState": {
     "isRunning": false,
-    "timeRemaining": 1500
+    "timeRemaining": 1500,
+    "nextSessionType": "work"
   },
-  "lastPomodoroDate": "2026-09-13",
+  "lastPomodoroDate": "2026-09-14",
   "pomodoroHistory": [
     {
       "id": "1786413262882",
@@ -5954,6 +5955,154 @@
         {
           "startTime": "2026-09-12T16:40:28.524+09:00",
           "endTime": "2026-09-12T16:55:28.524+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1789420953536",
+      "startTime": "2026-09-15T06:22:33.536+09:00",
+      "endTime": "2026-09-15T06:47:33.536+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-09-15T06:22:33.536+09:00",
+          "endTime": "2026-09-15T06:47:33.536+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1789422454631",
+      "startTime": "2026-09-15T06:47:34.630+09:00",
+      "endTime": "2026-09-15T06:52:34.630+09:00",
+      "plannedDuration": 5,
+      "type": "short-break",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-09-15T06:47:34.630+09:00",
+          "endTime": "2026-09-15T06:52:34.630+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1789423735308",
+      "startTime": "2026-09-15T07:08:55.308+09:00",
+      "endTime": "2026-09-15T07:33:55.308+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-09-15T07:08:55.308+09:00",
+          "endTime": "2026-09-15T07:33:55.308+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1789425236385",
+      "startTime": "2026-09-15T07:33:56.385+09:00",
+      "endTime": "2026-09-15T07:38:56.385+09:00",
+      "plannedDuration": 5,
+      "type": "short-break",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-09-15T07:33:56.385+09:00",
+          "endTime": "2026-09-15T07:38:56.385+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1789425738239",
+      "startTime": "2026-09-15T07:42:18.239+09:00",
+      "endTime": "2026-09-15T08:07:18.239+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-09-15T07:42:18.239+09:00",
+          "endTime": "2026-09-15T08:07:18.239+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1789427239357",
+      "startTime": "2026-09-15T08:07:19.357+09:00",
+      "endTime": "2026-09-15T08:12:19.357+09:00",
+      "plannedDuration": 5,
+      "type": "short-break",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-09-15T08:07:19.357+09:00",
+          "endTime": "2026-09-15T08:12:19.357+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1789428926406",
+      "startTime": "2026-09-15T08:35:26.406+09:00",
+      "endTime": "2026-09-15T09:11:47.445+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-09-15T08:35:26.406+09:00",
+          "endTime": "2026-09-15T08:38:47.789+09:00"
+        },
+        {
+          "startTime": "2026-09-15T08:44:41.335+09:00",
+          "endTime": "2026-09-15T08:51:47.291+09:00"
+        },
+        {
+          "startTime": "2026-09-15T08:57:14.784+09:00",
+          "endTime": "2026-09-15T09:11:47.445+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1789431109876",
+      "startTime": "2026-09-15T09:11:49.876+09:00",
+      "endTime": "2026-09-15T09:26:49.876+09:00",
+      "plannedDuration": 15,
+      "type": "long-break",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-09-15T09:11:49.876+09:00",
+          "endTime": "2026-09-15T09:26:49.876+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1789432449829",
+      "startTime": "2026-09-15T09:34:09.829+09:00",
+      "endTime": "2026-09-15T09:59:09.829+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-09-15T09:34:09.829+09:00",
+          "endTime": "2026-09-15T09:59:09.829+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1789433950939",
+      "startTime": "2026-09-15T09:59:10.939+09:00",
+      "endTime": "2026-09-15T10:04:10.939+09:00",
+      "plannedDuration": 5,
+      "type": "short-break",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-09-15T09:59:10.939+09:00",
+          "endTime": "2026-09-15T10:04:10.939+09:00"
         }
       ]
     }
