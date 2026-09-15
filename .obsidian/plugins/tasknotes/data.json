@@ -541,21 +541,9 @@
   "enableDebugLogging": false,
   "lastSeenVersion": "4.13.0",
   "pomodoroState": {
-    "isRunning": true,
+    "isRunning": false,
     "timeRemaining": 1500,
-    "currentSession": {
-      "id": "1789434644233",
-      "taskPath": "Tasks/RS-0024 subtask 未処理例外のEventRecordをexactly-onceで記録する.md",
-      "startTime": "2026-09-15T10:10:44.233+09:00",
-      "plannedDuration": 25,
-      "type": "work",
-      "completed": false,
-      "activePeriods": [
-        {
-          "startTime": "2026-09-15T10:10:44.233+09:00"
-        }
-      ]
-    }
+    "nextSessionType": "work"
   },
   "lastPomodoroDate": "2026-09-14",
   "pomodoroHistory": [
@@ -6115,6 +6103,93 @@
         {
           "startTime": "2026-09-15T09:59:10.939+09:00",
           "endTime": "2026-09-15T10:04:10.939+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1789434644233",
+      "startTime": "2026-09-15T10:10:44.233+09:00",
+      "endTime": "2026-09-15T10:35:44.233+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "taskPath": "Tasks/RS-0024 subtask 未処理例外のEventRecordをexactly-onceで記録する.md",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-09-15T10:10:44.233+09:00",
+          "endTime": "2026-09-15T10:35:44.233+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1789436145344",
+      "startTime": "2026-09-15T10:35:45.344+09:00",
+      "endTime": "2026-09-15T10:40:45.344+09:00",
+      "plannedDuration": 5,
+      "type": "short-break",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-09-15T10:35:45.344+09:00",
+          "endTime": "2026-09-15T10:40:45.344+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1789437119933",
+      "startTime": "2026-09-15T10:51:59.933+09:00",
+      "endTime": "2026-09-15T11:16:59.933+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "taskPath": "Tasks/RS-0024 subtask 未処理例外のEventRecordをexactly-onceで記録する.md",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-09-15T10:51:59.933+09:00",
+          "endTime": "2026-09-15T11:16:59.933+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1789438621019",
+      "startTime": "2026-09-15T11:17:01.018+09:00",
+      "endTime": "2026-09-15T11:22:01.018+09:00",
+      "plannedDuration": 5,
+      "type": "short-break",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-09-15T11:17:01.018+09:00",
+          "endTime": "2026-09-15T11:22:01.018+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1789439879372",
+      "startTime": "2026-09-15T11:37:59.372+09:00",
+      "endTime": "2026-09-15T12:02:59.372+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "taskPath": "Tasks/RS-0024 subtask 未処理例外のEventRecordをexactly-onceで記録する.md",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-09-15T11:37:59.372+09:00",
+          "endTime": "2026-09-15T12:02:59.372+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1789441380479",
+      "startTime": "2026-09-15T12:03:00.479+09:00",
+      "endTime": "2026-09-15T12:18:00.479+09:00",
+      "plannedDuration": 15,
+      "type": "long-break",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-09-15T12:03:00.479+09:00",
+          "endTime": "2026-09-15T12:18:00.479+09:00"
         }
       ]
     }

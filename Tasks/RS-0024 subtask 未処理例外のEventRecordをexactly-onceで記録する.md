@@ -9,13 +9,20 @@ blockedBy:
     reltype: FINISHTOSTART
 branch: RS-0024/exception-event-once
 dateCreated: 2026-09-08T15:43:45+09:00
-dateModified: 2026-09-15T10:10:44.242+09:00
+dateModified: 2026-09-15T12:02:59.444+09:00
 tags:
   - task
 priority: normal
 timeEntries:
   - startTime: 2026-09-15T01:10:44.242Z
     description: Work session
+    endTime: 2026-09-15T01:35:44.311Z
+  - startTime: 2026-09-15T01:51:59.940Z
+    description: Work session
+    endTime: 2026-09-15T02:16:59.983Z
+  - startTime: 2026-09-15T02:37:59.385Z
+    description: Work session
+    endTime: 2026-09-15T03:02:59.444Z
 ---
 
 ## Squash merge commit body
