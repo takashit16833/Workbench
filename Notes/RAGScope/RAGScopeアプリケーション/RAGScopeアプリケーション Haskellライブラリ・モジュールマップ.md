@@ -2,8 +2,6 @@
 
 正本は `takashit16833/RAGScope` の `ragscope-app/ragscope.cabal` と実際のHaskellコードとする。このノートはそれらを追従する準正本として保守し、差異がある場合は正本を優先する。
 
-現在の確認基準は `RS-0024/exception-event-once`。`RAGScope.Telemetry.OpenTelemetry.Exception` は今回のリファクタで採用する構成として確定しており、正本コードへの反映対象である。
-
 ## Cabal component
 
 ```mermaid
