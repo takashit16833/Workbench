@@ -72,15 +72,13 @@ flowchart LR
 
 凡例: 公開library / module = 青、非公開library / module = 紫、別package / 外部package = 濃青。
 
-`RAGScope.Telemetry.OpenTelemetry.Exception` は `opentelemetry-adapter` 内部moduleとし、公開Adapter APIにはしない。`ragscope.cabal` では `other-modules` に置く。
-
 `Trace` はSpan lifecycleを担当し、exception固有の `ExceptionContext`、exactly-once claim、exception EventRecord schemaは `Exception` が担当する。`Trace` から `Logs` への依存は `mkOpenTelemetryTraceBoundary` が受け取る `EventRecordEmitter` の型に限定する。
 
 ## exception処理の依存
 
 ```mermaid
 flowchart LR
-  caller["composition root"]
+  caller["composition root / test setup"]
   emitter["EventRecordEmitter"]
   mkTrace["mkOpenTelemetryTraceBoundary"]
   mkHandler["mkSpanExceptionHandler"]
