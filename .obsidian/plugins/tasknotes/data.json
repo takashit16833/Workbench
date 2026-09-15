@@ -541,9 +541,21 @@
   "enableDebugLogging": false,
   "lastSeenVersion": "4.13.0",
   "pomodoroState": {
-    "isRunning": false,
+    "isRunning": true,
     "timeRemaining": 1500,
-    "nextSessionType": "work"
+    "currentSession": {
+      "id": "1789434644233",
+      "taskPath": "Tasks/RS-0024 subtask 未処理例外のEventRecordをexactly-onceで記録する.md",
+      "startTime": "2026-09-15T10:10:44.233+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "completed": false,
+      "activePeriods": [
+        {
+          "startTime": "2026-09-15T10:10:44.233+09:00"
+        }
+      ]
+    }
   },
   "lastPomodoroDate": "2026-09-14",
   "pomodoroHistory": [
@@ -6108,6 +6120,6 @@
     }
   ],
   "lastNotifiedReleaseVersion": "4.13.0",
-  "lastSelectedTaskPath": "Tasks/RS-0024 subtask Trace境界とSpan実行を実装する.md",
+  "lastSelectedTaskPath": "Tasks/RS-0024 subtask 未処理例外のEventRecordをexactly-onceで記録する.md",
   "completionMenuAsSubmenu": true
 }
