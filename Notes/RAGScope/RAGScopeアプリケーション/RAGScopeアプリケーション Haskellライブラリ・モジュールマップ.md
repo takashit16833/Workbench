@@ -9,9 +9,9 @@
 ```mermaid
 flowchart TB
   subgraph package["package: ragscope"]
-    mainlib["library ragscope\npublic facade"]
-    boundary["library telemetry-boundary\nprivate"]
-    adapter["library opentelemetry-adapter\nprivate"]
+    mainlib["library ragscope"]
+    boundary["library telemetry-boundary"]
+    adapter["library opentelemetry-adapter"]
     executable["executable ragscope"]
     tests["test-suite ragscope-test"]
   end
@@ -23,22 +23,21 @@ flowchart TB
   tests -->|build-depends| adapter
 
   boundary --> base["base / bytestring / containers / text / time"]
-  adapter --> otel["hs-opentelemetry-api\nhs-opentelemetry-sdk"]
+  adapter --> otel["hs-opentelemetry-api<br>hs-opentelemetry-sdk"]
   adapter --> support["containers / text / time / unordered-containers"]
-  tests --> testdeps["hspec\nhs-opentelemetry-exporter-in-memory"]
+  tests --> testdeps["hspec<br>hs-opentelemetry-exporter-in-memory"]
 
-  classDef boundaryStyle fill:#dbeafe,stroke:#2563eb,color:#111827
-  classDef adapterStyle fill:#dcfce7,stroke:#16a34a,color:#111827
-  classDef applicationStyle fill:#f3e8ff,stroke:#9333ea,color:#111827
-  classDef externalStyle fill:#ffedd5,stroke:#ea580c,color:#111827
-  classDef testStyle fill:#e5e7eb,stroke:#6b7280,color:#111827
+  classDef public fill:#052A59,stroke:#5EAFFF,color:#DDF0FF,stroke-width:2px
+  classDef private fill:#211536,stroke:#8A5EC0,color:#DDF0FF,stroke-width:2px
+  classDef external fill:#001947,stroke:#316CBD,color:#A6CAFF,stroke-width:2px
 
-  class boundary boundaryStyle
-  class adapter adapterStyle
-  class mainlib,executable applicationStyle
-  class base,otel,support,testdeps externalStyle
-  class tests testStyle
+  class mainlib public
+  class boundary,adapter private
+  class base,otel,support,testdeps external
+  style package fill:transparent,stroke:#153A75,color:#4C9EEB
 ```
+
+凡例: 公開library / module = 青、非公開library / module = 紫、別package / 外部package = 濃青。
 
 `library ragscope` は現在Facade用componentだけがあり、`exposed-modules` はまだ持たない。`executable ragscope` の `Main.hs` も現在は最小stubである。
 
@@ -47,16 +46,16 @@ flowchart TB
 ```mermaid
 flowchart LR
   subgraph boundary["telemetry-boundary"]
-    telemetry["RAGScope.Telemetry\nroot"]
-    traceBoundary["RAGScope.Telemetry.Trace\nTraceBoundary / SpanRunner\nSpanName / SpanOutcome"]
-    logsBoundary["RAGScope.Telemetry.Logs\nLogsBoundary\nLogRecord / EventRecord\nEventRecordEmitter"]
+    telemetry["RAGScope.Telemetry<br>root"]
+    traceBoundary["RAGScope.Telemetry.Trace<br>TraceBoundary / SpanRunner<br>SpanName / SpanOutcome"]
+    logsBoundary["RAGScope.Telemetry.Logs<br>LogsBoundary<br>LogRecord / EventRecord<br>EventRecordEmitter"]
   end
 
   subgraph adapter["opentelemetry-adapter"]
-    otelRoot["RAGScope.Telemetry.OpenTelemetry\nroot"]
-    otelTrace["RAGScope.Telemetry.OpenTelemetry.Trace\nSpan lifecycle\nSpanOutcome -> Status\nmask / rethrow"]
-    otelException["RAGScope.Telemetry.OpenTelemetry.Exception\nsynchronous exception policy\nExceptionContext / exactly-once claim\nSpan error + exception EventRecord"]
-    otelLogs["RAGScope.Telemetry.OpenTelemetry.Logs\nLogRecord / EventRecord -> OTel Logs\ncurrent Context correlation"]
+    otelRoot["RAGScope.Telemetry.OpenTelemetry<br>root"]
+    otelTrace["RAGScope.Telemetry.OpenTelemetry.Trace<br>Span lifecycle<br>SpanOutcome -> Status<br>mask / rethrow"]
+    otelException["RAGScope.Telemetry.OpenTelemetry.Exception<br>synchronous exception policy<br>ExceptionContext / exactly-once claim<br>Span error + exception EventRecord"]
+    otelLogs["RAGScope.Telemetry.OpenTelemetry.Logs<br>LogRecord / EventRecord -> OTel Logs<br>current Context correlation"]
   end
 
   otelTrace -->|TraceBoundary types| traceBoundary
@@ -69,14 +68,16 @@ flowchart LR
   otelException --> otelTraceSdk
   otelLogs --> otelLogsSdk["OpenTelemetry Logs API / SDK"]
 
-  classDef boundaryStyle fill:#dbeafe,stroke:#2563eb,color:#111827
-  classDef adapterStyle fill:#dcfce7,stroke:#16a34a,color:#111827
-  classDef externalStyle fill:#ffedd5,stroke:#ea580c,color:#111827
+  classDef public fill:#052A59,stroke:#5EAFFF,color:#DDF0FF,stroke-width:2px
+  classDef private fill:#211536,stroke:#8A5EC0,color:#DDF0FF,stroke-width:2px
+  classDef external fill:#001947,stroke:#316CBD,color:#A6CAFF,stroke-width:2px
 
-  class telemetry,traceBoundary,logsBoundary boundaryStyle
-  class otelRoot,otelTrace,otelException,otelLogs adapterStyle
-  class otelTraceSdk,otelLogsSdk externalStyle
+  class telemetry,traceBoundary,logsBoundary,otelRoot,otelTrace,otelLogs public
+  class otelException private
+  class otelTraceSdk,otelLogsSdk external
 ```
+
+凡例: 公開library / module = 青、非公開library / module = 紫、別package / 外部package = 濃青。
 
 `RAGScope.Telemetry.OpenTelemetry.Exception` は `opentelemetry-adapter` 内部moduleとし、公開Adapter APIにはしない。`ragscope.cabal` では `other-modules` に置く。
 
@@ -103,16 +104,6 @@ flowchart LR
   handler --> event
   event --> emitter
   emitter --> logs
-
-  classDef boundaryStyle fill:#dbeafe,stroke:#2563eb,color:#111827
-  classDef adapterStyle fill:#dcfce7,stroke:#16a34a,color:#111827
-  classDef applicationStyle fill:#f3e8ff,stroke:#9333ea,color:#111827
-  classDef externalStyle fill:#ffedd5,stroke:#ea580c,color:#111827
-
-  class emitter,event boundaryStyle
-  class mkTrace,mkHandler,handler,logs adapterStyle
-  class caller applicationStyle
-  class span externalStyle
 ```
 
 `EventRecordEmitter` は `mkOpenTelemetryTraceBoundary` で受け取り、`mkSpanExceptionHandler` へ一度渡してcaptureする。`runOpenTelemetrySpan`、exception捕捉、claim、EventRecord生成の各段へEmitterをparameter threadingしない。
@@ -143,12 +134,14 @@ flowchart TB
   exceptionSpec --> otTrace
   exceptionSpec --> otLogs
 
-  classDef adapterStyle fill:#dcfce7,stroke:#16a34a,color:#111827
-  classDef testStyle fill:#e5e7eb,stroke:#6b7280,color:#111827
+  classDef public fill:#052A59,stroke:#5EAFFF,color:#DDF0FF,stroke-width:2px
+  classDef private fill:#211536,stroke:#8A5EC0,color:#DDF0FF,stroke-width:2px
 
-  class main,behavior,traceSpec,logsSpec,exceptionSpec,support testStyle
-  class otTrace,otLogs adapterStyle
+  class main,behavior,traceSpec,logsSpec,exceptionSpec,support private
+  class otTrace,otLogs public
 ```
+
+凡例: 公開library / module = 青、非公開library / module = 紫。
 
 - `OpenTelemetryTraceSpec`: TraceBoundary単体のresult、Span Status、Context、同期/非同期exception、action exactly-once。
 - `OpenTelemetryLogsSpec`: LogRecord / EventRecord変換、timestamp、current Trace Contextとの相関。
