@@ -26,6 +26,18 @@ flowchart TB
   adapter --> otel["hs-opentelemetry-api\nhs-opentelemetry-sdk"]
   adapter --> support["containers / text / time / unordered-containers"]
   tests --> testdeps["hspec\nhs-opentelemetry-exporter-in-memory"]
+
+  classDef boundaryStyle fill:#dbeafe,stroke:#2563eb,color:#111827
+  classDef adapterStyle fill:#dcfce7,stroke:#16a34a,color:#111827
+  classDef applicationStyle fill:#f3e8ff,stroke:#9333ea,color:#111827
+  classDef externalStyle fill:#ffedd5,stroke:#ea580c,color:#111827
+  classDef testStyle fill:#e5e7eb,stroke:#6b7280,color:#111827
+
+  class boundary boundaryStyle
+  class adapter adapterStyle
+  class mainlib,executable applicationStyle
+  class base,otel,support,testdeps externalStyle
+  class tests testStyle
 ```
 
 `library ragscope` は現在Facade用componentだけがあり、`exposed-modules` はまだ持たない。`executable ragscope` の `Main.hs` も現在は最小stubである。
@@ -56,6 +68,14 @@ flowchart LR
   otelTrace --> otelTraceSdk["OpenTelemetry Trace API / SDK"]
   otelException --> otelTraceSdk
   otelLogs --> otelLogsSdk["OpenTelemetry Logs API / SDK"]
+
+  classDef boundaryStyle fill:#dbeafe,stroke:#2563eb,color:#111827
+  classDef adapterStyle fill:#dcfce7,stroke:#16a34a,color:#111827
+  classDef externalStyle fill:#ffedd5,stroke:#ea580c,color:#111827
+
+  class telemetry,traceBoundary,logsBoundary boundaryStyle
+  class otelRoot,otelTrace,otelException,otelLogs adapterStyle
+  class otelTraceSdk,otelLogsSdk externalStyle
 ```
 
 `RAGScope.Telemetry.OpenTelemetry.Exception` は `opentelemetry-adapter` 内部moduleとし、公開Adapter APIにはしない。`ragscope.cabal` では `other-modules` に置く。
@@ -83,6 +103,16 @@ flowchart LR
   handler --> event
   event --> emitter
   emitter --> logs
+
+  classDef boundaryStyle fill:#dbeafe,stroke:#2563eb,color:#111827
+  classDef adapterStyle fill:#dcfce7,stroke:#16a34a,color:#111827
+  classDef applicationStyle fill:#f3e8ff,stroke:#9333ea,color:#111827
+  classDef externalStyle fill:#ffedd5,stroke:#ea580c,color:#111827
+
+  class emitter,event boundaryStyle
+  class mkTrace,mkHandler,handler,logs adapterStyle
+  class caller applicationStyle
+  class span externalStyle
 ```
 
 `EventRecordEmitter` は `mkOpenTelemetryTraceBoundary` で受け取り、`mkSpanExceptionHandler` へ一度渡してcaptureする。`runOpenTelemetrySpan`、exception捕捉、claim、EventRecord生成の各段へEmitterをparameter threadingしない。
@@ -112,6 +142,12 @@ flowchart TB
   logsSpec --> otLogs["OpenTelemetry.Logs"]
   exceptionSpec --> otTrace
   exceptionSpec --> otLogs
+
+  classDef adapterStyle fill:#dcfce7,stroke:#16a34a,color:#111827
+  classDef testStyle fill:#e5e7eb,stroke:#6b7280,color:#111827
+
+  class main,behavior,traceSpec,logsSpec,exceptionSpec,support testStyle
+  class otTrace,otLogs adapterStyle
 ```
 
 - `OpenTelemetryTraceSpec`: TraceBoundary単体のresult、Span Status、Context、同期/非同期exception、action exactly-once。
