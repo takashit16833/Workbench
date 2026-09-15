@@ -30,25 +30,21 @@ flowchart TB
   style package fill:transparent,stroke:#153A75,color:#4C9EEB
 ```
 
-凡例: 公開library / module = 青、非公開library / module = 紫、別package / 外部package = 濃青。
-
-`library ragscope` は現在Facade用componentだけがあり、`exposed-modules` はまだ持たない。`executable ragscope` の `Main.hs` も現在は最小stubである。
-
 ## Production module
 
 ```mermaid
 flowchart LR
   subgraph boundary["telemetry-boundary"]
-    telemetry["RAGScope.Telemetry<br>root"]
-    traceBoundary["RAGScope.Telemetry.Trace<br>TraceBoundary / SpanRunner<br>SpanName / SpanOutcome"]
-    logsBoundary["RAGScope.Telemetry.Logs<br>LogsBoundary<br>LogRecord / EventRecord<br>EventRecordEmitter"]
+    telemetry["RAGScope.Telemetry"]
+    traceBoundary["RAGScope.Telemetry.Trace"]
+    logsBoundary["RAGScope.Telemetry.Logs"]
   end
 
   subgraph adapter["opentelemetry-adapter"]
-    otelRoot["RAGScope.Telemetry.OpenTelemetry<br>root"]
-    otelTrace["RAGScope.Telemetry.OpenTelemetry.Trace<br>Span lifecycle<br>SpanOutcome -> Status<br>mask / rethrow"]
-    otelException["RAGScope.Telemetry.OpenTelemetry.Exception<br>synchronous exception policy<br>ExceptionContext / exactly-once claim<br>Span error + exception EventRecord"]
-    otelLogs["RAGScope.Telemetry.OpenTelemetry.Logs<br>LogRecord / EventRecord -> OTel Logs<br>current Context correlation"]
+    otelRoot["RAGScope.Telemetry.OpenTelemetry"]
+    otelTrace["RAGScope.Telemetry.OpenTelemetry.Trace"]
+    otelException["RAGScope.Telemetry.OpenTelemetry.Exception"]
+    otelLogs["RAGScope.Telemetry.OpenTelemetry.Logs"]
   end
 
   otelTrace -->|TraceBoundary types| traceBoundary
@@ -69,8 +65,6 @@ flowchart LR
   class otelException private
   class otelTraceSdk,otelLogsSdk external
 ```
-
-凡例: 公開library / module = 青、非公開library / module = 紫、別package / 外部package = 濃青。
 
 ## exception処理の依存
 
