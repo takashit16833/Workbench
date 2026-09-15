@@ -8,7 +8,7 @@ created: 2026-09-15
 
 # Span実行フロー
 
-対象: `RS-0024/exception-event-once` / `9f6517a4dc9c2fbaa70479eea8cf7c1d3a7acc78`
+対象: `RS-0024/exception-event-once` / `e40a998a0352214e4989a0aec5ec6ea1d65d6e8b`
 
 ## `withSpan`を1回呼ぶ
 
@@ -41,27 +41,55 @@ flowchart LR
 
 ## 現在の`runOpenTelemetrySpan`
 
-現在は次の形である。
+現在は、同期exceptionだけを`inSpan''`のcallback内で一時的に値へ変換する。
 
 ```haskell
 runOpenTelemetrySpan tracer eventRecordEmitter (SpanName spanName) classify action =
-  inSpan''
-    tracer
-    spanName
-    defaultSpanArguments
-    $ \span ->
-      handleSynchronousException
-        eventRecordEmitter
-        span
-        $ do
-          result <- action
+  mask $ \restore -> do
+    exit <-
+      inSpan''
+        tracer
+        spanName
+        defaultSpanArguments
+        $ \span ->
+          handleSynchronousException
+            eventRecordEmitter
+            span
+            $ restore $ do
+              result <- action
 
-          applySpanOutcome span (classify result)
+              applySpanOutcome span (classify result)
 
-          pure result
+              pure result
+
+    either rethrowIO pure exit
 ```
 
-まずはexceptionを考えず、正常に値が返る経路だけ追う。
+ここで使うAdapter内部型は次の2つ。
+
+```haskell
+type CapturedException = ExceptionWithContext SomeException
+
+type SpanExit result = Either CapturedException result
+```
+
+`SpanExit`の`Left`はapplication-level failureではない。
+
+```text
+Left CapturedException
+  = Haskell exceptionをSDK内部だけ値として運ぶ
+
+Right result
+  = actionが普通に返したresult
+```
+
+元のresult自体が`Either failure value`でも構わない。その場合は、
+
+```text
+Right (Left failure)
+```
+
+となるので、exceptionの`Left CapturedException`とは混同しない。
 
 ## 正常に値が返る場合
 
@@ -72,356 +100,269 @@ resultが返る
   ↓
 classify result
   ↓
-SpanOutcome
-  ↓
 applySpanOutcome
   ↓
-元のresultを返す
+Right result
+  ↓
+inSpan''が正常returnとして処理
+  ↓
+Span終了 / Context復元
+  ↓
+either rethrowIO pure
+  ↓
+pure result
 ```
 
-シーケンスで見るとこうなる。
-
-```mermaid
-sequenceDiagram
-    participant App as RAGScope code
-    participant Boundary as TraceBoundary
-    participant Adapter as Trace Adapter
-    participant SDK as inSpan''
-    participant Action as action
-
-    App->>Boundary: withSpan name classify action
-    Boundary->>Adapter: runOpenTelemetrySpan
-    Adapter->>SDK: inSpan'' tracer name ... callback
-    SDK->>SDK: Span作成 / current化
-    SDK->>Adapter: callback span
-    Adapter->>Action: action
-    Action-->>Adapter: result
-    Adapter->>Adapter: classify result
-    Adapter->>Adapter: applySpanOutcome
-    Adapter-->>SDK: result
-    SDK->>SDK: Span終了 / Context復元
-    SDK-->>Adapter: result
-    Adapter-->>Boundary: result
-    Boundary-->>App: result
-```
-
-ここで大事なのは、Telemetryがapplication resultを別の値へ変換しないこと。
-
-## `SpanSucceeded`の場合
+`SpanSucceeded`なら何もしない。
 
 ```haskell
 applySpanOutcome _ SpanSucceeded =
   pure ()
 ```
 
-何もしない。
+application-level failureなら、classifierが`SpanFailed errorType`へ写し、SpanをErrorにする。
 
-OpenTelemetry Spanの初期Statusは`Unset`なので、そのままになる。
+```haskell
+applySpanOutcome span (SpanFailed errorType) = do
+  setStatus span $ Error ""
+  addAttribute span "error.type" errorType
+```
+
+ただし元のapplication resultはそのまま返る。
 
 ```text
-result = 42
-classify 42 = SpanSucceeded
-
-返り値 = 42
-Span Status = Unset
-error.type = なし
+action result = Left failure
+    ↓
+classify = SpanFailed "some_failure"
+    ↓
+Span = Error
+    ↓
+SpanExit = Right (Left failure)
+    ↓
+呼び出し元にも Left failure
 ```
-
-## application-level failureの場合
-
-たとえばactionの型が、
-
-```haskell
-IO (Either SomeFailure Value)
-```
-
-だったとする。
-
-そして結果が、
-
-```haskell
-Left failure
-```
-
-だった場合。
-
-これはHaskellのexceptionではない。
-
-普通の戻り値として`action`から返っている。
-
-classifierが、
-
-```haskell
-classify result =
-  case result of
-    Left _ -> SpanFailed "some_failure"
-    Right _ -> SpanSucceeded
-```
-
-なら、
-
-```haskell
-applySpanOutcome span (SpanFailed errorType)
-```
-
-へ進む。
-
-現在の実装は、
-
-```haskell
-setStatus span $ Error ""
-
-addAttribute
-  span
-  "error.type"
-  errorType
-```
-
-を行う。
-
-しかし元の`Left failure`はそのまま返す。
-
-```text
-action
-  ↓
-Left failure                    ← application result
-  ↓ classify
-SpanFailed "some_failure"       ← telemetry用の見方
-  ↓
-Span: Error + error.type
-  ↓
-Left failureをそのまま返す
-```
-
-つまり、
-
-```text
-application-level failure
-```
-
-と、
-
-```text
-Haskell exception
-```
-
-は別経路である。
 
 ## 同期exceptionの場合
 
-今度はactionが値を返さず、
+`action`が、
 
 ```haskell
 throwIO TestException
 ```
 
-した場合。
+した場合、`result <- action`は完了しない。
 
-このとき、
-
-```haskell
-result <- action
-```
-
-は完了しない。
-
-したがって、
+`handleSynchronousException`が`ExceptionWithContext SomeException`として捕捉する。
 
 ```haskell
-classify result
-applySpanOutcome ...
+handleSynchronousException ::
+  EventRecordEmitter ->
+  Span ->
+  IO result ->
+  IO (SpanExit result)
 ```
 
-にも到達しない。
-
-代わりに外側の、
-
-```haskell
-handleSynchronousException
-```
-
-がexceptionを捕捉する。
-
-```mermaid
-flowchart TB
-    A["action"] -->|値を返す| B["classify result"]
-    B --> C["applySpanOutcome"]
-    C --> D["resultを返す"]
-
-    A -->|同期exception| E["handleSynchronousException"]
-    E --> F["markSynchronousException"]
-    F --> G["Span Error + error.type"]
-    G --> H["必要ならEventRecord"]
-    H --> I["rethrowIO"]
-```
-
-### `handleSynchronousException`
-
-現在は、
+現在の本体は、
 
 ```haskell
 handleSynchronousException eventRecordEmitter span action =
-  action `catchNoPropagate` \exceptionWithContext@(ExceptionWithContext _ exception) ->
-    if isSynchronousException exception
-      then
-        markSynchronousException
-          eventRecordEmitter
-          span
-          exceptionWithContext
-      else
-        rethrowIO exceptionWithContext
+  (Right <$> action)
+    `catchNoPropagate` \exceptionWithContext@(ExceptionWithContext _ exception) ->
+      if isSynchronousException exception
+        then
+          Left
+            <$> markSynchronousException
+              eventRecordEmitter
+              span
+              exceptionWithContext
+        else
+          rethrowIO exceptionWithContext
 ```
 
-となっている。
+同期exceptionなら、
 
-`catchNoPropagate`で`ExceptionWithContext SomeException`として捕捉する。
-
-その中身が同期exceptionなら`markSynchronousException`へ渡す。
-
-非同期exceptionなら、このRAGScope独自の同期exception処理には入れず、そのまま`rethrowIO`する。
-
-## 同期 / 非同期をどう分けているか
-
-```haskell
-isSynchronousException :: SomeException -> Bool
-isSynchronousException exception =
-  case fromException exception :: Maybe SomeAsyncException of
-    Just _ ->
-      False
-    Nothing ->
-      True
+```text
+markSynchronousException
+    ↓
+CapturedExceptionを返す
+    ↓
+Left CapturedException
 ```
 
-`SomeAsyncException`として取り出せるものは非同期側、それ以外を同期側としている。
+となる。
 
-`UserInterrupt`も非同期側なので、`markSynchronousException`には入らない。
+ここでは再throwしない。
 
 ## `markSynchronousException`
 
-この関数が、exceptionをSpan上の失敗として表現する。
-
-まずexceptionから、
-
-```text
-exception message
-exception type
-```
-
-を作る。
-
-その後、
+この関数は同期exceptionをそのSpanの失敗として記録し、必要ならexception EventRecordをemitする。
 
 ```haskell
-setStatus
-  span
-  (Error exceptionMessage)
+markSynchronousException ::
+  EventRecordEmitter ->
+  Span ->
+  CapturedException ->
+  IO CapturedException
 ```
 
-と、
+処理は、
+
+```text
+exception messageを作る
+exception typeを作る
+Span Status = Error
+error.typeを付ける
+EventRecordのclaimを確認
+初回ならEventRecordをemit
+marker付きExceptionContextを返す
+```
+
+である。
+
+重要なのは、最後が`rethrowIO`ではなく`pure`になったこと。
+
+```text
+以前
+  mark → emit → rethrowIO
+
+現在
+  mark → emit → CapturedExceptionを値として返す
+```
+
+## なぜcallback内で再throwしないのか
+
+以前はcallbackからexceptionとして出たため、`inSpan''`自身がそのexceptionを`SomeException`としてcatchし、cleanup後に`throwIO`していた。
+
+その経路でGHC 9.12.4の`ExceptionContext`が失われ、outer Spanで同じexceptionが未記録に見えていた。
+
+現在は、
+
+```text
+RAGScope handler
+  ↓
+Left CapturedException
+  ↓
+inSpan''から見ると正常return
+  ↓
+SDKのSomeException catch / throwIO経路へ入らない
+  ↓
+Span終了
+  ↓
+Context復元
+  ↓
+inSpan''の外でrethrowIO
+```
+
+とする。
+
+## EventRecord emitとrethrowの場所
+
+ここが現在実装の中心である。
+
+```text
+EventRecord emit
+  = callback内
+  = 対象Spanがまだcurrent
+
+rethrowIO
+  = callback外
+  = SDKがSpan終了とContext復元を終えた後
+```
+
+EventRecordをcallback外でemitするとownerがparent Spanへずれる可能性がある。
+
+逆にrethrowをcallback内で行うと、以前のSDK exception pathへ戻ってしまう。
+
+そのため、2つを分けている。
+
+## `mask`と`restore`
+
+`runOpenTelemetrySpan`の外側に、
 
 ```haskell
-addAttribute
-  span
-  "error.type"
-  exceptionType
+mask $ \restore -> do
 ```
 
-を行う。
+がある。
 
-ここまでは、そのexceptionが通過した各RAGScope Spanで行う。
+ただしapplication action自体は、
 
-EventRecordだけは1件にしたいので、その後に`claimExceptionEvent`がある。
-
-## `inSpan''`が担当していること
-
-RAGScopeのcallbackのさらに外側にはhs-opentelemetryの`inSpan''`がいる。
-
-今回必要な範囲では、主に次を担当する。
-
-```text
-1. 親Contextを見る
-2. Spanを作る
-3. そのSpanをcurrentにする
-4. RAGScope callbackを実行する
-5. callbackの終了を処理する
-6. Spanをendする
-7. 元のContextへ戻す
-8. callbackの結果を返す / exceptionなら再throwする
+```haskell
+restore $ do
+  result <- action
+  ...
 ```
 
-正常returnなら、
+で元のmasking stateへ戻して実行する。
 
-```text
-callbackがresultを返す
-    ↓
-endSpan
-    ↓
-Context復元
-    ↓
-resultを返す
+つまり、actionを常にmask状態で実行するための`mask`ではない。
+
+同期exceptionを`Left`へ変換した後、SDKを抜けて外側の`rethrowIO`へ到達するまでの区間を守りつつ、action本体は通常どおり実行するための形である。
+
+## 非同期exception
+
+`SomeAsyncException`として取り出せるものは同期exception処理へ入れない。
+
+```haskell
+isSynchronousException exception =
+  case fromException exception :: Maybe SomeAsyncException of
+    Just _ -> False
+    Nothing -> True
 ```
 
-となる。
+非同期exceptionなら、
 
-exceptionなら、
-
-```text
-callbackからexception
-    ↓
-inSpan''内部でcatch
-    ↓
-SDK側exception handling
-    ↓
-endSpan
-    ↓
-Context復元
-    ↓
-exceptionを再throw
+```haskell
+rethrowIO exceptionWithContext
 ```
 
-となる。
+して従来どおりSDKのexception pathへ渡す。
 
-今回のexactly-once問題は、この「RAGScope handlerの外側に、SDK側のcatch / rethrowがもう1段ある」ことから起きている。
+`UserInterrupt`などの挙動まで`SpanExit`へ変えない。
 
-## nested Spanでは何が起きるか
+## nested Spanではどう進むか
 
 ```text
 root
 └─ use-case
    └─ internal
+      └─ TestException
 ```
 
-は、実際には`withSpan`が入れ子になっている。
-
-概念的には、
-
-```haskell
-withSpan root $
-  withSpan useCase $
-    withSpan internal $
-      action
-```
-
-となる。
-
-したがってexceptionが一番内側で発生すると、stackを内側から外側へ抜ける。
+一番内側で同期exceptionが出ると、現在は概ね次の順で進む。
 
 ```text
-internalのactionでexception
+internal actionでTestException
     ↓
-internalのhandler
+internal handlerがcatch
     ↓
-internalのinSpan''
+internal SpanをError
     ↓
-use-caseのhandler
+EventRecordをemit
     ↓
-use-caseのinSpan''
+marker付きCapturedExceptionをLeftで返す
     ↓
-rootのhandler
+internal inSpan''が正常returnとしてSpan終了 / Context復元
     ↓
-rootのinSpan''
+internal runOpenTelemetrySpan外側でrethrowIO
     ↓
-呼び出し元
+use-case handlerが同じExceptionContextをcatch
+    ↓
+use-case SpanをError
+    ↓
+markerありなのでEventRecordはemitしない
+    ↓
+同じ流れでrootへ
 ```
 
-この順番を頭に置いておくと、次のexactly-once問題がかなり追いやすくなる。
+この流れにより、
+
+```text
+3 Spanすべて Error
+EventRecordは最初の1件だけ
+元のexceptionは最終的に再throw
+```
+
+を同時に成立させることを狙っている。
+
+次は、このexactly-onceのmarkerがなぜ必要なのかと、以前の実装でなぜ壊れたのかを見る。

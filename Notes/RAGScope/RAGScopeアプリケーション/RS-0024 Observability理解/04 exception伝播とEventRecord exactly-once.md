@@ -8,11 +8,11 @@ created: 2026-09-15
 
 # exception伝播とEventRecord exactly-once
 
-対象: `RS-0024/exception-event-once` / `9f6517a4dc9c2fbaa70479eea8cf7c1d3a7acc78`
+対象: `RS-0024/exception-event-once` / `e40a998a0352214e4989a0aec5ec6ea1d65d6e8b`
 
 ## 今回やりたいこと
 
-次のようにnested Spanの一番内側で同期exceptionが出たとする。
+nested Spanの一番内側で同期exceptionが出たとする。
 
 ```text
 root-span
@@ -21,9 +21,7 @@ root-span
       └─ TestException
 ```
 
-このexceptionは3つのSpan境界をすべて外へ抜ける。
-
-そのため、3つのSpanはそれぞれ自分の処理がexceptionで終了したことを表す。
+このexceptionが3つのSpan境界をすべて外へ抜けるなら、3 Spanはそれぞれ自分の処理がexceptionで終了したことを表す。
 
 ```text
 internal-span  Error + error.type
@@ -31,20 +29,20 @@ use-case-span  Error + error.type
 root-span      Error + error.type
 ```
 
-一方、exceptionを表すLogsの`EventRecord`は1件だけにする。
+一方、同じexceptionを表すLogsの`EventRecord`は1件だけにする。
 
 ```text
 exception EventRecord = 1件
 owner = internal-span
 ```
 
-ここでいうownerは、EventRecordに付くTraceId / SpanIdがどのSpanのものか、という意味で考えると分かりやすい。
+ownerとは、そのEventRecordに関連付くTraceId / SpanIdがどのSpanのものか、という意味である。
 
 ## なぜinternal-spanがownerなのか
 
-exceptionが最初にSpan外へ出るのは`internal-span`だから。
+exceptionが最初にSpan外へ出るのは`internal-span`だからである。
 
-しかもEventRecordは、`internal-span`がcurrentな間にemitすれば、Logs SDKがcurrent Contextからinternal-spanのTraceId / SpanIdを取得する。
+EventRecordを`internal-span`がcurrentな間にemitすると、Logs SDKはcurrent Contextからinternal-spanのTraceId / SpanIdを使える。
 
 ```text
 internal-span current
@@ -56,11 +54,11 @@ EventRecord emit
 LogRecordにinternal-spanのTraceId / SpanId
 ```
 
-EventRecordを`inSpan''`の外まで持ち出してからemitすると、その時点ではparent Contextへ戻っているためownerが変わってしまう。
+EventRecordを`inSpan''`の外まで持ち出してからemitすると、すでにparent Contextへ戻っているためownerが変わる可能性がある。
 
-## 現在の重複防止方法
+## 重複防止に使うmarker
 
-現在は`ExceptionContext`へ独自annotationを付ける。
+同じexception propagationでEventRecordを何度も記録しないため、`ExceptionContext`へ独自annotationを付ける。
 
 ```haskell
 data ExceptionEventRecorded
@@ -70,19 +68,19 @@ data ExceptionEventRecorded
 instance ExceptionAnnotation ExceptionEventRecorded
 ```
 
-考え方は単純で、
+意味は、
 
 ```text
 annotationなし
-  = まだ誰もEventRecordを記録していない
+  = このexception propagationではまだEventRecord未記録
 
 annotationあり
-  = 内側のSpanですでに記録済み
+  = 内側のSpanですでにEventRecord記録済み
 ```
 
-とする。
+である。
 
-判定は、
+判定は純粋関数で行う。
 
 ```haskell
 claimExceptionEvent ::
@@ -90,301 +88,60 @@ claimExceptionEvent ::
   Maybe ExceptionContext
 ```
 
-で行う。
-
 ```text
-Just updatedContext
-  = 初回。markerを付けた新しいContext
+Just claimedContext
+  = 初回
+  = markerを追加したContext
 
 Nothing
   = すでにmarkerあり
 ```
 
-この判定自体はIOを使わない。
+## 以前なぜ3件になっていたのか
 
-## 本来期待していた伝播
-
-期待していたのは次の流れ。
-
-```mermaid
-flowchart TB
-    X["TestException発生"]
-    I["internal handler"]
-    IE["internal SpanをError"]
-    EV["EventRecord emit"]
-    M["ExceptionContextへmarker"]
-    U["use-case handler"]
-    UE["use-case SpanをError"]
-    R["root handler"]
-    RE["root SpanをError"]
-    OUT["元のTestExceptionを外へ"]
-
-    X --> I
-    I --> IE
-    IE --> EV
-    EV --> M
-    M --> U
-    U --> UE
-    UE --> R
-    R --> RE
-    RE --> OUT
-```
-
-use-caseとrootではmarkerが見えるためEventRecordを追加しない。
-
-```text
-internal
-  markerなし → emit → markerありで再throw
-
-use-case
-  markerあり → emitしない → そのまま再throw
-
-root
-  markerあり → emitしない → そのまま再throw
-```
-
-これならEventRecordは1件になる。
-
-## 実際には何が起きているか
-
-現在のコードでは`markSynchronousException`の最後で`rethrowIO`する。
-
-つまり、RAGScopeのhandlerからexceptionとして`inSpan''` callbackの外へ出る。
-
-しかし`inSpan''`の外側には、hs-opentelemetry自身のexception handlerがある。
-
-簡略化すると、SDK側は次のような流れになっている。
-
-```haskell
-restore (run $ f s)
-  `catch` \someEx@(SomeException inner) -> do
-    ...
-    endSpan s Nothing
-    writeIORef ctxRef entry
-    throwIO someEx
-```
-
-ここで重要なのは、RAGScopeが再throwしたものが、そのまま次のRAGScope handlerへ届くわけではないこと。
-
-間に、
-
-```text
-hs-opentelemetryがSomeExceptionとしてcatch
-    ↓
-Span終了
-    ↓
-Context復元
-    ↓
-throwIO someEx
-```
-
-が入る。
-
-## `SomeException`で何が失われるのか
-
-GHC 9.12.4の`Exception SomeException` instanceは、`toException`するときに付いていた`ExceptionContext`を落とす。
-
-概念的には、
-
-```text
-SomeException
-  + ExceptionContext(markerあり)
-
-      ↓ SDKのthrowIO someEx
-
-SomeException
-  + 新しい空のExceptionContext
-```
-
-となる。
-
-一方、`rethrowIO`は`ExceptionWithContext`として保持している既存Contextを使って再throwするため、RAGScope handler単独ならmarkerを維持できる。
-
-問題は、その後SDKがもう一度`SomeException`としてthrowし直していること。
-
-## 3件になる実際の流れ
-
-```mermaid
-sequenceDiagram
-    participant A as application
-    participant IH as internal RAGScope handler
-    participant IS as internal inSpan''
-    participant UH as use-case RAGScope handler
-    participant US as use-case inSpan''
-    participant RH as root RAGScope handler
-    participant RS as root inSpan''
-
-    A->>IH: TestException
-    IH->>IH: markerなし → EventRecord emit
-    IH->>IH: markerをContextへ追加
-    IH-->>IS: rethrowIO
-    IS->>IS: SomeExceptionとしてcatch
-    IS->>IS: endSpan / Context復元
-    IS-->>UH: throwIO someEx<br/>markerが失われる
-
-    UH->>UH: markerなしに見える → EventRecord emit
-    UH->>UH: marker追加
-    UH-->>US: rethrowIO
-    US->>US: SomeExceptionとしてcatch
-    US-->>RH: throwIO someEx<br/>再びmarker消失
-
-    RH->>RH: markerなしに見える → EventRecord emit
-    RH-->>RS: rethrowIO
-```
-
-結果、
-
-```text
-internal = 1件
-use-case = 1件
-root = 1件
-合計 = 3件
-```
-
-となる。
-
-現在の失敗テスト、
-
-```text
-expected exactly one exported LogRecord, but got 3
-```
-
-と一致する。
-
-## Span Eventが0件なのは別の仕組み
-
-hs-opentelemetryは通常、callbackからexceptionが出ると自動でexception Span Eventを記録する。
-
-RAGScopeでは独自にLogsの`EventRecord`を記録するため、同期exceptionについてSDK側の自動Span Eventを抑止している。
-
-Tracer作成時に、
-
-```haskell
-tracerExceptionHandlerOptions =
-  [ ignoreSynchronousException
-  , ignoreIntentionalInterruption
-  ]
-```
-
-を設定している。
-
-ここで注意すること。
-
-```text
-SDKのexception記録をignoreする
-```
-
-ことと、
-
-```text
-SDKがexceptionをcatch / rethrowしなくなる
-```
-
-ことは同じではない。
-
-ignoreしても`inSpan''`自身のcatch / cleanup / rethrow経路は残る。
-
-そのためignore設定だけではmarker消失問題は直らない。
-
-## recoveryケースはなぜ成功するのか
-
-次のケースを考える。
-
-```text
-root
-└─ use-case
-   └─ internal
-      └─ TestException
-         ↓
-      internal-span外へ出る
-         ↓
-   use-caseのapplication codeがcatchして復旧
-```
-
-ここではexceptionは`internal-span`の`inSpan''`を抜けたあと、use-caseの`withSpan`自体を抜ける前にapplication codeがcatchする。
-
-概念的には、
-
-```haskell
-withSpan useCase $ do
-  withSpan internal
-    (throwIO TestException)
-    `catch` \TestException ->
-      pure ()
-```
-
-となる。
-
-流れは、
+commit `9f6517a4...`までの実装では、`markSynchronousException`の最後で`rethrowIO`していた。
 
 ```text
 internal handler
-  ↓
-internal Span Error
-  ↓
-EventRecord 1件
-  ↓
-internal inSpan''が再throw
-  ↓
-application codeがcatch
-  ↓
-()
-  ↓
-use-case actionは普通に値を返す
-```
-
-となる。
-
-そのため、use-case側の`handleSynchronousException`までexceptionが届かない。
-
-```text
-internal = Error
-use-case = Unset
-root = Unset
-EventRecord = 1件
-```
-
-となる。
-
-このケースではmarkerがSDK再throwで消えていても、その後outer handlerがexceptionを見ること自体がないため重複が表面化しない。
-
-## 「各SpanをError」と「EventRecordは1件」は別の制御
-
-ここはかなり大事。
-
-```text
-Span Error設定
-  = exceptionがそのSpan境界を外へ抜けたか
-
+    ↓
 EventRecord emit
-  = 同じexception propagationですでに誰かが記録したか
+    ↓
+ExceptionContextへmarker
+    ↓
+rethrowIO
+    ↓
+inSpan'' callbackからexceptionとして出る
 ```
 
-3 SpanすべてErrorにしたいので、Error設定はclaimの外側で毎回行う。
+その外側でhs-opentelemetryの`inSpan''`が、exceptionを`SomeException`としてcatchし、Span終了とContext復元の後に`throwIO someEx`していた。
+
+GHC 9.12.4の`Exception SomeException`では、この再throw時に元の`ExceptionContext`が保持されない。
+
+そのためouter Spanから見ると、
 
 ```text
-internal  Error
-use-case Error
-root     Error
+marker付きexception
+    ↓ SDK catch / throwIO
+markerなしに見えるexception
 ```
 
-一方、EventRecordはclaimに成功した最初の1回だけ。
+となっていた。
+
+結果は、
 
 ```text
-internal  emit
-use-case emitしない
-root     emitしない
+internal  markerなし → emit
+use-case markerなしに見える → emit
+root     markerなしに見える → emit
+
+合計3件
 ```
 
-この2つを同じ条件にしてはいけない。
+だった。
 
-## 未採用の修正案は何を変えるのか
+## 現在の修正
 
-現在検討している案は、marker方式そのものを捨てる案ではない。
-
-壊れているのは、marker付き`ExceptionContext`を外側へ渡す途中の経路。
-
-そこで、hs-opentelemetry内部を通る短い区間だけexceptionを値へ変える。
+現在は、同期exceptionをSDK内部を通る短い区間だけ値へ変換する。
 
 ```haskell
 type CapturedException =
@@ -394,44 +151,211 @@ type SpanExit result =
   Either CapturedException result
 ```
 
-狙いは、
+流れは次のようになった。
 
-```text
-RAGScope handler
-  ↓
-marker付きexceptionをLeftとして返す
-  ↓
-inSpan''から見るとcallback正常return
-  ↓
-SDKはSomeException catch / throwIO経路へ入らない
-  ↓
-Span終了 / Context復元
-  ↓
-inSpan''の外でrethrowIO
+```mermaid
+sequenceDiagram
+    participant A as application action
+    participant H as RAGScope handler
+    participant S as inSpan''
+    participant O as runOpenTelemetrySpan外側
+
+    A-->>H: TestException
+    H->>H: SpanをError
+    H->>H: 初回ならEventRecord emit
+    H->>H: marker付きCapturedException
+    H-->>S: Left CapturedException
+    S->>S: callback正常returnとしてSpan終了
+    S->>S: Context復元
+    S-->>O: Left CapturedException
+    O-->>O: rethrowIO
 ```
 
-とすること。
+`inSpan''`から見るとcallbackはexceptionを投げていない。
 
-つまり、
+そのため、問題だったSDK内部の、
+
+```text
+SomeExceptionとしてcatch
+↓
+throwIO someEx
+```
+
+の経路へ入らない。
+
+## EventRecord emitとrethrowを分ける
+
+現在実装で特に重要なのはここである。
 
 ```text
 EventRecord emit
-  = Spanがcurrentなcallback内
+  = Span callback内
+  = owner Spanがcurrentな間
 
 rethrowIO
-  = SDKがSpanを終了したcallback外
+  = inSpan''の外
+  = SDKがSpan終了とContext復元を終えた後
 ```
 
-に分離する。
+両方をcallback内で行うと以前のSDK exception pathへ入る。
 
-これはまだ現在コードではない。
+両方をcallback外で行うとEventRecordのownerがずれる可能性がある。
 
-現在コードを理解するときは、まず
+そのため、
 
 ```text
-callback内でrethrowIOしている
-    ↓
-SDKのexception pathへ入っている
+記録は内側
+再throwは外側
 ```
 
-ところまで押さえる。
+に分けている。
+
+## nested Spanでの現在の期待経路
+
+```text
+internal actionでTestException
+    ↓
+internal handler
+    ↓
+internal Span Error
+    ↓
+markerなし → EventRecord emit → marker追加
+    ↓
+Left CapturedException
+    ↓
+internal inSpan''正常return / Context復元
+    ↓
+rethrowIO
+    ↓
+use-case handler
+    ↓
+use-case Span Error
+    ↓
+markerあり → EventRecordなし
+    ↓
+Left CapturedException
+    ↓
+use-case inSpan''正常return / Context復元
+    ↓
+rethrowIO
+    ↓
+root handler
+    ↓
+root Span Error
+    ↓
+markerあり → EventRecordなし
+    ↓
+最終的に元のTestExceptionを外へ再throw
+```
+
+これにより狙っている結果は、
+
+```text
+internal = Error
+use-case = Error
+root = Error
+EventRecord = 1件
+owner = internal
+元のTestExceptionを維持
+```
+
+である。
+
+## recoveryケース
+
+```text
+root
+└─ use-case
+   └─ internal
+      └─ TestException
+         ↓
+      internalを抜ける
+         ↓
+   use-case内のapplication codeがcatch
+```
+
+internal Spanでは、
+
+```text
+Span Error
+EventRecord 1件
+rethrowIO
+```
+
+まで行う。
+
+しかしそのexceptionをuse-case action内部のapplication codeがcatchして復旧すれば、use-caseの`handleSynchronousException`までは届かない。
+
+したがって期待は、
+
+```text
+internal = Error
+use-case = Unset
+root = Unset
+EventRecord = 1件
+```
+
+のままである。
+
+## Span ErrorとEventRecord exactly-onceは別条件
+
+```text
+Span Error設定
+  = exceptionがそのSpan境界を外へ抜けたか
+
+EventRecord emit
+  = 同じexception propagationですでに記録済みか
+```
+
+3 SpanすべてをErrorにする場合でも、EventRecordは1件だけにできる。
+
+```text
+internal  Error + emit
+use-case Error + emitしない
+root     Error + emitしない
+```
+
+この2つを同じclaim条件へまとめない。
+
+## Span Eventを0件にする仕組み
+
+RAGScopeでは同期exceptionをLogsの`EventRecord`で記録するため、SDK側の自動exception Span Eventを抑止している。
+
+```haskell
+tracerExceptionHandlerOptions =
+  [ ignoreSynchronousException
+  , ignoreIntentionalInterruption
+  ]
+```
+
+このignoreは、
+
+```text
+SDKの自動Span Eventを抑える
+```
+
+ためのもの。
+
+```text
+exception propagation自体を止める
+```
+
+設定ではない。
+
+## 現時点の検証状態
+
+commit `e40a998a...`では`SpanExit`方式のproduction変更が入っている。
+
+ただし、このノート更新時点では変更後の`make check-app`結果をまだ確認していない。
+
+したがって、
+
+```text
+設計・実装上の狙い
+  = exactly-onceを成立させる
+
+実測結果
+  = これから既存テストで確認
+```
+
+と分けて扱う。
