@@ -11,19 +11,14 @@ flowchart TB
     boundary["library telemetry-boundary"]
     adapter["library opentelemetry-adapter"]
     executable["executable ragscope"]
-    tests["test-suite ragscope-test"]
   end
 
   adapter -->|build-depends| boundary
   executable -->|build-depends| mainlib
-  tests -->|build-depends| mainlib
-  tests -->|build-depends| boundary
-  tests -->|build-depends| adapter
 
   boundary --> base["base / bytestring / containers / text / time"]
   adapter --> otel["hs-opentelemetry-api<br>hs-opentelemetry-sdk"]
   adapter --> support["containers / text / time / unordered-containers"]
-  tests --> testdeps["hspec<br>hs-opentelemetry-exporter-in-memory"]
 
   classDef public fill:#052A59,stroke:#5EAFFF,color:#DDF0FF,stroke-width:2px
   classDef private fill:#211536,stroke:#8A5EC0,color:#DDF0FF,stroke-width:2px
@@ -31,7 +26,7 @@ flowchart TB
 
   class mainlib public
   class boundary,adapter private
-  class base,otel,support,testdeps external
+  class base,otel,support external
   style package fill:transparent,stroke:#153A75,color:#4C9EEB
 ```
 
@@ -85,7 +80,7 @@ flowchart LR
 
 ```mermaid
 flowchart LR
-  caller["composition root / test setup"]
+  caller["composition root"]
   emitter["EventRecordEmitter"]
   mkTrace["mkOpenTelemetryTraceBoundary"]
   mkHandler["mkSpanExceptionHandler"]
@@ -105,42 +100,3 @@ flowchart LR
 ```
 
 `EventRecordEmitter` は `mkOpenTelemetryTraceBoundary` で受け取り、`mkSpanExceptionHandler` へ一度渡してcaptureする。`runOpenTelemetrySpan`、exception捕捉、claim、EventRecord生成の各段へEmitterをparameter threadingしない。
-
-## test-suite module
-
-```mermaid
-flowchart TB
-  main["test/Main.hs"]
-  behavior["OpenTelemetryBehaviorSpec"]
-  traceSpec["OpenTelemetryTraceSpec"]
-  logsSpec["OpenTelemetryLogsSpec"]
-  exceptionSpec["OpenTelemetryExceptionEventSpec"]
-  support["OpenTelemetryTestSupport"]
-
-  main --> behavior
-  main --> traceSpec
-  main --> logsSpec
-  main --> exceptionSpec
-
-  behavior --> support
-  traceSpec --> support
-  logsSpec --> support
-  exceptionSpec --> support
-
-  traceSpec --> otTrace["OpenTelemetry.Trace"]
-  logsSpec --> otLogs["OpenTelemetry.Logs"]
-  exceptionSpec --> otTrace
-  exceptionSpec --> otLogs
-
-  classDef public fill:#052A59,stroke:#5EAFFF,color:#DDF0FF,stroke-width:2px
-  classDef private fill:#211536,stroke:#8A5EC0,color:#DDF0FF,stroke-width:2px
-
-  class main,behavior,traceSpec,logsSpec,exceptionSpec,support private
-  class otTrace,otLogs public
-```
-
-凡例: 公開library / module = 青、非公開library / module = 紫。
-
-- `OpenTelemetryTraceSpec`: TraceBoundary単体のresult、Span Status、Context、同期/非同期exception、action exactly-once。
-- `OpenTelemetryLogsSpec`: LogRecord / EventRecord変換、timestamp、current Trace Contextとの相関。
-- `OpenTelemetryExceptionEventSpec`: Trace × Logsの統合。nested Spanで全SpanをErrorにしつつexception EventRecordを1件だけ記録し、first-escape Spanへ相関させる。
