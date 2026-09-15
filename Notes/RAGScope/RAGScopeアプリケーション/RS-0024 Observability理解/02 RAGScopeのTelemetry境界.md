@@ -8,9 +8,9 @@ created: 2026-09-15
 
 # RAGScopeのTelemetry境界
 
-対象: `RS-0024/exception-event-once` / `9f6517a4dc9c2fbaa70479eea8cf7c1d3a7acc78`
+対象: `RS-0024/exception-event-once` / `e40a998a0352214e4989a0aec5ec6ea1d65d6e8b`
 
-## RAGScopeはOpenTelemetryを直接使わない
+## RAGScopeの機能コードはOpenTelemetry SDKを直接使わない
 
 RAGScopeの機能コードから見ると、TraceとLogsは次の2つの境界として見える。
 
@@ -19,7 +19,7 @@ TraceBoundary
 LogsBoundary
 ```
 
-OpenTelemetry固有の
+OpenTelemetry固有の、
 
 ```text
 TracerProvider
@@ -30,7 +30,7 @@ Logger
 LogRecordArguments
 ```
 
-などはAdapter側に閉じ込める。
+などはAdapter側へ閉じ込める。
 
 ```mermaid
 flowchart LR
@@ -48,6 +48,8 @@ flowchart LR
     TA --> SDK
     LA --> SDK
 ```
+
+ただし、現在のOpenTelemetry Trace Adapterは未処理exceptionをLogsのEventRecordとして記録するため、SDK非依存のLogs境界型も利用している。このcross-signalな依存は後で分けて見る。
 
 ## TraceBoundary
 
@@ -68,25 +70,11 @@ type SpanRunner =
   IO result
 ```
 
-これを普通の日本語にすると、
+普通の日本語にすると、
 
-> Span名と、結果の分類方法と、実際のIO処理を受け取り、その処理をSpanの中で実行して、元の結果を返す関数
+> Span名と、結果をTelemetry上どう分類するかと、実際に実行したいIO処理を受け取り、その処理をSpanの中で実行して元の結果を返す関数
 
 である。
-
-### なぜ`forall result`なのか
-
-`TraceBoundary`は特定の戻り値専用ではない。
-
-```haskell
-IO Int
-IO Text
-IO (Either SomeFailure Value)
-```
-
-など、いろいろな処理を同じBoundaryで包める必要がある。
-
-そのため`SpanRunner`は戻り値型`result`に対して多相になっている。
 
 ### `SpanOutcome`はapplication resultではない
 
@@ -96,30 +84,22 @@ data SpanOutcome
   | SpanFailed Text
 ```
 
-これは機能処理そのものの戻り値ではない。
-
 たとえば機能処理が、
 
 ```haskell
 Left SomeFailure
 ```
 
-を返したとしても、その値を`SpanFailed`へ置き換えるわけではない。
+を返しても、その値を`SpanFailed`へ置き換えるわけではない。
 
-処理は元の
-
-```haskell
-Left SomeFailure
-```
-
-をそのまま返し、別に渡したclassifierが、
+元の`Left SomeFailure`はそのまま返し、classifierが、
 
 ```haskell
 Left _  -> SpanFailed "some_failure"
 Right _ -> SpanSucceeded
 ```
 
-のように「Telemetry上どう見せるか」だけ決める。
+のようにTelemetry上の見え方だけ決める。
 
 ```text
 application result
@@ -132,30 +112,11 @@ application result
              SpanFailed "..."
 ```
 
-この分離は、後でexceptionとapplication-level failureを区別するときに重要になる。
-
-## `withSpan`は薄い入口
-
-```haskell
-withSpan :: TraceBoundary -> SpanRunner
-withSpan (TraceBoundary run) = run
-```
-
-`withSpan`自身はOpenTelemetryを知らない。
-
-`TraceBoundary`の中に入っている実装関数を取り出して実行しているだけ。
-
-つまり、
-
-```haskell
-withSpan traceBoundary spanName classify action
-```
-
-を呼んだとき、実際にどんなSpanを作るかは`traceBoundary`をどう作ったかで決まる。
+この分離は、application-level failureとexceptionを区別するときに重要である。
 
 ## OpenTelemetry版TraceBoundaryを作る
 
-Trace Adapterの入口は、
+現在のTrace Adapterの入口は、
 
 ```haskell
 mkOpenTelemetryTraceBoundary ::
@@ -164,29 +125,19 @@ mkOpenTelemetryTraceBoundary ::
   TraceBoundary
 ```
 
-となっている。
+である。
 
 入力は2つ。
 
 ```text
 TracerProvider
-  = Spanを作るOpenTelemetry側の大元
+  = OpenTelemetry Trace側のProvider
 
 EventRecordEmitter
-  = exception EventRecordなどを記録する能力
+  = RAGScopeのEventRecordを記録する関数
 ```
 
-そして内部でTracerを1つ作る。
-
-```haskell
-tracer =
-  makeTracer
-    tracerProvider
-    "ragscope"
-    tracerOptions { ... }
-```
-
-そのTracerとEventRecordEmitterを使う`runOpenTelemetrySpan`を、RAGScope側の`TraceBoundary`へ包む。
+内部でTracerを作り、TracerとEventRecordEmitterを使う`runOpenTelemetrySpan`を`TraceBoundary`へ包む。
 
 ```text
 TracerProvider
@@ -202,47 +153,112 @@ mkTraceBoundary
 TraceBoundary
 ```
 
-これで機能コードは、ProviderやTracerを知らずに`withSpan`だけ使える。
+機能コードはProviderやTracerを知らずに`withSpan`だけを使う。
 
-## なぜTrace AdapterがEventRecordEmitterを受け取るのか
+## TraceからLogsへの依存はある
 
-今回の設計では、同期exceptionがSpan外へ伝播するとき、Trace Adapterが
+現在の`RAGScope.Telemetry.OpenTelemetry.Trace`は次をimportしている。
+
+```haskell
+import RAGScope.Telemetry.Logs (
+  EventName,
+  EventRecord (..),
+  EventRecordEmitter,
+  EventTimestamp (EventNow),
+  LogValue (LogText),
+  mkEventName,
+ )
+import RAGScope.Telemetry.Logs qualified as Logs
+```
+
+したがって、module-levelの静的依存としては、
 
 ```text
-SpanをErrorにする
+RAGScope.Telemetry.OpenTelemetry.Trace
+    ↓
+RAGScope.Telemetry.Logs
+```
+
+が存在する。
+
+ここは「TraceとLogsは完全に独立している」と読むと間違いになる。
+
+一方で、次の依存ではない。
+
+```text
+RAGScope.Telemetry.OpenTelemetry.Trace
+    ✗→ RAGScope.Telemetry.OpenTelemetry.Logs
+```
+
+Trace Adapterは`LoggerProvider`、`Logger`、OpenTelemetry Logs APIを知らない。
+
+依存しているのはSDK非依存の、
+
+```haskell
+type EventRecordEmitter = EventRecord -> IO ()
+```
+
+と`EventRecord`を組み立てるための型だけである。
+
+## なぜこの依存があるのか
+
+現在設計では、同期exceptionが処理されないままSpan外へ伝播するとき、
+
+```text
+そのSpanをErrorにする
 error.typeを付ける
-exception EventRecordを記録する
+exception EventRecordを1件だけ記録する
 exceptionを再throwする
 ```
 
-ところまで担当している。
+必要がある。
 
-ただしTrace AdapterがLogs Adapterそのものへ依存するわけではない。
-
-受け取るのは、
-
-```haskell
-type EventRecordEmitter =
-  EventRecord -> IO ()
-```
-
-という関数だけ。
-
-そのため依存は、
+しかもEventRecordのownerを最初に抜けたSpanにするには、そのSpanがcurrentな間にemitしなければならない。
 
 ```text
-Trace Adapter
+internal-span current
     ↓
-EventRecordEmitterという能力
+exceptionを捕捉
+    ↓
+SpanをError
+    ↓
+EventRecord emit
+    ↓
+internal-spanのTraceId / SpanIdが付く
 ```
 
-で止まる。
+現在このexception boundaryを実際に観測しているのがTrace Adapterの`inSpan''` callback内なので、そこへ`EventRecordEmitter`を注入している。
 
-`LoggerProvider`や`Logger`をTrace Adapterへ渡してはいない。
+## この依存は問題か
+
+現時点では問題とは判断しない。
+
+理由は次の通り。
+
+```text
+1. TraceBoundaryとLogsBoundaryが相互依存しているわけではない
+2. Trace AdapterはOpenTelemetry Logs Adapterへ依存していない
+3. EventRecordEmitterはSDK非依存の小さい能力である
+4. Logs AdapterからTrace Adapterへの逆依存はない
+5. opentelemetry-adapter packageは元々telemetry-boundary packageへ依存しており、新しいpackage依存edgeは増えていない
+6. exceptionのSpan ErrorとLogs EventRecordを同じexception boundaryで扱う必要が現在設計にある
+```
+
+ただし、`Trace.hs`が純粋なTrace変換だけではなく、
+
+```text
+exception EventRecordの作成
+exactly-onceのclaim
+Trace + Logsのexception処理の協調
+```
+
+まで持つようになったため、moduleの責務が名前から想像するより広いのは事実である。
+
+今の規模では、この事実だけを理由に新しいmoduleや抽象化を増やす必要はない。今後、exception以外でも複数Signalの協調処理が増えるなど、具体的な責務分離の必要が出た場合に再評価できる。
 
 ## LogsBoundary
 
-現在のLogs側は、2種類のemit能力をまとめている。
+現在のLogs側は2種類のemit能力をまとめている。
 
 ```haskell
 data LogsBoundary
@@ -250,8 +266,6 @@ data LogsBoundary
       LogRecordEmitter
       EventRecordEmitter
 ```
-
-型は、
 
 ```haskell
 type LogRecordEmitter =
@@ -262,36 +276,6 @@ type EventRecordEmitter =
 ```
 
 `LogRecord`と`EventRecord`はRAGScope側の型で、hs-opentelemetryの型ではない。
-
-### LogRecordとEventRecord
-
-大きな違いは、EventRecordが安定したevent nameを持つこと。
-
-```haskell
-data LogRecord = LogRecord
-  { logTimestamp :: Maybe UTCTime
-  , logSeverity :: Severity
-  , logBody :: LogValue
-  , logAttributes :: LogAttributes
-  }
-```
-
-```haskell
-data EventRecord = EventRecord
-  { eventName :: EventName
-  , eventTimestamp :: EventTimestamp
-  , eventSeverity :: Severity
-  , eventAttributes :: LogAttributes
-  }
-```
-
-今回のexceptionは、
-
-```text
-EventName = "exception"
-```
-
-を持つ`EventRecord`として作られる。
 
 ## OpenTelemetry版LogsBoundaryを作る
 
@@ -305,18 +289,7 @@ mkOpenTelemetryLogsBoundary ::
 
 となっている。
 
-内部では、
-
-```haskell
-logger =
-  OpenTelemetry.makeLogger
-    loggerProvider
-    "ragscope"
-```
-
-でLoggerを作る。
-
-そのLoggerを閉じ込めた2つの関数、
+内部でLoggerを作り、
 
 ```text
 emitOpenTelemetryLogRecord
@@ -339,7 +312,7 @@ Logger
 
 ## テストでTraceとLogsを接続するところ
 
-exception統合テストでは、最終的に次の形になっている。
+exception統合テストでは、
 
 ```haskell
 let
@@ -352,84 +325,45 @@ let
       (emitEventRecord logsBoundary)
 ```
 
-ここがかなり重要。
-
-順番に読むと、
+の形で接続する。
 
 ```text
 LoggerProvider
     ↓
 LogsBoundary
-    ↓ emitEventRecordだけ取り出す
+    ↓ emitEventRecord
 EventRecordEmitter
+    ↓
+Trace Adapterへ注入
 
-TracerProvider + EventRecordEmitter
+TracerProvider
+    ↓
+Trace Adapter
     ↓
 TraceBoundary
 ```
 
-となる。
+Trace Adapterが作った`EventRecord`は、注入されたEmitterを通してLogs Adapterへ渡る。OpenTelemetry Logsへの具体変換はLogs Adapter側の責務のままである。
 
-図にすると、
+## package依存として見る
 
-```mermaid
-flowchart TB
-    TP["TracerProvider"]
-    LP["LoggerProvider"]
-
-    LP --> MLB["mkOpenTelemetryLogsBoundary"]
-    MLB --> LB["LogsBoundary"]
-    LB --> EER["emitEventRecord logsBoundary\n= EventRecordEmitter"]
-
-    TP --> MTB["mkOpenTelemetryTraceBoundary"]
-    EER --> MTB
-    MTB --> TB["TraceBoundary"]
-```
-
-Trace Adapterは「exceptionをEventRecordとして出したい」とだけ知っている。
-
-そのEventRecordが最終的にOpenTelemetry Logsへどう変換されるかは、LogsBoundaryの向こう側に隠れている。
-
-## production初期化との関係
-
-将来productionへ繋ぐ場合、大枠は次のようになる。
+`ragscope.cabal`では、
 
 ```text
-アプリ初期化
-  ↓
-TracerProviderを作る
-LoggerProviderを作る
-  ↓
-logsBoundary = mkOpenTelemetryLogsBoundary loggerProvider
-  ↓
-traceBoundary =
-  mkOpenTelemetryTraceBoundary
-    tracerProvider
-    (emitEventRecord logsBoundary)
-  ↓
-必要な機能へBoundaryを渡す
-```
-
-ただし現在のbranchでは、このproduction wiring自体はまだ実装されていない。
-
-現時点で実ファイルとして存在するのは、Boundary、Adapter、それらを組み合わせるテストfixtureまでである。
-
-## 依存の向き
-
-大きく見ると次の向きになる。
-
-```text
-RAGScope機能コード
-    ↓
 telemetry-boundary
-    ↑ 実装を注入
+  exposed-modules:
+    RAGScope.Telemetry.Logs
+    RAGScope.Telemetry.Trace
+
 opentelemetry-adapter
-    ↓
-hs-opentelemetry
+  build-depends:
+    ragscope:telemetry-boundary
+    hs-opentelemetry-api
+    hs-opentelemetry-sdk
 ```
 
-機能コードからOpenTelemetry Adapterを直接呼ぶ構造ではない。
+となっている。
 
-「RAGScopeが必要とする能力」をBoundaryで定義し、「OpenTelemetryでそれをどう実現するか」をAdapterが提供している。
+したがって現在のcross-signal依存は、`opentelemetry-adapter`から新しいlibrary/packageへ依存を増やしたものではない。同じ`telemetry-boundary` libraryにあるLogs型をTrace Adapter moduleが使っている、というmodule-levelの依存である。
 
-次は、この`TraceBoundary`を使って`withSpan`を1回呼んだとき、実際にどの順番で処理が進むかを見る。
+次は、このBoundaryを使って`withSpan`を1回呼んだときの現在の実行フローを見る。
