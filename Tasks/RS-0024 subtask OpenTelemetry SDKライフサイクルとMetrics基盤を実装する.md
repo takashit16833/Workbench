@@ -35,3 +35,10 @@ Trace / Logs / MetricsのOpenTelemetry SDKを安全に初期化・終了でき�
 - 部分初期化失敗時に取得済み資源がcleanupされる
 - flush / shutdownの一部失敗後も残りの終了処理が実行される
 - MeterProvider / Reader / Exporterの接続をテスト限定の測定で確認できる
+
+## 実装時に再確認する調査メモ
+
+- 以前確認した`hs-opentelemetry`の`initializeOpenTelemetry`では、複数Providerの取得途中で後段が例外になった場合の明示的なrollbackをhelper内部から確認できなかった。ただし、これは当時のpackage versionに対する調査結果であり、現在採用APIの仕様として扱わない。実装時に採用versionのソースを再確認する。
+- SDKの統合helperを使う案と、各Providerを段階的に取得して取得直後からcleanupを登録する案を、部分初期化失敗と終了失敗の扱いまで含めて比較する。
+- production向けの高水準入口では、必要性がなければ`SpanProcessor`、`LogRecordExporter`、ReaderなどのSDK型を呼び出し側へ要求しない。一方、Adapterの自動テストではproductionと同じAdapter実装へin-memoryのProcessor / Exporter / Readerを差し込める、狭い低水準構築入口を必要に応じて設ける。production用とtest用でAdapter本体を別実装にしない。
+- このSubtaskでMetrics SDKを利用可能にすることと、application向けの万能`emitMetric name value attributes`を作ることは別である。手動Metric操作は、具体的なCounter / Histogram等が必要になった時点で最小限の境界を設計する。
