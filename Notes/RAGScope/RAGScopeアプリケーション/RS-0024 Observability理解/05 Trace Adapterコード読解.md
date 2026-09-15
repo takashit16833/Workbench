@@ -10,7 +10,7 @@ created: 2026-09-15
 
 対象ファイル: `ragscope-app/opentelemetry-adapter/RAGScope/Telemetry/OpenTelemetry/Trace.hs`
 
-対象commit: `9f6517a4dc9c2fbaa70479eea8cf7c1d3a7acc78`
+対象commit: `e40a998a0352214e4989a0aec5ec6ea1d65d6e8b`
 
 ## まず呼び出し関係だけ見る
 
@@ -23,13 +23,15 @@ flowchart TB
     C["claimExceptionEvent"]
     E["emitExceptionEvent"]
     O["applySpanOutcome"]
+    R["rethrowIO"]
 
     MK --> RUN
     RUN --> H
-    H -->|値を返す| O
+    H -->|通常値| O
     H -->|同期exception| M
     M --> C
     C -->|初回| E
+    RUN -->|inSpan''の外| R
 ```
 
 このファイルは大きく、
@@ -37,14 +39,73 @@ flowchart TB
 ```text
 1. Tracerを準備する
 2. Spanの中でactionを実行する
-3. 正常な戻り値をSpanへ反映する
+3. 普通に返ったresultをSpanへ反映する
 4. 同期exceptionをSpanへ反映する
 5. exception EventRecordの重複を防ぐ
+6. 同期exceptionをSDK内だけ値として運び、Span終了後に再throwする
 ```
 
 を行っている。
 
-## 1. `ExceptionEventRecorded`
+## 1. Logs境界への依存
+
+このmoduleはTraceだけで閉じていない。
+
+```haskell
+import RAGScope.Telemetry.Logs (
+  EventName,
+  EventRecord (..),
+  EventRecordEmitter,
+  EventTimestamp (EventNow),
+  LogValue (LogText),
+  mkEventName,
+ )
+import RAGScope.Telemetry.Logs qualified as Logs
+```
+
+同期exceptionがSpan外へ出るとき、SpanをErrorにするだけでなくLogsのexception EventRecordも記録するためである。
+
+ただし`RAGScope.Telemetry.OpenTelemetry.Logs`はimportしていない。
+
+```text
+Trace Adapter
+    ↓
+RAGScope.Telemetry.LogsのSDK非依存型 / EventRecordEmitter
+```
+
+までの依存である。
+
+## 2. Adapter内部型
+
+```haskell
+type CapturedException = ExceptionWithContext SomeException
+```
+
+これは、元のexceptionと、そのexception propagationに付いている`ExceptionContext`をまとめて保持する型である。
+
+```haskell
+type SpanExit result = Either CapturedException result
+```
+
+これは`inSpan''` callbackから外へ出すためのAdapter内部表現。
+
+```text
+Left CapturedException
+  = 同期exception
+
+Right result
+  = actionが普通に返した値
+```
+
+application result自体が`Either failure value`でも、
+
+```text
+Right (Left failure)
+```
+
+になるため混同しない。
+
+## 3. `ExceptionEventRecorded`
 
 ```haskell
 data ExceptionEventRecorded
@@ -56,34 +117,16 @@ instance ExceptionAnnotation ExceptionEventRecorded
 
 これはexceptionの種類ではない。
 
-`TestException`や`IOException`の代わりになるものでもない。
-
-`ExceptionContext`へ追加するmarkerである。
-
-意味は、
+`ExceptionContext`へ付けるmarkerで、
 
 ```text
-このexception propagationでは、
+このexception propagationでは
 exception EventRecordをすでに記録した
 ```
 
-という状態。
+という状態を表す。
 
-exception値そのものではなくContextに付けるのは、同じexception型でも別々のthrowは別の伝播だから。
-
-```text
-TestException A の伝播
-  markerあり
-
-後で新しくthrowされた TestException B
-  markerなし
-```
-
-という状態を表せる。
-
-## 2. `mkOpenTelemetryTraceBoundary`
-
-型は、
+## 4. `mkOpenTelemetryTraceBoundary`
 
 ```haskell
 mkOpenTelemetryTraceBoundary ::
@@ -92,7 +135,7 @@ mkOpenTelemetryTraceBoundary ::
   TraceBoundary
 ```
 
-この関数は初期化側から、
+初期化側から、
 
 ```text
 TracerProvider
@@ -101,7 +144,7 @@ EventRecordをemitする関数
 
 を受け取る。
 
-中で、
+Tracerは、
 
 ```haskell
 tracer =
@@ -116,29 +159,13 @@ tracer =
       }
 ```
 
-としてTracerを作る。
+で作る。
 
-このTracerにはSDK側exception handlingの設定も入っている。
+`ignoreSynchronousException`は、RAGScope自身が同期exceptionをSpan StatusとLogs EventRecordで処理するため、SDKに同じexception Span Eventを追加させない設定。
 
-### `ignoreSynchronousException`
+`ignoreIntentionalInterruption`は`UserInterrupt`をSpan Errorとして自動記録させない設定。
 
-RAGScopeが同期exceptionを自分で、
-
-```text
-Status Error
-error.type
-Logs EventRecord
-```
-
-として処理するため、SDKに追加のexception Span Eventを作らせない。
-
-### `ignoreIntentionalInterruption`
-
-`UserInterrupt`をSpan Errorとして扱わないための設定。
-
-## 3. `runOpenTelemetrySpan`
-
-型は、
+## 5. `runOpenTelemetrySpan`
 
 ```haskell
 runOpenTelemetrySpan ::
@@ -147,194 +174,194 @@ runOpenTelemetrySpan ::
   SpanRunner
 ```
 
-`SpanRunner`を展開すると、実質的には、
-
-```haskell
-Tracer ->
-EventRecordEmitter ->
-SpanName ->
-(result -> SpanOutcome) ->
-IO result ->
-IO result
-```
-
-という関数になる。
-
-この関数が、RAGScopeの`withSpan`とOpenTelemetryの`inSpan''`を繋ぐ中心。
-
 現在の本体は、
 
 ```haskell
 runOpenTelemetrySpan tracer eventRecordEmitter (SpanName spanName) classify action =
-  inSpan''
-    tracer
-    spanName
-    defaultSpanArguments
-    $ \span ->
-      handleSynchronousException
-        eventRecordEmitter
-        span
-        $ do
-          result <- action
+  mask $ \restore -> do
+    exit <-
+      inSpan''
+        tracer
+        spanName
+        defaultSpanArguments
+        $ \span ->
+          handleSynchronousException
+            eventRecordEmitter
+            span
+            $ restore $ do
+              result <- action
 
-          applySpanOutcome span (classify result)
+              applySpanOutcome span (classify result)
 
-          pure result
+              pure result
+
+    either rethrowIO pure exit
 ```
-
-となっている。
 
 読む順番は、
 
 ```text
+maskで外側を組み立てる
+    ↓
 inSpan''でSpan scopeを作る
     ↓
-callbackとしてSpanを受け取る
+callbackでSpanを受け取る
     ↓
 handleSynchronousExceptionでactionを包む
     ↓
-actionを1回実行
+actionをrestoreして実行
     ↓
-値が返ればclassify
+値ならapplySpanOutcome
+exceptionならCapturedExceptionへ変換
     ↓
-applySpanOutcome
+SpanExitをinSpan''から返す
     ↓
-元のresultを返す
+Span終了 / Context復元
+    ↓
+either rethrowIO pure
 ```
 
 でよい。
 
-## 4. `applySpanOutcome`
+## 6. `mask`と`restore`
+
+```haskell
+mask $ \restore -> do
+```
+
+と書いてあるが、application actionそのものをmask状態で固定しているわけではない。
+
+```haskell
+restore $ do
+  result <- action
+  ...
+```
+
+としているので、actionは元のmasking stateで動く。
+
+この形で守りたいのは、同期exceptionを`Left`へ変換したあと、SDKを抜けて外側の`rethrowIO`へ到達するまでの処理である。
+
+## 7. `applySpanOutcome`
+
+成功なら何もしない。
 
 ```haskell
 applySpanOutcome _ SpanSucceeded =
   pure ()
 ```
 
-成功なら何もしない。
+application-level failureなら、
 
 ```haskell
 applySpanOutcome span (SpanFailed errorType) = do
   setStatus span $ Error ""
-
-  addAttribute
-    span
-    "error.type"
-    errorType
+  addAttribute span "error.type" errorType
 ```
 
-application-level failureなら、SpanをErrorにして`error.type`を付ける。
+とする。
 
-ここで扱うのは、exceptionではなく「actionが普通に返したresultの分類」。
+ここで扱うのはexceptionではなく、actionが普通に返したresultの分類。
 
-この区別を崩さない。
-
-## 5. `handleSynchronousException`
-
-型は、
+## 8. `handleSynchronousException`
 
 ```haskell
 handleSynchronousException ::
   EventRecordEmitter ->
   Span ->
   IO result ->
-  IO result
+  IO (SpanExit result)
 ```
 
-入力された`IO result`を実行し、exceptionが出なければそのまま`result`を返す。
-
-exceptionが出た場合だけhandlerへ入る。
+現在は、
 
 ```haskell
-action `catchNoPropagate` \exceptionWithContext@(ExceptionWithContext _ exception) ->
-  ...
+handleSynchronousException eventRecordEmitter span action =
+  (Right <$> action)
+    `catchNoPropagate` \exceptionWithContext@(ExceptionWithContext _ exception) ->
+      if isSynchronousException exception
+        then
+          Left
+            <$> markSynchronousException
+              eventRecordEmitter
+              span
+              exceptionWithContext
+        else
+          rethrowIO exceptionWithContext
 ```
 
-ここで受け取るのは、
+となっている。
 
-```haskell
+値が返れば、
+
+```text
+result
+↓
+Right result
+```
+
+同期exceptionなら、
+
+```text
 ExceptionWithContext SomeException
+↓
+markSynchronousException
+↓
+CapturedException
+↓
+Left CapturedException
 ```
 
-である。
+になる。
 
-### なぜ`catchNoPropagate`なのか
+非同期exceptionはこの`SpanExit`経路へ入れず、そのまま`rethrowIO`する。
 
-このhandlerはexceptionを処理済みにして終わるのではなく、最終的に再throwする。
-
-そのため、捕捉した元の`ExceptionContext`を明示的に保持したい。
-
-通常の`catch`のようにhandler実行そのものへ追加の伝播annotationを付けるのではなく、元Contextを扱うため`catchNoPropagate`を使っている。
-
-### 分岐
-
-```haskell
-if isSynchronousException exception
-  then markSynchronousException ...
-  else rethrowIO exceptionWithContext
-```
-
-同期exceptionだけをRAGScope独自処理へ入れる。
-
-非同期exceptionはそのまま再throw。
-
-## 6. `markSynchronousException`
-
-この関数が同期exception処理の中心。
-
-現在の型は、
+## 9. `markSynchronousException`
 
 ```haskell
 markSynchronousException ::
   EventRecordEmitter ->
   Span ->
-  ExceptionWithContext SomeException ->
-  IO result
+  CapturedException ->
+  IO CapturedException
 ```
 
-`IO result`になっているのは、この関数が最後に必ず再throwし、正常な値を返さないから。
+以前の`IO result`ではない。
 
-### exception message
+現在はexceptionをその場で再throwせず、更新した`CapturedException`を返す。
+
+まず、
 
 ```haskell
 exceptionMessage =
   Text.pack $
     displayException inner
-```
 
-Span Status DescriptionとEventRecordの`exception.message`に使う。
-
-### exception type
-
-```haskell
 exceptionType =
   Text.pack $
     show $
       typeOf inner
 ```
 
-Spanの`error.type`とEventRecordの`exception.type`に使う。
+を作る。
 
-### SpanをErrorにする
+その後、
 
 ```haskell
 setStatus
   span
   (Error exceptionMessage)
-```
 
-```haskell
 addAttribute
   span
   "error.type"
   exceptionType
 ```
 
-ここはclaim判定より前。
+で、そのSpan自身をErrorとして記録する。
 
-したがって、EventRecordをすでに内側で記録していても、outer Span自身はErrorにできる。
+ここはEventRecordのclaimより前なので、outer Spanでも毎回実行される。
 
-## 7. `claimExceptionEvent`
+## 10. `claimExceptionEvent`
 
 ```haskell
 claimExceptionEvent ::
@@ -342,15 +369,7 @@ claimExceptionEvent ::
   Maybe ExceptionContext
 ```
 
-IOではない純粋な関数。
-
-現在Contextに、
-
-```haskell
-ExceptionEventRecorded
-```
-
-があるかを見る。
+純粋関数である。
 
 ```haskell
 case getExceptionAnnotations @ExceptionEventRecorded exceptionContext of
@@ -366,29 +385,25 @@ case getExceptionAnnotations @ExceptionEventRecorded exceptionContext of
 つまり、
 
 ```text
-[]
-  = markerなし
-  = 自分が最初
-  = markerを付けたContextを返す
+markerなし
+  → Just marker付きContext
 
-_ 
-  = markerあり
-  = 内側ですでに記録済み
-  = Nothing
+markerあり
+  → Nothing
 ```
 
 となる。
 
-## 8. `markSynchronousException`のclaim後
+## 11. claim後
 
-すでにmarkerがある場合、
+すでにmarkerがある場合は、
 
 ```haskell
 Nothing ->
-  rethrowIO exceptionWithContext
+  pure exceptionWithContext
 ```
 
-EventRecordを追加せず、元Contextのまま再throwする。
+でそのまま返す。
 
 初回なら、
 
@@ -399,7 +414,7 @@ Just claimedContext -> do
     exceptionType
     exceptionMessage
 
-  rethrowIO $
+  pure $
     ExceptionWithContext
       claimedContext
       exception
@@ -407,17 +422,11 @@ Just claimedContext -> do
 
 となる。
 
-順番が重要。
+以前と違い、ここでは`rethrowIO`しない。
 
-```text
-EventRecord emit
-    ↓
-marker付きContextでrethrow
-```
+これによりmarker付き`ExceptionContext`を`Left`の値としてSDK外まで運べる。
 
-emitはまだこのSpanがcurrentな間に行われる。
-
-## 9. `emitExceptionEvent`
+## 12. `emitExceptionEvent`
 
 ```haskell
 emitExceptionEvent eventRecordEmitter exceptionType exceptionMessage =
@@ -434,13 +443,13 @@ emitExceptionEvent eventRecordEmitter exceptionType exceptionMessage =
       }
 ```
 
-ここではOpenTelemetryの`Logger`を直接使っていない。
+ここがTrace AdapterからLogs境界への直接依存が見える場所である。
 
-RAGScope側の`EventRecord`を作り、注入された`EventRecordEmitter`へ渡すだけ。
+OpenTelemetryの`Logger`を直接使っているのではなく、RAGScope側の`EventRecord`を作り、注入された`EventRecordEmitter`へ渡す。
 
-実際のOpenTelemetry LogRecordへの変換はLogs Adapter側。
+この関数は`inSpan''` callback内で呼ばれるため、owner Spanがまだcurrentである。
 
-## 10. `exceptionEventName`
+## 13. `exceptionEventName`
 
 ```haskell
 exceptionEventName :: EventName
@@ -452,11 +461,36 @@ exceptionEventName =
       error ...
 ```
 
-`EventName` constructorは外へ公開されていないため、`mkEventName`を通す。
+`EventName` constructorは隠されているため`mkEventName`を通す。
 
-`"exception"`は静的な非空文字列なので、ここで失敗するのはプログラム上の不整合と扱っている。
+`"exception"`は静的な非空文字列なので、失敗した場合はプログラム上の不整合としている。
 
-## 11. `ignoreSynchronousException`
+## 14. callback外の`rethrowIO`
+
+`inSpan''`が返したあと、
+
+```haskell
+either rethrowIO pure exit
+```
+
+を実行する。
+
+ここで初めて同期exceptionをexceptionとして戻す。
+
+```text
+callback内
+  mark / emit / Left化
+
+inSpan''
+  Span終了 / Context復元
+
+callback外
+  rethrowIO
+```
+
+この配置がexactly-once修正の中心である。
+
+## 15. `ignoreSynchronousException`
 
 ```haskell
 ignoreSynchronousException :: ExceptionHandler
@@ -464,9 +498,9 @@ ignoreSynchronousException =
   ignoreExceptionMatching @SomeException isSynchronousException
 ```
 
-これは「同期exceptionを無視して何もしない」という意味ではない。
+これは同期exceptionそのものを無視する処理ではない。
 
-RAGScope側ですでに処理するので、SDK側の自動exception記録対象から外す設定。
+SDKの自動exception Span Eventを抑止する設定である。
 
 RAGScope側の、
 
@@ -475,9 +509,9 @@ handleSynchronousException
 markSynchronousException
 ```
 
-は普通に動く。
+は通常どおり動く。
 
-## 12. `ignoreIntentionalInterruption`
+## 16. `ignoreIntentionalInterruption`
 
 ```haskell
 ignoreIntentionalInterruption :: ExceptionHandler
@@ -485,11 +519,11 @@ ignoreIntentionalInterruption =
   ignoreExceptionMatching @AsyncException (== UserInterrupt)
 ```
 
-`UserInterrupt`をOpenTelemetry SDK側でもerrorとして自動記録しないための設定。
+`UserInterrupt`をSDK側でもerrorとして自動記録しないための設定。
 
-RAGScope側の`handleSynchronousException`でも`SomeAsyncException`は同期exception扱いしないため、`UserInterrupt`はそのまま再throwされる。
+RAGScope側でも`SomeAsyncException`は同期exception扱いしない。
 
-## 13. `isSynchronousException`
+## 17. `isSynchronousException`
 
 ```haskell
 isSynchronousException :: SomeException -> Bool
@@ -501,8 +535,6 @@ isSynchronousException exception =
       True
 ```
 
-ここで「同期exception」をpositiveに列挙しているわけではない。
-
 ```text
 SomeAsyncExceptionとして取り出せる
   → 非同期
@@ -511,39 +543,43 @@ SomeAsyncExceptionとして取り出せる
   → 同期
 ```
 
-という分類。
+という分類である。
 
 ## このファイルを一言で読むなら
 
 ```text
 mkOpenTelemetryTraceBoundary
-  = ProviderからRAGScope用Tracerを準備してBoundaryを作る
+  = TracerとEventRecordEmitterを組み合わせてTraceBoundaryを作る
 
 runOpenTelemetrySpan
-  = 1 Spanの実行全体を組み立てる
+  = 1 Spanの実行全体とexception再throwの位置を組み立てる
 
 applySpanOutcome
   = 普通に返ったresultをSpanへ反映する
 
 handleSynchronousException
-  = exception経路を正常値経路から分ける
+  = 同期exceptionをSpanExitのLeftへ変える
 
 markSynchronousException
-  = Span Errorとexception EventRecordを処理する
+  = Span Errorとexception EventRecordを処理し、CapturedExceptionを返す
 
 claimExceptionEvent
-  = EventRecordの最初の記録者か純粋に判定する
+  = EventRecordの最初の記録者か判定する
 
 emitExceptionEvent
-  = RAGScope EventRecordを作ってLogs側へ渡す
+  = RAGScope EventRecordを作ってLogs側のEmitterへ渡す
 ```
 
-現在のexactly-once bugを読むときは、`claimExceptionEvent`だけを見るのではなく、
+現在のexactly-once実装を読むときは、
 
 ```text
-markSynchronousExceptionのrethrowIO
+markSynchronousException
     ↓
-inSpan''内部のcatch / throwIO
+Left CapturedException
+    ↓
+inSpan''正常return
+    ↓
+either rethrowIO pure
     ↓
 outer handleSynchronousException
 ```
