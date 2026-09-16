@@ -539,13 +539,12 @@
     "defaultReminderMinutes": null
   },
   "enableDebugLogging": false,
-  "lastSeenVersion": "4.13.0",
+  "lastSeenVersion": "4.13.1",
   "pomodoroState": {
     "isRunning": false,
-    "timeRemaining": 1500,
-    "nextSessionType": "work"
+    "timeRemaining": 1500
   },
-  "lastPomodoroDate": "2026-09-14",
+  "lastPomodoroDate": "2026-09-15",
   "pomodoroHistory": [
     {
       "id": "1786413262882",
@@ -6194,7 +6193,7 @@
       ]
     }
   ],
-  "lastNotifiedReleaseVersion": "4.13.0",
+  "lastNotifiedReleaseVersion": "4.13.1",
   "lastSelectedTaskPath": "Tasks/RS-0024 subtask 未処理例外のEventRecordをexactly-onceで記録する.md",
   "completionMenuAsSubmenu": true
 }
