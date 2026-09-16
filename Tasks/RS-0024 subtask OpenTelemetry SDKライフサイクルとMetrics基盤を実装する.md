@@ -1,12 +1,12 @@
 ---
-status: todo
+status: doing
 projects:
   - "[[RS-0024 RAGScopeアプリケーションへOpenTelemetry Observability最小基盤を実装する]]"
 blockedBy:
   - "[[RS-0024 subtask OpenTelemetry依存とCabal境界を実装する]]"
 branch: RS-0024/sdk-lifecycle-metrics
 dateCreated: 2026-09-08T15:43:45+09:00
-dateModified: 2026-09-08T15:43:45+09:00
+dateModified: 2026-09-16T20:12:25.689+09:00
 tags:
   - task
 ---

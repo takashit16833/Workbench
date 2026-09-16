@@ -1,15 +1,16 @@
 ---
-status: doing
+status: done
 projects:
   - "[[RS-0024 RAGScopeアプリケーションへOpenTelemetry Observability最小基盤を実装する]]"
 blockedBy:
   - "[[RS-0024 subtask 未処理例外のEventRecordをexactly-onceで記録する]]"
 branch: RS-0024/feature-telemetry-api
 dateCreated: 2026-09-16T09:47:00+09:00
-dateModified: 2026-09-16T10:53:15.008+09:00
+dateModified: 2026-09-16T20:12:11.365+09:00
 tags:
   - task
 priority: normal
+completedDate: 2026-09-16
 ---
 
 ## 設計検討の引き継ぎ（2026-09-16）
