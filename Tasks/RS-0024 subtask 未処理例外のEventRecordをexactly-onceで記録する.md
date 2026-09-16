@@ -1,5 +1,5 @@
 ---
-status: doing
+status: done
 projects:
   - "[[RS-0024 RAGScopeアプリケーションへOpenTelemetry Observability最小基盤を実装する]]"
 blockedBy:
@@ -9,7 +9,7 @@ blockedBy:
     reltype: FINISHTOSTART
 branch: RS-0024/exception-event-once
 dateCreated: 2026-09-08T15:43:45+09:00
-dateModified: 2026-09-15T12:02:59.444+09:00
+dateModified: 2026-09-16T09:54:33.672+09:00
 tags:
   - task
 priority: normal
@@ -23,6 +23,7 @@ timeEntries:
   - startTime: 2026-09-15T02:37:59.385Z
     description: Work session
     endTime: 2026-09-15T03:02:59.444Z
+completedDate: 2026-09-16
 ---
 
 ## Squash merge commit body
