@@ -6,11 +6,19 @@ blockedBy:
   - "[[RS-0024 subtask 未処理例外のEventRecordをexactly-onceで記録する]]"
 branch: RS-0024/feature-telemetry-api
 dateCreated: 2026-09-16T09:47:00+09:00
-dateModified: 2026-09-16T10:04:49.758+09:00
+dateModified: 2026-09-16T10:53:15.008+09:00
 tags:
   - task
 priority: normal
 ---
+
+## 設計検討の引き継ぎ（2026-09-16）
+
+[RS-0024後続機能向けTelemetry利用API設計案](../Notes/RAGScope/RAGScopeアプリケーション/RS-0024後続機能向けTelemetry利用API設計案.md)に、確認した正本commit、現在のAPI・依存、推奨設計、比較案、検証方針、写経モードでの実装順序を記録した。
+
+RAGScopeの確認対象は `RS-0024/feature-telemetry-api` の `dfe5dbb61e0948202c80c995efd0ca507318d430`。推奨は、機能ADTからの純粋な変換、既存の記録・Span実行境界、コンパイル時に空文字を拒否する固定EventName定義APIである。既存構成の維持を優先条件とせず、機能専用portと別library、GADTによる処理・結果型の対応、型付きイベントschemaの案も比較した。
+
+このNoteは提案であり、正式な採用・実装完了を意味しない。RAGScope側は未変更で、提案コードのコンパイルとテストも未実施である。次は設計案を確認し、採用する生成APIの最小型検査をGHC 9.12.4で行ってから、差分を提示する。採用内容は適切な正本へ反映する。
 
 ## Squash merge commit body
 
