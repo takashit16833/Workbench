@@ -9,10 +9,11 @@ blockedBy:
   - "[[RS-0024 subtask Trace Context伝播境界を実装する]]"
   - "[[RS-0024 subtask OpenTelemetry SDKライフサイクルとMetrics基盤を実装する]]"
   - "[[RS-0024 subtask 未処理例外のEventRecordをexactly-onceで記録する]]"
+  - "[[RS-0024 subtask 後続機能向けTelemetry利用APIを設計・実装する]]"
   - "[[RS-0024 subtask Telemetry失敗を機能処理から隔離する]]"
 branch: RS-0024/app-integration-verification
 dateCreated: 2026-09-08T15:43:45+09:00
-dateModified: 2026-09-08T15:43:45+09:00
+dateModified: 2026-09-16T09:47:00+09:00
 tags:
   - task
 ---
@@ -20,7 +21,7 @@ tags:
 ## Squash merge commit body
 
 - Telemetry基盤をRAGScopeアプリケーションの起動・終了処理へ組み込んだ
-- Trace / Logs / Metrics、Context、例外記録、Telemetry失敗隔離を統合状態で検証した
+- 後続機能向けTelemetry利用API、Trace / Logs / Metrics、Context、例外記録、Telemetry失敗隔離を統合状態で検証した
 - RS-0024の完了条件とプロジェクト品質検査を全件確認し、Ticket結果記録に必要な情報を整理した
 
 ## 目的
@@ -30,7 +31,7 @@ tags:
 ## 作業範囲
 
 - Composition RootでOpenTelemetry SDKを初期化し、構築したTelemetry操作をRAGScopeアプリケーションへ渡し、終了時にflush / shutdownする構成を組み込む
-- Trace / Logs / Metrics、Context、例外記録、Telemetry失敗隔離を組み合わせた状態でRS-0024の完了条件を全件照合する
+- 後続機能向けTelemetry利用API、Trace / Logs / Metrics、Context、例外記録、Telemetry失敗隔離を組み合わせた状態でRS-0024の完了条件を全件照合する
 - プロジェクトで定めたRAGScopeアプリケーション側のテスト・品質検査を実行する
 - RS-0024 Ticketの結果欄へ記録するため、採用package / version、SDK構成、テスト結果、後続機能への利用方法、既知の制約を整理する
 
