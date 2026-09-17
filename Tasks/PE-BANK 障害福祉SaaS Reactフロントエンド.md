@@ -1,14 +1,15 @@
 ---
-status: doing
+status: dropped
 projects:
   - "[[案件管理]]"
 agent: PE-BANK
 priority: medium
 dateCreated: 2026-09-09T10:37:00+09:00
-dateModified: 2026-09-09T10:52:00+09:00
+dateModified: 2026-09-17T06:31:41.486+09:00
 tags:
   - task
   - job
+completedDate: 2026-09-17
 ---
 
 # 障害福祉向けSaaSのフロントエンド開発（React）

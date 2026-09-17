@@ -542,9 +542,10 @@
   "lastSeenVersion": "4.13.1",
   "pomodoroState": {
     "isRunning": false,
-    "timeRemaining": 1500
+    "timeRemaining": 1500,
+    "nextSessionType": "work"
   },
-  "lastPomodoroDate": "2026-09-15",
+  "lastPomodoroDate": "2026-09-16",
   "pomodoroHistory": [
     {
       "id": "1786413262882",
@@ -6191,9 +6192,104 @@
           "endTime": "2026-09-15T12:18:00.479+09:00"
         }
       ]
+    },
+    {
+      "id": "1789594320719",
+      "startTime": "2026-09-17T06:32:00.718+09:00",
+      "endTime": "2026-09-17T07:01:46.608+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "taskPath": "Tasks/RS-0024 subtask OpenTelemetry SDKライフサイクルとMetrics基盤を実装する.md",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-09-17T06:32:00.718+09:00",
+          "endTime": "2026-09-17T06:43:44.754+09:00"
+        },
+        {
+          "startTime": "2026-09-17T06:48:30.644+09:00",
+          "endTime": "2026-09-17T07:01:46.608+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1789596107764",
+      "startTime": "2026-09-17T07:01:47.764+09:00",
+      "endTime": "2026-09-17T07:06:47.764+09:00",
+      "plannedDuration": 5,
+      "type": "short-break",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-09-17T07:01:47.764+09:00",
+          "endTime": "2026-09-17T07:06:47.764+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1789596554983",
+      "startTime": "2026-09-17T07:09:14.983+09:00",
+      "endTime": "2026-09-17T07:34:14.983+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "taskPath": "Tasks/RS-0024 subtask OpenTelemetry SDKライフサイクルとMetrics基盤を実装する.md",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-09-17T07:09:14.983+09:00",
+          "endTime": "2026-09-17T07:34:14.983+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1789598056087",
+      "startTime": "2026-09-17T07:34:16.087+09:00",
+      "endTime": "2026-09-17T07:39:16.087+09:00",
+      "plannedDuration": 5,
+      "type": "short-break",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-09-17T07:34:16.087+09:00",
+          "endTime": "2026-09-17T07:39:16.087+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1789598437332",
+      "startTime": "2026-09-17T07:40:37.332+09:00",
+      "endTime": "2026-09-17T08:07:40.702+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "taskPath": "Tasks/RS-0024 subtask OpenTelemetry SDKライフサイクルとMetrics基盤を実装する.md",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-09-17T07:40:37.332+09:00",
+          "endTime": "2026-09-17T07:55:43.025+09:00"
+        },
+        {
+          "startTime": "2026-09-17T07:57:46.395+09:00",
+          "endTime": "2026-09-17T08:07:40.702+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1789600062500",
+      "startTime": "2026-09-17T08:07:42.500+09:00",
+      "endTime": "2026-09-17T08:12:42.500+09:00",
+      "plannedDuration": 5,
+      "type": "short-break",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-09-17T08:07:42.500+09:00",
+          "endTime": "2026-09-17T08:12:42.500+09:00"
+        }
+      ]
     }
   ],
   "lastNotifiedReleaseVersion": "4.13.1",
-  "lastSelectedTaskPath": "Tasks/RS-0024 subtask 未処理例外のEventRecordをexactly-onceで記録する.md",
-  "completionMenuAsSubmenu": true
+  "completionMenuAsSubmenu": true,
+  "lastSelectedTaskPath": "Tasks/RS-0024 subtask OpenTelemetry SDKライフサイクルとMetrics基盤を実装する.md"
 }
