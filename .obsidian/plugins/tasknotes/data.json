@@ -6287,6 +6287,93 @@
           "endTime": "2026-09-17T08:12:42.500+09:00"
         }
       ]
+    },
+    {
+      "id": "1789608125824",
+      "startTime": "2026-09-17T10:22:05.824+09:00",
+      "endTime": "2026-09-17T10:47:05.824+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "taskPath": "Tasks/RS-0024 subtask OpenTelemetry SDKライフサイクルとMetrics基盤を実装する.md",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-09-17T10:22:05.824+09:00",
+          "endTime": "2026-09-17T10:47:05.824+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1789609626881",
+      "startTime": "2026-09-17T10:47:06.881+09:00",
+      "endTime": "2026-09-17T11:02:06.881+09:00",
+      "plannedDuration": 15,
+      "type": "long-break",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-09-17T10:47:06.881+09:00",
+          "endTime": "2026-09-17T11:02:06.881+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1789611725335",
+      "startTime": "2026-09-17T11:22:05.335+09:00",
+      "endTime": "2026-09-17T11:47:05.335+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "taskPath": "Tasks/RS-0024 subtask OpenTelemetry SDKライフサイクルとMetrics基盤を実装する.md",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-09-17T11:22:05.335+09:00",
+          "endTime": "2026-09-17T11:47:05.335+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1789613226449",
+      "startTime": "2026-09-17T11:47:06.449+09:00",
+      "endTime": "2026-09-17T11:52:06.449+09:00",
+      "plannedDuration": 5,
+      "type": "short-break",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-09-17T11:47:06.449+09:00",
+          "endTime": "2026-09-17T11:52:06.449+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1789614536324",
+      "startTime": "2026-09-17T12:08:56.324+09:00",
+      "endTime": "2026-09-17T12:33:56.324+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "taskPath": "Tasks/RS-0024 subtask OpenTelemetry SDKライフサイクルとMetrics基盤を実装する.md",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-09-17T12:08:56.324+09:00",
+          "endTime": "2026-09-17T12:33:56.324+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1789616037444",
+      "startTime": "2026-09-17T12:33:57.444+09:00",
+      "endTime": "2026-09-17T12:38:57.444+09:00",
+      "plannedDuration": 5,
+      "type": "short-break",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-09-17T12:33:57.444+09:00",
+          "endTime": "2026-09-17T12:38:57.444+09:00"
+        }
+      ]
     }
   ],
   "lastNotifiedReleaseVersion": "4.13.1",
