@@ -10,150 +10,196 @@ created: 2026-09-16
 
 ## 1. 目的と位置付け
 
-対象: [[RS-0024 subtask OpenTelemetry SDKライフサイクルとMetrics基盤を実装する]]。作業branchはRAGScope正本リポジトリの`RS-0024/sdk-lifecycle-metrics`。このノートは写経の実行計画であり、現在仕様や採用済み設計の正本ではない。実装上の確定事項は正本のコード・テスト・該当設計へ反映する。実ファイルと相違する場合は、指定branch上の正本を優先して確認する。
+対象: [[RS-0024 subtask OpenTelemetry SDKライフサイクルとMetrics基盤を実装する]]。RAGScope正本リポジトリの作業branchは`RS-0024/sdk-lifecycle-metrics`。このノートは写経の実行計画であり、現在仕様や採用済み設計の正本ではない。実装上の確定事項は正本のコード・テスト・該当設計へ反映する。実ファイルと相違する場合は対象branchの正本を優先する。
 
-判断の出発点: [[RS-0024 SDKライフサイクルとMetrics基盤の設計案]]（Workbench commit [`9497b4a`](https://github.com/takashit16833/Workbench/commit/9497b4a8798c3f96340a20d9d861017cfbc28b9f)）。本計画はその段階取得・機能/構築境界の分離・Metrics外側所有を維持し、レビューで合意したReader終了結果、delta集約、非同期中断、Lifecycle責務の修正を反映した作業基準とする。
+検討の経緯: [[RS-0024 SDKライフサイクルとMetrics基盤の設計案]]（Workbench commit [`9497b4a`](https://github.com/takashit16833/Workbench/commit/9497b4a8798c3f96340a20d9d861017cfbc28b9f)）と[[RS-0024-SDKライフサイクルの責務分離案]]（Workbench commit [`e4ebd63`](https://github.com/takashit16833/Workbench/commit/e4ebd6312434f6f2ff091a9461011757dc1ecc1b)）。後者のレビュー結果に従い、**寿命管理は標準`bracket`、cleanupの実行と結果保持は小さな専用処理、例外の選択は最外層で一度**に分離する。段階取得、機能/構築境界の分離、Metrics Exporterの単独所有は維持する。これは作業上の採用方針であり、正本へ未反映の型・moduleを採用済み仕様と呼ばない。
 
-対象の正本基点はcommit [`7526326d`](https://github.com/takashit16833/RAGScope/commit/7526326d076c5ce8c2a51a3358a4e47a5197f76e)。既存の`TraceBoundary`、`LogsBoundary`、Trace/Logs Adapterおよび例外のexactly-once処理を維持する。新しい共通`emitMetric`、RAGScope独自Metric、共通失敗ADT、Telemetry独自queue/送信worker/Context管理を導入しない。
+正本の開始基点は[`7526326d`](https://github.com/takashit16833/RAGScope/commit/7526326d076c5ce8c2a51a3358a4e47a5197f76e)。2026-09-17に確認した作業branchのHEADは[`957d04a`](https://github.com/takashit16833/RAGScope/commit/957d04a962ffc1804ae2234b08fb83c6cc982555)。現行`Lifecycle.hs`には`withOwned`と`ProviderAcquisition`が存在するが、以下の構成へ置き換える予定であり、完成済みとは扱わない。既存の`TraceBoundary`、`LogsBoundary`、Trace/Logs Adapterおよび例外EventRecordのexactly-once処理を維持する。新しい共通`emitMetric`、RAGScope独自Metric、共通失敗ADT、Telemetry独自queue/送信worker/Context管理は追加しない。
 
 ## 2. 完成時の責務と公開API
 
-### 機能処理用のSDK非依存境界
+### SDK非依存の機能境界
 
-`ragscope-app/telemetry-boundary/RAGScope/Telemetry.hs`に次の積型を設ける。各UseCaseには束を一律に渡さず、必要な既存の操作だけを渡す。
+既存`ragscope-app/telemetry-boundary/RAGScope/Telemetry.hs`の`Telemetry`を維持する。
 
 ```haskell
--- 設計上の公開型。実装時には既存Trace/Logs moduleをimportする。
 data Telemetry = Telemetry
   { telemetryTrace :: TraceBoundary
   , telemetryLogs  :: LogsBoundary
   }
 ```
 
-このlibraryの`build-depends`へOpenTelemetry SDK/APIを追加しない。既存`RAGScope.Telemetry.Trace`の`SpanRunner`・`TraceBoundary`、`RAGScope.Telemetry.Logs`の`LogsBoundary`・`EventRecordEmitter`・EventName制約を変更しない。
+UseCaseへ束を一律に渡さず、必要な`TraceBoundary`または`LogsBoundary`の操作だけを渡す。`telemetry-boundary`の`build-depends`へOpenTelemetry SDK/APIを追加しない。`SpanRunner`、`EventRecordEmitter`、EventName制約を変更しない。
 
-### SDK構築側
+### SDK構築側の責務（以下の新moduleとAPIは提案）
 
-`opentelemetry-adapter`に以下を配置する。`OpenTelemetry.*`は`RAGScope.Telemetry.OpenTelemetry.*`の略記。
+`OpenTelemetry.*`は`RAGScope.Telemetry.OpenTelemetry.*`の略記。
 
-| Module | Cabal公開状態 | 担当 |
+| Module | Cabal状態 | 責務 |
 |---|---|---|
-| `RAGScope.Telemetry.OpenTelemetry` | exposed | 高水準`withTelemetry :: (Telemetry -> IO a) -> IO a`。通常設定を選び共通入口を呼ぶ |
-| `OpenTelemetry.Construction` | exposed | `SdkPlan`、`SdkTelemetry`、`withTelemetryUsing`、3資源の接続、既存Adapterから機能境界の組み立て。テスト/ローカルも同じ実装へ接続 |
-| `OpenTelemetry.Lifecycle` | other | 取得範囲、途中rollbackの報告、cleanup操作結果の捕捉・集約、利用結果と終了結果の分離 |
-| `OpenTelemetry.Metrics` | other | `MeterProvider`/`SdkMeterEnv`、Periodic Reader、単独所有Exporter、停止確認と結果、最終export・終了の依存順序 |
-| `OpenTelemetry.Configuration` | other | 通常のResource、ID生成器、Processor/Exporter/Readerのfactoryと環境設定 |
-| 既存`OpenTelemetry.Trace`、`.Logs` | exposed（現状維持） | Providerから境界への変換 |
-| 既存`OpenTelemetry.Exception` | other（現状維持） | Context注釈、例外EventRecordの重複防止 |
+| `RAGScope.Telemetry.OpenTelemetry` | exposed | 通常設定用`withTelemetry :: (Telemetry -> IO a) -> IO a` |
+| `OpenTelemetry.Configuration` | other | Resource、ID生成器、Processor/Exporter/Reader factory、環境設定の選択。結果収集や例外選択はしない |
+| `OpenTelemetry.Construction` | exposed | `SdkPlan`と構築用`SdkTelemetry`、3つの`bracket`の合成、既存Trace/Logs境界への接続。journalの読取りや例外選択はしない |
+| `OpenTelemetry.Cleanup` | other | SDK結果の`CleanupResult`、操作名と結果/例外の`CleanupOutcome`、1操作の捕捉・記録。Provider取得やReader具象型を持たない |
+| `OpenTelemetry.Lifecycle` | other | 実行ごとの内部記録領域、取得/use全体の結果捕捉、最終報告、純粋な`chooseExit`、文脈付き再送出 |
+| `OpenTelemetry.Metrics` | other | `MeterProvider`/`SdkMeterEnv`、Periodic Reader、単独所有Exporter、停止確認と終了依存順序 |
+| 既存`OpenTelemetry.Trace`、`.Logs` | exposed（維持） | ProviderからSDK非依存境界への変換 |
+| 既存`OpenTelemetry.Exception` | other（維持） | Context注釈、例外EventRecord重複防止 |
 
-構築用の`SdkTelemetry`は`Telemetry`と`MeterProvider`を持つ。`MeterProvider`は標準計装を組み立てる起動側と接続テストにのみ渡す。構築moduleは必要な型・スマートコンストラクタだけを公開し、`MetricsResources`のconstructorや内部終了操作を不用意に公開しない。
+内部import方向はroot→Configuration/Construction、Configuration→Construction、Construction→Lifecycle/Cleanup/Metrics/Trace/Logs、Lifecycle→Cleanup、Metrics→CleanupとSDK。CleanupからLifecycleやConstructionへ戻らない。`telemetry-boundary`と`opentelemetry-adapter`間の方向はCabalの`build-depends`で制約する。同じAdapter library内のmodule間importまではCabalで静的禁止できない。
+
+構築用の型は機能境界と区別する。
 
 ```haskell
--- 構築側での設計上の型。
+-- 設計用シグネチャ。設定値とReportの具体定義は実装時に確定する。
 data SdkTelemetry = SdkTelemetry
   { sdkTelemetry     :: Telemetry
   , sdkMeterProvider :: MeterProvider
   }
 
-withTelemetryUsing :: SdkPlan -> (SdkTelemetry -> IO a) -> IO a
+withTelemetryUsing
+  :: SdkPlan
+  -> (LifecycleReport -> IO ())
+  -> (SdkTelemetry -> IO a)
+  -> IO a
 ```
 
-通常入口`withTelemetry`は`withTelemetryUsing`を経由し、callbackへ`sdkTelemetry`だけを渡す。いずれもcallback実行回数は1回。型だけで資源依存のIO値のスコープ外への退避を完全禁止できるとは主張しない。子threadの終了をcallback内で待ち、Providerより長寿命にしない。
-
-### 静的な依存方向
-
-`telemetry-boundary`はSDK/APIに依存しない。`opentelemetry-adapter`は境界、OpenTelemetry API/SDKへ依存する。内部のimportはroot→Configuration/Construction、Configuration→Construction、Construction→Lifecycle/Metrics/Trace/Logs、Metrics→LifecycleおよびSDK。LifecycleからMetricsの具象Reader型へ依存させない。`ragscope-test`は公開されたConstruction入口を利用し、`telemetry-boundary-test`は引き続きSDK非依存とする。
+`SdkTelemetry`は起動側と接続テスト用であり、UseCaseの型へ`MeterProvider`を漏出させない。通常入口は共通構築入口を呼び、`sdkTelemetry`だけをcallbackへ渡す。productionとテストで別のAdapter実装を作らない。callbackは一回だけ。Provider依存の子threadはcallback内で終了を待つ。型だけでスコープ外へIO値を退避する行為まで完全には禁止できない。
 
 ## 3. 資源取得と所有
 
-取得順はTrace→Logs→Metrics、解放順はMetrics→Logs→Traceとする。資源を返した直後から取得済み範囲にcleanup責任を設定する。第二段階でLogs取得に失敗すればTraceを解放し、第三段階でMetrics取得に失敗すればLogs→Traceを解放する。途中失敗ではcallbackを呼ばず、元の取得例外を保存する。
-
-概念上は以下の入れ子。実際の`withOwned`は`mask`と`restore`を使い、callbackをmaskしたまま実行しない。`bracket`だけでは同一finalizer中のflush例外からshutdownへ進めず、release例外が元のcallback例外を上書きする点に注意する。
+取得順はTrace→Logs→Metrics、終了順はMetrics→Logs→Trace。`Construction`では次の標準`bracket`を合成する。
 
 ```haskell
-withProviders journal plan use =
-  withOwned journal (acquireTrace plan) $ \tp ->
-    withOwned journal (acquireLogs plan) $ \lp ->
-      withOwned journal (acquireMetrics plan) $ \metrics ->
+-- 寿命の形を示す提案。各releaseは失敗を捕捉・記録し、原則として例外を外へ出さない。
+withProviders record plan use =
+  bracket (acquireTrace record plan) (releaseTrace record) $ \tp ->
+    bracket (acquireLogs record plan) (releaseLogs record) $ \lp ->
+      bracket (acquireMetrics record plan) (releaseMetrics record) $ \metrics ->
         use tp lp metrics
 ```
 
-`SdkPlan`は3つの`ProviderAcquisition`と終了報告の出力先を持つ。Trace/LogsのProcessor/Exporter、MetricsのExporter/Readerはfactoryまたは取得関数として渡せる。任意の`IO provider`の内部リークまで`withOwned`が防ぐと主張しない。各標準取得関数自身が途中で取得した資源を保護する。
+第2Provider取得失敗ならTrace、第3Provider取得失敗ならLogs→Traceを解放する。取得失敗ではcallbackを実行しない。標準`bracket`の取得はmask状態で保護され、使用中は元のmask状態へ戻る。現行`withOwned`の`restore (acquireProvider ...)`をそのまま引き継がない。
 
-特にMetrics内部は(1)`createMeterProvider`でProvider/Env取得、(2)Exporter取得、(3)`forkPeriodicMetricReader`でReader取得、の順とし、(2)(3)の取得失敗では既に得た資源を逆順にcleanupする。Trace/LogsもExporter→Processor→Providerで所有権を移す前の取得失敗を保護し、成功後は所有者を重複shutdownしない。rollbackの失敗情報はlifecycle内部のjournalへ集め、診断関数の例外がrollbackそのものを妨げないようにする。
+ただし`bracket`は取得関数の**内部**で既に取得したExporter/ProcessorやMetrics資源まで自動解放しない。Trace/LogsはExporter→Processor→Providerという所有権移譲の各段階を`bracketOnError`等で保護し、移譲成功後は所有者を重ねてshutdownしない。MetricsはProvider/Env→Exporter→Readerの部分取得失敗で既取得資源を逆順rollbackする。内部rollbackの各結果も`record :: CleanupOutcome -> IO ()`へ渡す。任意の利用者提供factory内部のリークまで自動修復できるとは主張しない。
 
-SDK global Providerは登録しない。既存Adapterは`mkOpenTelemetryLogsBoundary :: LoggerProvider -> LogsBoundary`、`mkOpenTelemetryTraceBoundary :: TracerProvider -> EventRecordEmitter -> TraceBoundary`に明示的にProviderを渡せる。Logsで作った`emitEventRecord`をTrace Adapterへ接続する。
+SDK global Providerを登録しない。既存の`mkOpenTelemetryLogsBoundary :: LoggerProvider -> LogsBoundary`と`mkOpenTelemetryTraceBoundary :: TracerProvider -> EventRecordEmitter -> TraceBoundary`へ明示的にProviderを渡す。Logsの`emitEventRecord`をTrace Adapterへ接続する。
 
-## 4. Metrics構築と正常終了
+## 4. cleanup結果の取得と保存
 
-`SdkMeterProviderOptions.metricExporter`は必ず`Nothing`にする。`Just`を渡す構成は取得前に`Left ExporterOwnedByMeterProvider`等の明示的な設定エラーとして拒否する。Exporterの所有者は外側のMetrics取得範囲だけ。SDK Readerは定期的な`exportMetricsOnce`を実行するが、`stopPeriodicMetricReader`を呼ばず、公開`periodicMetricReaderAsync`からReaderを停止・終了待ちする。これにより停止helper内の最終export例外でExporter shutdownが飛ぶ経路を避け、二重export/shutdownも避ける。
+`CleanupResult`はSDKの`FlushResult`、`ShutdownResult`、`ExportResult`を成功値へ変換せず保持する。`CleanupOutcome`には対象操作名と`Either (ExceptionWithContext SomeException) CleanupResult`を保存する。既存の`runCleanupSteps`の逐次実行・例外捕捉という機能は`Cleanup`へ移し、SDK固有の結果型を同moduleに閉じる。Readerの結果や依存操作のskipも診断で識別可能にするが、Readerのworker例外とlifecycle実行threadの例外は異なる区分として表現する。
 
-通常終了順:
+```haskell
+-- 提案の1操作実行。recordはLifecycleが渡す内部追記関数。
+attemptCleanup
+  :: (CleanupOutcome -> IO ())
+  -> String
+  -> IO CleanupResult
+  -> IO (Either (ExceptionWithContext SomeException) CleanupResult)
+attemptCleanup record name action = mask_ $ do
+  result <- tryWithContext @SomeException action
+  record (CleanupOutcome name result)
+  pure result
+```
 
-1. Readerを`cancel`し終了を確認する。`poll`/`waitCatch`の終了結果から正常・例外・意図的中断を区別し、単なる`isJust`への変換で理由を捨てない。
-2. `exportMetricsOnce env exporter`の`Success`/`Failure`または例外を記録する。
-3. `metricExporterForceFlush exporter`の結果または例外を記録する。
-4. `metricExporterShutdown exporter`の結果または例外を記録する。外側が1回だけ実行する。
-5. `shutdownMeterProvider provider ...`の結果または例外を記録する。Provider側Exporterは`Nothing`。
+flush失敗constructorや同期例外が発生しても、後続shutdownと独立したProviderのcleanupを試す。`attemptCleanup`は例外を選択・再throwせず、結果を記録するだけ。各step実行後に即時記録し、最後に一括して記録する方式を採らない。
 
-最終exportが`Failure`を返す、または例外を投げても、Exporter flush/shutdownとProvider shutdownを続ける。Reader停止が未確認なら使用中のExporterを閉じる競合を避け、Metricsの依存する後続操作を未実行として報告し、独立したLogs/Traceのcleanupへ進む。中断時は停止を再試行・確認できる範囲で実施するが、停止不能な外部処理の有限時間終了や全資源の解放成功までは保証しない。
+`Lifecycle`は一度の呼出し専用`IORef [CleanupOutcome]`を作り、内部`record`は`modifyIORef' ref (outcome :)`で追記し、読取り時に`reverse`する。ユーザーcallback/Exporter背景threadへこのrefや記録関数を公開しない。ライフサイクルthreadだけが書き込むという制約の下で`modifyIORef'`を使用する。並行書込みを要求するなら原子的更新へ見直す。`CleanupJournal`の公開APIと`journalSupersededExceptions`は廃止する方針。結果を返すだけの個別操作にWriterTや別Runtimeを追加しない。
 
-`metricExporter = Nothing`のProviderに対し、最終export前に`forceFlushMeterProvider`を呼ばない。SDKのdelta集約では収集時に保存値がリセットされ、exportなしのforce flushが測定値を消費し得る。`exportMetricsOnce`自体も収集→export間でReaderがcancelされるとdelta値を失う余地があるため、初期通常構成はcumulative集約を選ぶ。delta集約まで損失ゼロを保証したとは報告せず、delta試験では不要な追加collectの不在を検証する。SDK自体の集約・収集・送信は置き換えない。
+内部recordにネットワーク、Telemetryログ、任意のreporter callbackを混ぜない。`mask_`はinterruptibleなIOの中断を禁止しない。操作中の中断は捕捉して記録し、最外層で選択する。強制終了、停止不能、メモリ枯渇時の記録成功や有限時間解放を保証しない。
 
-## 5. cleanup結果、元例外と中断
+## 5. 元の機能結果と例外を最外層で選択する
 
-`Lifecycle`は汎用的な終了操作の実行と報告を担当する。`CleanupStep`は対象名・操作名・結果を返す`IO`の組とし、Reader具象型や`StopReaderStep ReaderControl`を含めない。SDKの`ExportResult`、`FlushResult`、`ShutdownResult`の異なる失敗constructor、および例外を捨てずに`CleanupReport`へ記録する。Reader停止の成否、停止未確認によるskip、先行取得途中のrollbackはMetrics/取得関数側が判定・報告する。短い実行単位のjournalは許可するが、汎用Runtime、送信queueやTelemetry sinkは作らない。
+`Lifecycle`は3つの`bracket`を含む取得/use全体を`tryWithContext @SomeException`で捕捉し、`original :: Either CapturedException a`を保持する。全取得済み資源のrelease試行後にrefを読み、`LifecycleReport`を独立診断先へ一回渡す。診断失敗も`tryWithContext`で捕捉してから、**純粋関数**`chooseExit`で値/再送出例外を一度だけ選ぶ。例外は`rethrowIO`でcontextごと再送出する。報告先の同期失敗は機能結果を変更せず、Telemetryへ再帰的に報告しない。失敗したreporterへの全情報の永続保存は保証しない。
 
-- callbackが値`a`を返しcleanupの同期失敗だけが生じた場合、同じ`a`を返し、失敗は別経路で診断する。`Left FeatureFailure`という戻り値は`Right (Left FeatureFailure)`として保持し、例外扱いしない。
-- callbackまたは取得が同期例外を投げた場合、取得済み資源をcleanup後、既存`ExceptionWithContext SomeException`の文脈を保持して元例外を再送出する。失敗したcallbackを再実行しない。
-- callback/取得に非同期中断が来た場合はcleanup後にその中断を再送出する。cleanup中の同期的失敗は終了報告へ記録する。
-- callbackが正常終了した後、cleanup中に非同期中断が来た場合は、可能な範囲で残りの終了を試み、保留した中断を最外層で再送出する。
-- callback/取得の元例外が同期例外で、cleanup中に新たな非同期中断が来た場合は、元例外を報告へ保存し、非同期中断を最外層へ再送出する。元の非同期中断がある場合はその伝播を維持し、後続の中断・失敗は報告へ残す。元例外を上書きする普通の同期的cleanup失敗と、ユーザー中断の抹消を同一視しない。
-- `SomeAsyncException`と通常の`SomeException`を区別する。診断は同じTelemetry経路へ再帰しない。診断出力の同期例外は機能結果・元例外を変えない。`uninterruptibleMask`でネットワーク送信やReader待ち全体を囲まない。
+```haskell
+-- 提案。記録用referenceの所有と読取りはLifecycleに限定する。
+runLifecycle acquireAndUse publish = mask $ \restore -> do
+  ref <- newIORef []
+  let record outcome = modifyIORef' ref (outcome :)
+  original <- tryWithContext @SomeException $ restore (acquireAndUse record)
+  cleanup <- reverse <$> readIORef ref
+  let report = makeReport original cleanup
+  reporting <- tryWithContext @SomeException (publish report)
+  either rethrowIO pure (chooseExit original cleanup reporting)
 
-これらは今回の**ライフサイクル取得・終了**の方針。`withSpan`内部や通常の記録・export workerの隔離は後続Subtaskの責務であり、起動失敗後にcallbackを再実行するfallbackや、起動失敗時の無条件no-op継続は追加しない。
+chooseExit
+  :: Either CapturedException a
+  -> [CleanupOutcome]
+  -> Either CapturedException ()
+  -> Either CapturedException a
+```
 
-## 6. 通常構成
+優先順位は、(1) 元の取得/use中断、(2) lifecycle threadのcleanupで新たに捕捉した中断、(3) 診断threadの中断、(4) 元の同期例外、(5) 元の値`a`。cleanup/診断の同期失敗やSDKの失敗戻り値だけでは、元の`a`または同期例外を置換しない。`a = Left FeatureFailure`は通常の戻り値としてそのまま維持する。元の同期例外が後発中断に優先されなかった場合でも、元例外は`report`内に保持し、置換履歴専用の`IORef`は増やさない。報告先自身の同期失敗はこのreportの成功を保証しない。
 
-`Configuration`がResourceを共通構築し、Traceへ`defaultIdGenerator`を明示設定する（`emptyTracerProviderOptions`は`dummyIdGenerator`）。Trace/LogsはSDKのbatch Processor、Metricsは上記Provider+Periodic Reader+Exporterとする。通常送信手段はOpenTelemetry SDKのOTLP Exporter factoryを使い、送信先は環境設定で渡す案。production backendやCollector配置の決定ではない。環境変数対応は実際に使用する公開APIとテストで範囲を固定し、内部関数や全`OTEL_*`互換を仮定しない。無効化設定では背景workerを起動しない構成を選択する。通常入口も同じ`withTelemetryUsing`を通す。
+Reader workerの`waitCatch`/`poll`が返す`Left AsyncCancelled`と、`attemptCleanup`が**lifecycle threadで捕捉**する`SomeAsyncException`は混同しない。前者はReader終了状態のデータであり、それだけで`chooseExit`の中断候補にしない。後者だけがcleanup由来の中断候補となる。停止結果の型と記録先ではこの由来を保持し、単に`SomeException`へ平坦化しない。`uninterruptibleMask`でネットワーク送信やReader待ち全体を囲まない。
 
-Cabalでは`telemetry-boundary`の依存を増やさず、`opentelemetry-adapter`へ`Construction` exposed、`Lifecycle`/`Metrics`/`Configuration` otherを登録する。Reader終了待ちの`async`、通常Exporterを直接importする場合の`hs-opentelemetry-exporter-otlp`はAdapterへ直接依存を追加する。テストで直接使う`async`/`vector`等はテストcomponentへ追加する。version boundsは利用者の解決版と公開APIを照合して設定し、推移依存に頼らない。executableへの起動統合は別Subtaskの範囲。
+この方針は初期化失敗時の無条件no-op fallbackやcallback再実行を意味しない。`withSpan`等の個別Telemetry記録経路は別Subtaskの責務。
 
-## 7. 自動テストと完了基準
+## 6. Metricsの単独所有とReader停止（レビュー反映）
 
-共通`withTelemetryUsing`をproduction/テスト双方から使用。`ragscope-test`のMain/Cabalへ登録し、既存Trace/Logs/例外/SDK挙動テストを維持する。`telemetry-boundary-test`へSDK依存を増やさない。
+`SdkMeterProviderOptions.metricExporter = Nothing`を保証し、呼び出し側の`Just`は取得前に明示的な設定エラーとして拒否する。ExporterはMetrics資源が一度だけ所有する。SDK `stopPeriodicMetricReader`はReader停止・最終export・Exporter shutdownをまとめて実行するため、このhelperは使わない。公開`periodicMetricReaderAsync`を使い、SDK定期収集/送信自体は再実装しない。
+
+成功終了での依存順序:
+
+1. Reader workerに停止要求を送り、終了結果を確認する。
+2. 終了確認後、`exportMetricsOnce env exporter`のSDK戻り値/例外を記録する。
+3. `metricExporterForceFlush exporter`の戻り値/例外を記録する。
+4. `metricExporterShutdown exporter`を一回呼び、戻り値/例外を記録する。
+5. exporterを所有しないProviderの`meterProviderShutdown`を呼び、戻り値/例外を記録する。
+
+**Reader停止契約の補足:** 使用環境の`async 2.2.6`の`cancel`は中断送信に加えてworkerの終了待ちを行う。workerが応答しなければ`cancel`自体がブロックし、その後の`poll`へ到達できない。`cancel`が必ず有限時間で戻る、`poll`を後置すれば停止不能を検出できる、とは書かない。停止要求または待機が中断された場合は別途`poll`/`waitCatch`で終了済みか確認し、`ReaderStopped`（workerの成功/例外終了を保持）と`ReaderUnconfirmed`を区別する。この型名は案であり、実装時に具体化する。workerの`AsyncCancelled`は通常の意図的停止でも現れるので、lifecycle thread中断へ昇格させない。
+
+停止確認済みの場合だけ2〜5へ進む。未確認の場合、動作中のReaderと競合し得るExporter/Providerの後続終了操作は**理由付きでskip記録**し、独立するLogs→Traceの解放を続行する。停止不能、全資源解放成功、Metricsの全配送成功を保証しない。`cancel`/`poll`はMVar等を使う制御されたテストで分岐を検証し、短いdelayだけから停止成功を推測しない。
+
+最後のexportが失敗してもExporter flush/shutdownとProvider shutdownへ進む。最終export前にexporterなしProviderへ`forceFlushMeterProvider`を呼ばない。delta収集は保存値をリセットし得るため、初期通常構成はcumulativeを選び、deltaの損失ゼロは保証しない。Provider shutdown内部の収集は残るため「収集が一回だけ」とも主張しない。
+
+## 7. 通常構成と依存
+
+`Configuration`がResourceを共通構築し、Traceへ`defaultIdGenerator`を明示設定する（`emptyTracerProviderOptions`は`dummyIdGenerator`）。Trace/LogsはSDK batch Processor、Metricsは上記Provider/Periodic Reader/Exporterを用いる。通常送信手段はSDK OTLP Exporter factory、送信先は環境設定で渡す案。production backendやCollector配置の決定ではない。対応する環境変数は使用する公開APIとテストで範囲を確定し、全`OTEL_*`互換を仮定しない。無効化時は背景workerを起動しない構成を選び、通常入口も`withTelemetryUsing`を通す。
+
+Cabalでは`telemetry-boundary`へSDK依存を追加せず、Adapterに`Construction` exposed、`Configuration`/`Cleanup`/`Lifecycle`/`Metrics` otherを登録する。ReaderのAsync handle操作に`async`、利用Exporter factoryを直接importする場合に`hs-opentelemetry-exporter-otlp`を直接依存として追加する。テストが直接使う`async`/`vector`等もテストcomponentへ明示的に依存させる。version boundsは解決済みversionと公開APIを照合し、推移依存に頼らない。executableへの起動統合は別Subtask。
+
+## 8. 自動テストと完了基準
+
+production/テスト双方が共通`withTelemetryUsing`を呼ぶ。`ragscope-test`のMain/Cabalへ登録し、既存Trace/Logs/例外/SDK挙動試験を維持する。`telemetry-boundary-test`はSDK非依存を維持する。
 
 | ケース | 検証対象 |
 |---|---|
-| 正常終了、戻り値`Left`、callback例外 | callbackは1回、返り値またはExceptionContext維持、解放順Metrics→Logs→Trace |
-| 第2・第3Provider取得失敗 | 取得済みProviderは逆順終了、callbackは0回、取得元例外保持 |
-| Exporter/Reader取得失敗 | Metrics内部rollback、さらに外側Logs/Trace終了 |
-| flush/shutdownが失敗値または例外 | 同じProviderの後続操作と独立Providerの終了が続く、診断へ全結果 |
-| cleanup中断、診断失敗 | 非同期中断の伝播、元同期例外は診断保存、診断失敗による結果変化なし |
-| in-memory Metrics | テスト限定`Counter Int64`で2+3を記録し、共通終了経路から送信されたscope/Metric名/合計5を検査 |
-| delta集約 | 最終export前の余分なcollect不在、exporter shutdown一回。損失ゼロの一般保証と混同しない |
-| SDK Periodic Reader | 通知/MVarで目的測定のexportと同期し、終了結果と終了後export無しを確認。短いdelayのみで判定しない |
-| 既存境界統合 | Trace/Logsと例外EventRecord exactly-onceを新lifecycle内でも保持 |
+| 正常値、`Left FeatureFailure`、callback例外 | callback一回、元の値/ExceptionContext維持、解放順Metrics→Logs→Trace |
+| 第2/第3Provider取得失敗 | callback零回、既取得資源の逆順解放、元の取得例外維持 |
+| Exporter/Processor/Reader途中取得失敗 | 所有権移譲に応じて一度だけrollback、結果も同じreportに残す |
+| flush/shutdownの失敗constructorとthrow | 同じProviderの後続と独立Providerの終了を試し、結果を区別して報告 |
+| callbackの同期/非同期例外、cleanup中断 | 文脈、mask復元、元例外と中断の優先順位、全解放後に一度だけ選択 |
+| reporter同期失敗/中断 | 上記優先表、機能結果の保護、再実行と診断の再帰なし |
+| Reader正常停止/worker例外終了/停止未確認 | worker結果とlifecycle中断を区別。未確認は依存するMetrics終了をskip、Logs/Traceは続行 |
+| `cancel`の待機/中断 | MVar通知と別threadの中断で制御し、後続`poll`へ無条件に進めると仮定しない |
+| in-memory Metrics | テスト限定Counter Int64で2+3、実際の共通終了経路からscope/Metric名/合計5を検査 |
+| delta集約 | 最終export前の余分なcollectなし、Exporter shutdown一回。損失ゼロと混同しない |
+| SDK Periodic Reader | Exporter通知/MVarで目的測定のexportと同期、終了結果と終了後exportなしを確認 |
+| 既存境界 | Trace/Logsと例外EventRecord exactly-onceを新lifecycleでも保持 |
 
-SDKの`inMemoryMetricExporter`とテスト限定Counterだけを用い、production独自Metricは追加しない。測定値の取得先は`ResourceMetricsExport`のscope、名前、pointまで照合する。Periodic Readerは初回exportが即時なので、目的値の通知を待ち空の初回exportを許容する。`make check-app`でformat/build/test/型制約/Haddockまで検証する。未実施の検証を成功と記録しない。
+Meterの取得→Counter作成→`counterAdd`→in-memory Exporter検査を実行する。Readerなしの測定だけでPeriodic Reader接続を検証済みとはしない。初回の空exportは許容する。`make check-app`でformat/build/test/型制約/Haddockを検証し、未実施を成功とは記録しない。
 
-## 8. 写経の手順
+## 9. 写経の手順と現在地
 
-各段階で小さなコードと検証を提示する。新規ファイルは場所と全文、既存ファイルは差分を先に示してから全文を示す。コード・テストを正本へ書き込むのはその変更を明示依頼されたときだけ。作業branchは既存`RS-0024/sdk-lifecycle-metrics`を使い、別branchを作らない。
+各段階で小さなコードと検証を提示する。新規ファイルは配置場所と**全文**、既存ファイルは変更箇所ごとの**Before → After**の後に**変更後の全文**を示す。RAGScope正本のコードは写経案の提示だけでは変更せず、変更依頼が明示されたときだけGitHubへ反映する。既存`RS-0024/sdk-lifecycle-metrics`を使用し、別branchは作らない。
 
-1. **環境確認:** `ragscope-app/dist-newstyle/cache/plan.json`から解決済みAPI/SDK/in-memory Exporter/asyncのversionを読み取る。`cabal.project.local`とlocal patchの有無も確認し、異なるSDKでは取得・終了・MetricReaderを再照合する。読み取り専用で行う。
-2. **最小lifecycle:** `Lifecycle`の取得範囲と`Construction`のTrace→Logs→Metricsの入れ子を実装。背景Readerなしの最小Metricsで第2/第3取得失敗、rollback、元例外とcallback回数をテストする。flush失敗後のshutdown継続も同段階で確認する。
-3. **終了失敗・文脈:** cleanup結果値と例外を区別し、同期例外、`Left`、ExceptionContext、非同期中断、診断失敗の優先関係をテストする。
-4. **Metrics手動構成:** Provider/Exporter単一所有、最終export→flush→shutdown、in-memory Counter、delta確認、途中取得・終了失敗をテストする。
-5. **SDK Periodic Reader:** 公開Async handleの停止・終了結果と取得rollback、通知による測定export、停止未確認時の依存操作skipをテストする。
-6. **通常構成と既存Adapter:** Resource/ID生成器/Batch/環境設定を接続し、既存Trace/Logs/exactly-onceの統合と`make check-app`を確認する。
+1. **環境確認（実施済み）:** 利用者が`ragscope-app/dist-newstyle/cache/plan.json`で`hs-opentelemetry-api/sdk/exporter-in-memory/exporter-otlp = 1.0.0.0`、`async = 2.2.6`を確認。`cabal.project.local`/`cabal.project.freeze`はなし。環境中のすべてのpatchまで検証したという意味ではない。
+2. **責務分離の第一歩:** `OpenTelemetry.Cleanup`を新設し、現行`Lifecycle`の`CleanupResult`/`CleanupStep`/`CleanupOutcome`と1操作の捕捉・記録を移す。Cabalのmodule登録と関連テストを行う。新moduleだけを追加して同じ型を二重定義しない。
+3. **標準bracketと最外層:** `Lifecycle`を単一呼出しの内部ref、`runLifecycle`、`chooseExit`へ置換する。`Construction`の3つの`bracket`へ繋ぎ、Trace/Logs/Metrics段階取得とrollback、元例外、callback回数、解放順、診断失敗をテストする。
+4. **部分取得と割込み:** Processor/Exporterの所有権移譲、mask状態、取得中断、flush失敗後のshutdown継続、`ExceptionContext`保存をテストする。
+5. **Metrics手動構成:** Provider/Exporter単独所有、最終export→flush→shutdown、in-memory Counter、delta/取得途中失敗を検証する。
+6. **Periodic Reader:** SDK公開Async handleの停止・終了結果、`cancel`ブロック/中断、workerとlifecycleの例外由来、停止未確認時のskip、通知によるexportを検証する。
+7. **通常構成と統合:** Resource/ID生成器/Batch/環境設定、Trace/Logs/exactly-onceを繋ぎ、`make check-app`を実施する。
 
-最初のコード変更に先立ち、ステップ1の環境確認結果を確定する。`plan.json`がなければversion未確認と記録し、Cabalの解決をどう確認するか判断する。実装・実行テストはこのノートを作った時点では完了したと扱わない。
+直近の正本`Lifecycle.hs`は旧`withOwned`を含み、この新構成は未実装。コード提案のコンパイル、テスト、SDK挙動の実測は本計画更新時点では未実施。次は`Cleanup.hs`の写経から開始する。
 
-## 9. 参照
+## 10. 参照
 
-- [正本Ticket](https://github.com/takashit16833/RAGScope/blob/7526326d076c5ce8c2a51a3358a4e47a5197f76e/project-docs/project-management/milestones/v0.0/error-logging/RS-0024%20RAGScopeアプリケーションへOpenTelemetry%20Observability最小基盤を実装する.md)
-- [正本Cabal](https://github.com/takashit16833/RAGScope/blob/7526326d076c5ce8c2a51a3358a4e47a5197f76e/ragscope-app/ragscope.cabal)
-- [設計案・SDKソース調査と比較](https://github.com/takashit16833/Workbench/blob/9497b4a8798c3f96340a20d9d861017cfbc28b9f/Notes/RAGScope/RAGScope%E3%82%A2%E3%83%97%E3%83%AA%E3%82%B1%E3%83%BC%E3%82%B7%E3%83%A7%E3%83%B3/RS-0024%20SDK%E3%83%A9%E3%82%A4%E3%83%95%E3%82%B5%E3%82%A4%E3%82%AF%E3%83%AB%E3%81%A8Metrics%E5%9F%BA%E7%9B%A4%E3%81%AE%E8%A8%AD%E8%A8%88%E6%A1%88.md)
-- [SDK MetricReader実装](https://github.com/iand675/hs-opentelemetry/blob/46a42cdf80405fdb36fbb48a309254b2332617b4/sdk/src/OpenTelemetry/MetricReader.hs)、[MeterProvider実装](https://github.com/iand675/hs-opentelemetry/blob/46a42cdf80405fdb36fbb48a309254b2332617b4/sdk/src/OpenTelemetry/MeterProvider.hs)
+- [正本Ticket](https://github.com/takashit16833/RAGScope/blob/957d04a962ffc1804ae2234b08fb83c6cc982555/project-docs/project-management/milestones/v0.0/error-logging/RS-0024%20RAGScopeアプリケーションへOpenTelemetry%20Observability最小基盤を実装する.md)
+- [作業branchのLifecycle.hs](https://github.com/takashit16833/RAGScope/blob/957d04a962ffc1804ae2234b08fb83c6cc982555/ragscope-app/opentelemetry-adapter/RAGScope/Telemetry/OpenTelemetry/Lifecycle.hs)
+- [正本Cabal](https://github.com/takashit16833/RAGScope/blob/957d04a962ffc1804ae2234b08fb83c6cc982555/ragscope-app/ragscope.cabal)
+- [[RS-0024 SDKライフサイクルとMetrics基盤の設計案]]、[[RS-0024-SDKライフサイクルの責務分離案]]
+- [SDK MetricReader](https://github.com/iand675/hs-opentelemetry/blob/46a42cdf80405fdb36fbb48a309254b2332617b4/sdk/src/OpenTelemetry/MetricReader.hs)、[MeterProvider](https://github.com/iand675/hs-opentelemetry/blob/46a42cdf80405fdb36fbb48a309254b2332617b4/sdk/src/OpenTelemetry/MeterProvider.hs)
 - [[RAGScopeアプリケーション Haskellライブラリ・モジュールマップ]]
