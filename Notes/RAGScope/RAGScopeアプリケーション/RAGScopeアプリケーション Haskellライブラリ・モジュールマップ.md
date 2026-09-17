@@ -1,8 +1,6 @@
 # RAGScopeアプリケーション Haskellライブラリ・モジュールマップ
 
-対象: **RS-0024作業branch `RS-0024/sdk-lifecycle-metrics` の実装済み構成**（確認commit: [`4213fdef`](https://github.com/takashit16833/RAGScope/commit/4213fdef9088db56c62e4e5fa0d9ff902259c63a)）。library境界、module責務、import方向、取得・解放の経路を俯瞰するための作業用Noteであり、仕様・実装・正式進捗の正本ではない。正確な構成は正本リポジトリの[ragscope.cabal](https://github.com/takashit16833/RAGScope/blob/RS-0024/sdk-lifecycle-metrics/ragscope-app/ragscope.cabal)、コード、テスト、Ticketを確認する。今後の写経計画は[[RS-0024 SDKライフサイクルとMetrics基盤 実装計画]]を参照する。
-
-**現在地:** `Construction`、`Cleanup`、`Lifecycle`による注入可能な3 Providerの取得・解放と、その公開API経由のテストは実装済み。実際のSDK Provider構築・flush・shutdownとの接続、およびMetrics Reader管理は未実装。直近で提示された`TraceProvider.hs`とそのテストは写経中であり、上記commitには含まれていない。以下の図では実装済みのmoduleのみを配置する。
+対象: **RS-0024作業branch `RS-0024/sdk-lifecycle-metrics` の構成を基にした、TraceProvider追加後の完成図**（実装確認commit: [`4213fdef`](https://github.com/takashit16833/RAGScope/commit/4213fdef9088db56c62e4e5fa0d9ff902259c63a)）。library境界、module責務、import方向、取得・解放の経路を俯瞰するための作業用Noteであり、仕様・実装・正式進捗の正本ではない。正確な実装は正本リポジトリの[ragscope.cabal](https://github.com/takashit16833/RAGScope/blob/RS-0024/sdk-lifecycle-metrics/ragscope-app/ragscope.cabal)、コード、テスト、Ticketを確認する。今後の写経計画は[[RS-0024 SDKライフサイクルとMetrics基盤 実装計画]]を参照する。
 
 図の矢印は、特記がなければ**矢印元が矢印先をimportまたは依存する方向**。配色は[[Mermaid図の色分けルール]]に従う。
 
@@ -47,7 +45,7 @@ flowchart TB
 
 現行`opentelemetry-adapter`に`hs-opentelemetry-exporter-otlp`や`async`の直接依存はまだない。`telemetry-boundary`にもOpenTelemetry API/SDKへの依存はない。外部依存を追加する場合は、実際にimportするcomponentの`build-depends`を正本で確認する。
 
-## 実装済みmoduleと静的なimport方向
+## moduleと静的なimport方向（TraceProvider追加後の完成図）
 
 ```mermaid
 flowchart LR
@@ -60,6 +58,7 @@ flowchart LR
   subgraph adapter["opentelemetry-adapter"]
     otelRoot["RAGScope.Telemetry.OpenTelemetry<br/>現在は空の公開入口"]
     construction["OpenTelemetry.Construction<br/>ProviderOperations / withProviders<br/>3 Providerのbracket合成"]
+    traceProvider["OpenTelemetry.TraceProvider<br/>TraceProviderConfig / mkTraceProviderConfig<br/>acquireSdkTraceProvider / releaseSdkTraceProvider"]
     lifecycle["OpenTelemetry.Lifecycle<br/>runLifecycle / LifecycleReport<br/>結果集約・報告・例外選択"]
     cleanup["OpenTelemetry.Cleanup<br/>CleanupResult / CleanupOutcome<br/>attemptCleanup"]
     otelTrace["OpenTelemetry.Trace<br/>mkOpenTelemetryTraceBoundary"]
@@ -71,6 +70,7 @@ flowchart LR
   telemetry --> logsBoundary
   construction --> lifecycle
   construction --> cleanup
+  traceProvider --> cleanup
   lifecycle --> cleanup
   otelTrace --> traceBoundary
   otelTrace --> logsBoundary
@@ -79,24 +79,26 @@ flowchart LR
   otelLogs --> logsBoundary
 
   otelTrace --> sdkTrace["OpenTelemetry Trace API"]
+  traceProvider --> sdkTraceProvider["OpenTelemetry Trace SDK<br/>TracerProvider / SpanProcessor / SpanExporter"]
   otelLogs --> sdkLogs["OpenTelemetry Logs API"]
   otelException --> sdkException["OpenTelemetry Trace API / SDK"]
   cleanup --> sdkResult["SDK Flush / Shutdown / Export結果"]
   lifecycle --> baseException["base<br/>IORef / 例外処理"]
   construction --> baseBracket["base<br/>bracket / 例外処理"]
+  traceProvider --> baseBracket
 
   classDef public fill:#052A59,stroke:#5EAFFF,color:#DDF0FF,stroke-width:2px
   classDef private fill:#211536,stroke:#8A5EC0,color:#DDF0FF,stroke-width:2px
   classDef external fill:#001947,stroke:#316CBD,color:#A6CAFF,stroke-width:2px
 
-  class telemetry,traceBoundary,logsBoundary,otelRoot,construction,otelTrace,otelLogs public
+  class telemetry,traceBoundary,logsBoundary,otelRoot,construction,traceProvider,otelTrace,otelLogs public
   class lifecycle,cleanup,otelException private
-  class sdkTrace,sdkLogs,sdkException,sdkResult,baseException,baseBracket external
+  class sdkTrace,sdkTraceProvider,sdkLogs,sdkException,sdkResult,baseException,baseBracket external
   style boundary fill:transparent,stroke:#153A75,color:#4C9EEB
   style adapter fill:transparent,stroke:#153A75,color:#4C9EEB
 ```
 
-凡例: 青＝`exposed-modules`、紫＝`other-modules`、濃青＝外部library/API。図中の`OpenTelemetry.*`は`RAGScope.Telemetry.OpenTelemetry.*`の略記（外部APIのnodeを除く）。実際の静的importのみを矢印にし、今後予定する接続は描かない。現在、`OpenTelemetry`ルートは空の公開moduleで、`Construction`も`Trace`・`Logs`の境界構築関数をまだ呼ばない。
+凡例: 青＝`exposed-modules`、紫＝`other-modules`、濃青＝外部library/API。図中の`OpenTelemetry.*`は`RAGScope.Telemetry.OpenTelemetry.*`の略記（外部APIのnodeを除く）。矢印は静的importのみを示す。`TraceProvider`の取得・解放関数は`ProviderOperations`へ注入するため、`Construction`から`TraceProvider`へのimport矢印はない。`OpenTelemetry`ルートは空の公開moduleで、`Construction`は`Trace`・`Logs`の境界構築関数を直接呼ばない。
 
 ### 公開APIと責務
 
@@ -126,7 +128,7 @@ withProviders
   -> IO a
 ```
 
-`Construction`は`ProviderOperations`の6つの関数を使ってTrace→Logs→Metricsを取得し、`bracket`を3段に重ねる。解放側は`releaseSafely`から`attemptCleanup`を呼び、`metrics.release`、`logs.release`、`trace.release`という操作識別名で結果を記録する。取得関数が返す前に取得した内部資源のrollbackと、release関数の個別SDK操作の継続は、それぞれ注入側の契約であり、`Construction`にはまだ具象SDK処理はない。
+`Construction`は`ProviderOperations`の6つの関数を使ってTrace→Logs→Metricsを取得し、`bracket`を3段に重ねる。解放側は`releaseSafely`から`attemptCleanup`を呼び、`metrics.release`、`logs.release`、`trace.release`という操作識別名で結果を記録する。取得関数が返す前に取得した内部資源のrollbackと、release関数の個別SDK操作の継続は、それぞれ注入側の契約であり、`Construction`には具象SDK処理はない。
 
 `Lifecycle`の`runLifecycle`は呼出しごとに`IORef [CleanupOutcome]`を作り、取得・利用・解放の結果を捕捉して`LifecycleReport`を一度報告する。`chooseExit`は元の結果・cleanup中断・報告中断の優先順位を選び、元の例外は`rethrowIO`で文脈を保つ。機能処理が返した`Left`は通常の戻り値である。同期cleanup失敗・同期reporter失敗だけで元の成功値や例外を変更しない。
 
@@ -167,7 +169,7 @@ flowchart TB
 
 `OpenTelemetryLifecycleSpec.hs`は`Construction`の公開APIから、取得順と逆順解放、後段の取得失敗、解放例外後の継続、元の例外と中断の優先順位、`Left`値、reporter同期例外、部分取得rollback結果の保持の8件を検証する。テストでは`ProviderOperations () () ()`へ実行履歴と失敗を注入しており、実SDKのProvider・Exporter・Processorを取得していない。引き継ぎ時にユーザーが確認した実行結果は`cabal build all`成功、`cabal test all`計34 examples・0 failures。これはこのNoteの更新後の再実行結果ではない。
 
-今後、実際のSDK Provider取得、Processor/Exporterの所有と二重shutdown防止、flush・shutdown、部分取得rollback、Metrics Reader停止・結果確認、通常構成の`withTelemetry`接続を実装する。写経用に提示された`TraceProvider.hs`と対応テストは、正本branchに追加・検証されるまで図やCabalの実装済みmoduleとして扱わない。`Configuration`、`Metrics`、`SdkPlan`、`SdkTelemetry`、`withTelemetryUsing`も現行コードにはない。予定と検討の詳細は実装計画Noteを参照し、実装の採否や仕様は正本に従う。
+今後、実際のSDK Provider取得、Processor/Exporterの所有と二重shutdown防止、flush・shutdown、部分取得rollback、Metrics Reader停止・結果確認、通常構成の`withTelemetry`接続を実装する。`Configuration`、`Metrics`、`SdkPlan`、`SdkTelemetry`、`withTelemetryUsing`も現行コードにはない。予定と検討の詳細は実装計画Noteを参照し、実装の採否や仕様は正本に従う。
 
 ## exception処理の依存
 
