@@ -1,12 +1,12 @@
 ---
-status: todo
+status: dropped
 projects:
   - "[[案件管理]]"
 agent: レバテック
 company: 株式会社PLAY
 priority: low
 dateCreated: 2026-09-18T18:04:00+09:00
-dateModified: 2026-09-18T18:04:00+09:00
+dateModified: 2026-09-18T18:46:00+09:00
 tags:
   - task
   - job
@@ -47,6 +47,7 @@ JavaScript、TypeScript、React、Ajax、Node.js、AWS。
 - ◎ 詳細設計・テスト設計、4～6か月の案件: 実務記載あり。
 - 歓迎の決済・認証連携、設計・リリースは直近EC案件で説明可能。
 - フロント中心の職種でSPA経験が明確に不足。バックエンド中心に担当できる別枠やSPA年数緩和がある場合のみ検討。
+- 辞退方針（2026-09-18）: SPA開発の実務経験がなく、フロント中心の業務が本人のバックエンド・設計志向と異なるため見送りを決定。エージェントへの辞退送信完了は未確認。
 
 ## 会社情報
 株式会社PLAY。事業や所在地は未調査。
