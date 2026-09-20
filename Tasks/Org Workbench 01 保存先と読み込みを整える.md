@@ -1,11 +1,12 @@
 ---
-status: todo
+status: done
 projects:
   - "[[org-workbench]]"
 dateCreated: 2026-09-20T17:06:15+09:00
-dateModified: 2026-09-20T17:06:15+09:00
+dateModified: 2026-09-20T17:33:49.244+09:00
 tags:
   - task
+completedDate: 2026-09-20
 ---
 
 # Org Workbench の保存先と読み込みを整える
@@ -24,5 +25,13 @@ Org 版 Workbench のデータを置く場所と、Emacs 設定から読み込�
 - CLI Emacs を再起動しても Workbench の設定を読み込める。
 - 新たな Org タスクファイルを追加した後、再起動または明示的な更新で検索・Agenda の対象にできる。
 - 保存先とモジュールの役割が、次の AI に分かる短い記述として残っている。
+
+## 実施結果
+
+- Workbench のデータ保存先を `~/org/workbench/` に設定した。
+- `lisp/my-workbench.el` を作成し、`init.el` から読み込むようにした。
+- 新規 Org ファイルが TODO 一覧に表示されることを確認した。
+- Emacs 再起動後も読み込み・一覧表示が正常に動作した。
+- 保存先と設定の役割を `.emacs.d-cli/README.org` に記載した。
 
 参照: [設計書](https://github.com/takashit16833/.emacs.d-cli/blob/feat/org-workbench/workbench/design.org)

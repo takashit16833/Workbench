@@ -539,7 +539,7 @@
     "defaultReminderMinutes": null
   },
   "enableDebugLogging": false,
-  "lastSeenVersion": "4.12.3",
+  "lastSeenVersion": "4.13.1",
   "pomodoroState": {
     "isRunning": false,
     "timeRemaining": 1500,
@@ -4946,5 +4946,6 @@
     }
   ],
   "lastSelectedTaskPath": "Tasks/RS-0023 OpenTelemetry Logsを前提に実行追跡・構造化ログアーキテクチャを再設計する.md",
-  "lastNotifiedReleaseVersion": "4.12.5"
+  "lastNotifiedReleaseVersion": "4.13.2",
+  "completionMenuAsSubmenu": true
 }
