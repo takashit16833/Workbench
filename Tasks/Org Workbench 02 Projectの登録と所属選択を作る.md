@@ -1,11 +1,12 @@
 ---
-status: doing
+status: done
 projects:
   - "[[org-workbench]]"
 dateCreated: 2026-09-20T17:06:15+09:00
-dateModified: 2026-09-20T17:38:20.322+09:00
+dateModified: 2026-09-21T17:35:37.975+09:00
 tags:
   - task
+completedDate: 2026-09-21
 ---
 
 # Project の登録と所属選択を作る
