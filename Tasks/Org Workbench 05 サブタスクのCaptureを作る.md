@@ -1,5 +1,5 @@
 ---
-status: todo
+status: doing
 projects:
   - "[[org-workbench]]"
 dateCreated: 2026-09-20T17:06:15+09:00

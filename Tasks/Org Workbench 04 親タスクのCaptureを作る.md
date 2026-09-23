@@ -1,11 +1,12 @@
 ---
-status: doing
+status: done
 projects:
   - "[[org-workbench]]"
 dateCreated: 2026-09-20T17:06:15+09:00
-dateModified: 2026-09-22T10:59:41+09:00
+dateModified: 2026-09-23T15:10:21.331+09:00
 tags:
   - task
+completedDate: 2026-09-23
 ---
 
 # 親タスクを Capture で作成する
