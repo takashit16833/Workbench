@@ -1,11 +1,12 @@
 ---
-status: doing
+status: done
 projects:
   - "[[org-workbench]]"
 dateCreated: 2026-09-20T17:06:15+09:00
-dateModified: 2026-09-23T16:49:00+09:00
+dateModified: 2026-09-24T09:30:58.594+09:00
 tags:
   - task
+completedDate: 2026-09-24
 ---
 
 # タスク作成から親を指定して子タスクを追加する
