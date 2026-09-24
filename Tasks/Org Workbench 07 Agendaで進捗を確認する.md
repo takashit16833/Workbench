@@ -94,5 +94,5 @@ DEADLINE: <2026-09-21 Mon>
 - TODO → DOING → DONE、WAITING → TODO の変更が保存・表示に反映される。
 - 起動し直しても同じタスク群を確認でき、登録漏れ・重複で進捗を誤認しない。
 
-前提: [[Org Workbench 03 タスクの形式と状態を整える]]、[[Org Workbench 04 親タスクのCaptureを作る]]
+前提: [[Org Workbench 03 タスクの形式と状態を整える]]、[[Org Workbench 04 親タスクのCaptureを作る]]、[[Org Workbench 05 サブタスクのCaptureを作る]]
 参照: [設計書](https://github.com/takashit16833/.emacs.d-cli/blob/feat/org-workbench/workbench/design.org)
