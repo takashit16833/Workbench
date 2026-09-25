@@ -3,7 +3,7 @@ status: todo
 projects:
   - "[[org-workbench]]"
 dateCreated: 2026-09-20T17:06:15+09:00
-dateModified: 2026-09-20T17:06:15+09:00
+dateModified: 2026-09-25T21:30:46+09:00
 tags:
   - task
 ---
@@ -14,7 +14,7 @@ tags:
 
 **Workbench 専用の Agenda から、「今日何をするか」「今日が期限・期限超過のものは何か」「進行中・待機中の作業は何か」を確認できる**ようにする。Workbench 専用 Agenda は Workbench の `tasks/` だけを対象とし、通常の Org Agenda の対象ファイルや表示設定には影響させない。Agenda や TODO 一覧からタスクをすぐに開き、必要な日時・本文などを編集したり、状態を変更して更新結果を確認したりできるようにする。
 
-タスク06の Project 別・親別一覧は「所属や階層を手掛かりに目的のタスクを探す」機能。こちらは **予定・期限・状態を手掛かりに、日々の進捗を確認する画面**。新しい Dashboard を一から作るのではなく、Org 標準の custom agenda command を使って Workbench 専用 Agenda を用意する。Workbench のタスクファイル名は機械生成で人間向けの情報を持たないため、この専用 Agenda では category としてのファイル名を表示しない。通常の Org Agenda では既存の category 表示や設定をそのまま維持する。以下は表示したい情報を説明する例で、正確な画面レイアウトやキー操作を確定するものではない。
+タスク06の Project 別 Agenda は「Project を手掛かりにタスクを一覧・操作する」機能。こちらは **予定・期限・状態を手掛かりに、日々の進捗を確認する画面**。どちらも Org Agenda の上に作り、新しい Dashboard を一から作らない。Task 07 では Org 標準の custom agenda command を使って Workbench 専用 Agenda を用意する。Workbench のタスクファイル名は機械生成で人間向けの情報を持たないため、この専用 Agenda では category としてのファイル名を表示しない。通常の Org Agenda では既存の category 表示や設定をそのまま維持する。以下は表示したい情報を説明する例で、正確な画面レイアウトやキー操作を確定するものではない。
 
 ### 操作例①：今日の予定と期限を確認する
 
