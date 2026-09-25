@@ -4,7 +4,7 @@ CLI Emacs 上に Org 版 Workbench を作るための、一時的な開発 Proje
 
 ## 初回マイルストーン
 
-RAGScope と Workbench のタスクを Org に登録し、作成・状態変更・Project 別／親タスク別の一覧・Agenda による進捗確認ができること。
+RAGScope と Workbench のタスクを Org に登録し、作成・状態変更・Project 別 Agenda・日々の進捗確認ができること。
 
 タスクは `Tasks/Org Workbench 01 ...` から `08 ...` の順に進める。各 Task の「完了条件」を満たしたら完了にする。
 
