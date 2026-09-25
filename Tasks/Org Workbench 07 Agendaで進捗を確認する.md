@@ -12,14 +12,14 @@ tags:
 
 ## 完成イメージ
 
-**Workbench 専用の Agenda から、「今日何をするか」「今日が期限・期限超過のものは何か」「進行中・待機中の作業は何か」を確認できる**ようにする。Workbench 専用 Agenda は Workbench の `tasks/` だけを対象とし、通常の Org Agenda の対象ファイルや表示設定には影響させない。Agenda や TODO 一覧からタスクをすぐに開き、必要な日時・本文などを編集したり、状態を変更して更新結果を確認したりできるようにする。
+**Workbench の `tasks/` に閉じた Agenda 空間から、「今日何をするか」「今日が期限・期限超過のものは何か」「進行中・待機中の作業は何か」を確認できる**ようにする。Workbench 専用の入口から Org 標準の Agenda / TODO 一覧 / タグ・プロパティ検索と、Workbench 固有の Project 別・日付別・状態別・総合 view を利用できるようにする。通常の Org Agenda には Workbench のタスクを含めず、対象ファイルや表示設定にも影響させない。
 
-タスク06の Project 別 Agenda は「Project を手掛かりにタスクを一覧・操作する」機能。こちらは **予定・期限・状態を手掛かりに、日々の進捗を確認する画面**。どちらも Org Agenda の上に作り、新しい Dashboard を一から作らない。Task 07 では Org 標準の custom agenda command を使って Workbench 専用 Agenda を用意する。Workbench のタスクファイル名は機械生成で人間向けの情報を持たないため、この専用 Agenda では category としてのファイル名を表示しない。通常の Org Agenda では既存の category 表示や設定をそのまま維持する。以下は表示したい情報を説明する例で、正確な画面レイアウトやキー操作を確定するものではない。
+タスク06の Project 別 Agenda は「Project を手掛かりにタスクを一覧・操作する」機能。Task 07 では、それを独立した入口のまま増やすのではなく、**Workbench の Agenda 空間の一機能として整理する**。Workbench 専用の入口では `org-agenda-files` を実行中だけ `tasks/` に限定し、その中で Org 標準の Agenda ディスパッチャーと custom agenda command を利用する。独自 Dashboard や独自ディスパッチャーは作らない。Workbench のタスクファイル名は機械生成で人間向けの情報を持たないため、Workbench 固有 view では category としてのファイル名を表示しない。通常の Org Agenda では既存の category 表示や設定をそのまま維持する。
 
 ### 操作例①：今日の予定と期限を確認する
 
 1. RAGScope の親タスクと、その下の「SQL の実行計画を調べる」に後から予定や期限を設定する。
-2. `M-x org-agenda` から Workbench 専用 Agenda を選び、今日の予定を確認する。
+2. Workbench 専用の Agenda 入口を開き、今日・期限の view から今日の予定を確認する。
 3. 親タスクだけでなく、日時を指定した子・孫タスクも確認できる。
 4. 未完了タスクについて、今日が期限のものと昨日以前に期限を過ぎたものを確認し、対象の見出しを開く。
 
@@ -80,11 +80,12 @@ DEADLINE: <2026-09-21 Mon>
 
 ## やること
 
-Org 標準の custom agenda command を使って Workbench 専用 Agenda を初回リリースの進捗画面にする。Dashboard を新規で作り込む必要はない。通常の Org Agenda と Workbench 専用 Agenda の対象・表示設定は分離する。
+Workbench 専用の Agenda 入口を作り、Workbench の `tasks/` に閉じた作業空間として Org Agenda を利用する。独自 Dashboard や独自ディスパッチャーは作らず、Org 標準の Agenda ディスパッチャーと custom agenda command を使う。通常の Org Agenda と Workbench Agenda は対象ファイル・表示設定を分離する。
 
-- Workbench 専用 Agenda の対象を Workbench の `tasks/` に限定し、新しく作成した親タスクのファイルと子タスクを反映する。通常の `org-agenda-files` は Workbench のために上書きしない。
+- Workbench 専用の入口では Agenda の対象を Workbench の `tasks/` に限定し、新しく作成した親タスクのファイルと子タスクを反映する。通常の `org-agenda-files` は恒久的に変更せず、通常の Org Agenda には Workbench のタスクを含めない。
+- Workbench Agenda 内では Org 標準の Agenda / TODO 一覧 / タグ・プロパティ検索をそのまま利用できるようにし、Workbench 固有の Project 別・今日／期限・状態別・総合 view を追加する。
 - 今日の予定・本日期限・期限超過、未完了の TODO 一覧、DOING・WAITING を確認できる表示を整える。Workbench 専用 Agenda では機械生成されたファイル名を category として表示せず、通常の Org Agenda の表示形式は変更しない。日時未設定のタスクも探せるようにする。
-- Workbench 専用 Agenda や TODO 一覧から元の Org 見出しをすぐに開き、作成後の詳細追記・状態変更を行って表示を更新できる。通常の Org 操作を優先する。
+- Workbench Agenda の標準 view / 固有 view から元の Org 見出しをすぐに開き、作成後の詳細追記・状態変更を行って表示を更新できる。通常の Org 操作を優先する。
 - DONE / DROPPED の扱いを整理し、完了したタスクが未完了一覧に残らないようにする。
 
 ## 完了条件
@@ -92,7 +93,7 @@ Org 標準の custom agenda command を使って Workbench 専用 Agenda を初�
 - SCHEDULED / DEADLINE を付けたサブタスクまで Workbench 専用 Agenda に表示され、本日期限と期限超過の未完了タスクを確認できる。
 - 日時を付けずに作成したタスクも TODO 一覧から探し、元の見出しへ移動して本文・日時などを追記できる。
 - TODO → DOING → DONE、WAITING → TODO の変更が保存・表示に反映される。
-- 起動し直しても同じタスク群を確認でき、登録漏れ・重複で進捗を誤認しない。通常の Org Agenda の対象ファイルや category 表示などの既存設定は Workbench によって変更されない。
+- 起動し直しても同じタスク群を確認でき、登録漏れ・重複で進捗を誤認しない。Workbench Agenda は `tasks/` のみに閉じ、通常の Org Agenda は Workbench のタスクを含めない。通常の Org Agenda の対象ファイルや category 表示などの既存設定は Workbench によって変更されない。
 
 前提: [[Org Workbench 03 タスクの形式と状態を整える]]、[[Org Workbench 04 親タスクのCaptureを作る]]、[[Org Workbench 05 サブタスクのCaptureを作る]]
 参照: [設計書](https://github.com/takashit16833/.emacs.d-cli/blob/feat/org-workbench/workbench/design.org)
