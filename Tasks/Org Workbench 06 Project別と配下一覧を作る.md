@@ -1,11 +1,12 @@
 ---
-status: doing
+status: done
 projects:
   - "[[org-workbench]]"
 dateCreated: 2026-09-20T17:06:15+09:00
-dateModified: 2026-09-25T21:30:46+09:00
+dateModified: 2026-09-25T22:29:33.752+09:00
 tags:
   - task
+completedDate: 2026-09-25
 ---
 
 # Project 別タスク一覧を Agenda で作る
