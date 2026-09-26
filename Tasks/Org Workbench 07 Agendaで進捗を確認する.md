@@ -1,9 +1,9 @@
 ---
-status: doing
+status: done
 projects:
   - "[[org-workbench]]"
 dateCreated: 2026-09-20T17:06:15+09:00
-dateModified: 2026-09-25T22:29:40.427+09:00
+dateModified: 2026-09-26T09:47:03+09:00
 tags:
   - task
 ---
