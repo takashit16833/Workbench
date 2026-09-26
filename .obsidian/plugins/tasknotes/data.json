@@ -542,8 +542,7 @@
   "lastSeenVersion": "4.13.5",
   "pomodoroState": {
     "isRunning": false,
-    "timeRemaining": 1500,
-    "nextSessionType": "work"
+    "timeRemaining": 1500
   },
   "lastPomodoroDate": "2026-09-16",
   "pomodoroHistory": [

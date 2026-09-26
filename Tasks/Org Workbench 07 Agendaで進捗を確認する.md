@@ -1,0 +1,99 @@
+---
+status: done
+projects:
+  - "[[org-workbench]]"
+dateCreated: 2026-09-20T17:06:15+09:00
+dateModified: 2026-09-26T09:47:03+09:00
+tags:
+  - task
+---
+
+# Agenda で最低限の進捗を確認する
+
+## 完成イメージ
+
+**Workbench の `tasks/` に閉じた Agenda 空間から、「今日何をするか」「今日が期限・期限超過のものは何か」「進行中・待機中の作業は何か」を確認できる**ようにする。Workbench 専用の入口から Org 標準の Agenda / TODO 一覧 / タグ・プロパティ検索と、Workbench 固有の Project 別・日付別・状態別・総合 view を利用できるようにする。通常の Org Agenda には Workbench のタスクを含めず、対象ファイルや表示設定にも影響させない。
+
+タスク06の Project 別 Agenda は「Project を手掛かりにタスクを一覧・操作する」機能。Task 07 では、それを独立した入口のまま増やすのではなく、**Workbench の Agenda 空間の一機能として整理する**。Workbench 専用の入口では `org-agenda-files` を実行中だけ `tasks/` に限定し、その中で Org 標準の Agenda ディスパッチャーと custom agenda command を利用する。独自 Dashboard や独自ディスパッチャーは作らない。Workbench のタスクファイル名は機械生成で人間向けの情報を持たないため、Workbench 固有 view では category としてのファイル名を表示しない。通常の Org Agenda では既存の category 表示や設定をそのまま維持する。
+
+### 操作例①：今日の予定と期限を確認する
+
+1. RAGScope の親タスクと、その下の「SQL の実行計画を調べる」に後から予定や期限を設定する。
+2. Workbench 専用の Agenda 入口を開き、今日・期限の view から今日の予定を確認する。
+3. 親タスクだけでなく、日時を指定した子・孫タスクも確認できる。
+4. 未完了タスクについて、今日が期限のものと昨日以前に期限を過ぎたものを確認し、対象の見出しを開く。
+
+例えば、タスクのデータが次の状態だとする。
+
+```org
+* TODO API の性能を改善する :p_ragscope:
+DEADLINE: <2026-09-25 Fri>
+
+** DOING SQL の実行計画を調べる
+SCHEDULED: <2026-09-22 Tue>
+
+*** TODO 遅いクエリを確認する
+DEADLINE: <2026-09-21 Mon>
+```
+
+2026-09-22 に確認したとき、少なくとも次の情報を探せる状態を目指す。
+
+```text
+今日の予定 : SQL の実行計画を調べる（DOING）
+期限超過   : 遅いクエリを確認する（TODO / 期限 9月21日）
+今後の期限 : API の性能を改善する（TODO / 期限 9月25日）
+```
+
+期限が今日のタスクは「本日期限」、昨日以前の未完了タスクは「期限超過」として区別する。今後の期限の表示範囲や、これらを一画面にまとめるかは実装時に決める。
+
+### 操作例②：Agenda からすぐに詳細を編集する
+
+1. タスク04・05の「タスク作成」でタイトルと Project だけ登録する。予定や本文は未設定でもよい。
+2. 作業を始めるとき、未完了 TODO の一覧または Project 別一覧で対象を探す。日付未設定のタスクも TODO 一覧から見つけられる。
+3. Agenda 上のタスクで `RET` を押して元の Org ファイルの見出しを開き、SCHEDULED・DEADLINE・優先度・BRANCH・SOURCE・本文などを必要に応じて追記して保存する。
+4. Agenda に戻って表示を更新し、変更した日時や状態が反映されることを確認する。
+
+作成時に詳細入力を強制せず、後から編集したいときにタスクを探してすぐ開けることを重視する。詳細入力専用の Capture テンプレートは作らない。
+
+### 操作例③：Agenda から状態を更新する
+
+1. Agenda で「SQL の実行計画を調べる」を選び、元の Org 見出しを開く。
+2. 状態を `DOING` から `DONE` に変更して保存する。
+3. Agenda を更新すると、進行中の一覧から外れ、未完了の一覧にも残らない。
+4. 別の `WAITING` タスクを `TODO` に戻すと、その変更が保存・表示に反映される。
+
+```text
+変更前 : DOING   SQL の実行計画を調べる
+変更後 : DONE    SQL の実行計画を調べる
+
+変更前 : WAITING 表示速度を計測する
+変更後 : TODO    表示速度を計測する
+```
+
+`DONE` と `DROPPED` はどちらも未完了タスクの一覧から除外する。完了・中止の日時 `CLOSED` は既存の Org 設定に従って記録する。状態変更には Org の通常の操作を優先し、専用の状態管理画面は作らない。
+
+### 操作例④：新規作成・再起動後も同じタスクを扱う
+
+タスク04・05の共通の「タスク作成」で `tasks/` に親タスクを追加したら、手動でファイル一覧を書き換えなくても Workbench 専用 Agenda の検索対象となる。既存ファイルに追加した子タスクの SCHEDULED / DEADLINE も拾う。Emacs を再起動しても対象が失われず、登録漏れや同じタスクの重複表示によって状況を誤認しない。
+
+**このタスクの範囲は、初回リリースに必要な Workbench 専用 Agenda の検索対象・表示・元タスクへの移動・状態更新の整備まで。** 通常の Org Agenda の設定変更、独自 Dashboard の作り込み、Pomodoro による時間計測、ガントチャートなどは対象外。上記は完成予定の動作例であり、現時点で実装済みという意味ではない。
+
+## やること
+
+Workbench 専用の Agenda 入口を作り、Workbench の `tasks/` に閉じた作業空間として Org Agenda を利用する。独自 Dashboard や独自ディスパッチャーは作らず、Org 標準の Agenda ディスパッチャーと custom agenda command を使う。通常の Org Agenda と Workbench Agenda は対象ファイル・表示設定を分離する。
+
+- Workbench 専用の入口では Agenda の対象を Workbench の `tasks/` に限定し、新しく作成した親タスクのファイルと子タスクを反映する。通常の `org-agenda-files` は恒久的に変更せず、通常の Org Agenda には Workbench のタスクを含めない。
+- Workbench Agenda 内では Org 標準の Agenda / TODO 一覧 / タグ・プロパティ検索をそのまま利用できるようにし、Workbench 固有の Project 別・今日／期限・状態別・総合 view を追加する。
+- 今日の予定・本日期限・期限超過、未完了の TODO 一覧、DOING・WAITING を確認できる表示を整える。Workbench 専用 Agenda では機械生成されたファイル名を category として表示せず、通常の Org Agenda の表示形式は変更しない。日時未設定のタスクも探せるようにする。
+- Workbench Agenda の標準 view / 固有 view から元の Org 見出しをすぐに開き、作成後の詳細追記・状態変更を行って表示を更新できる。通常の Org 操作を優先する。
+- DONE / DROPPED の扱いを整理し、完了したタスクが未完了一覧に残らないようにする。
+
+## 完了条件
+
+- SCHEDULED / DEADLINE を付けたサブタスクまで Workbench 専用 Agenda に表示され、本日期限と期限超過の未完了タスクを確認できる。
+- 日時を付けずに作成したタスクも TODO 一覧から探し、元の見出しへ移動して本文・日時などを追記できる。
+- TODO → DOING → DONE、WAITING → TODO の変更が保存・表示に反映される。
+- 起動し直しても同じタスク群を確認でき、登録漏れ・重複で進捗を誤認しない。Workbench Agenda は `tasks/` のみに閉じ、通常の Org Agenda は Workbench のタスクを含めない。通常の Org Agenda の対象ファイルや category 表示などの既存設定は Workbench によって変更されない。
+
+前提: [[Org Workbench 03 タスクの形式と状態を整える]]、[[Org Workbench 04 親タスクのCaptureを作る]]、[[Org Workbench 05 サブタスクのCaptureを作る]]
+参照: [設計書](https://github.com/takashit16833/.emacs.d-cli/blob/feat/org-workbench/workbench/design.org)
