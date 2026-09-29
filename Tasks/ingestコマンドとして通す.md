@@ -2,12 +2,10 @@
 status: todo
 projects:
   - "[[文書取り込み機能作成]]"
-  - "[[OtelLens]]"
 branch: document-ingestion/integrate-ingest-command
 dateCreated: 2026-09-29T06:44:00+09:00
 tags:
   - task
-dateModified: 2026-09-29T10:27:51.336+09:00
 ---
 
 ## 実装
