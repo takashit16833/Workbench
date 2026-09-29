@@ -2,10 +2,12 @@
 status: todo
 projects:
   - "[[文書取り込み機能作成]]"
+  - "[[OtelLens]]"
 branch: document-ingestion/save-postgresql
 dateCreated: 2026-09-29T06:43:00+09:00
 tags:
   - task
+dateModified: 2026-09-29T10:27:56.135+09:00
 ---
 
 ## 実装
