@@ -6,7 +6,6 @@ dateModified: 2026-08-21T10:12:35.050+09:00
 tags:
   - task
 projects:
-  - "[[RAGScope]]"
   - "[[RS-0020 共通エラー・構造化ログの論理契約を再設計する]]"
 branch: RS-0020/isolate-existing-design
 completedDate: 2026-08-21

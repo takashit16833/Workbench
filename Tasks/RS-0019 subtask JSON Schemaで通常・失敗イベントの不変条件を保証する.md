@@ -6,7 +6,6 @@ dateModified: 2026-08-19T20:56:50.315+09:00
 tags:
   - task
 projects:
-  - "[[RAGScope]]"
   - "[[RS-0019 構造化ログのイベントモデルを直和へ再設計する]]"
 blockedBy:
   - uid: "[[RS-0019 subtask 構造化ログイベントモデルの設計判断を確定する]]"

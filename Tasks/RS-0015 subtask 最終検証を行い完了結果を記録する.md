@@ -8,7 +8,6 @@ tags:
   - task
 due: 2026-08-13
 projects:
-  - "[[RAGScope]]"
   - "[[RS-0015 RAGScopeアプリケーションの共通エラー・構造化ログ基盤を実装する]]"
 blockedBy:
   - uid: "[[RS-0015 subtask 共通エラーと構造化ログの設計書を実装へ同期する]]"

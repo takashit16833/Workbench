@@ -6,7 +6,6 @@ dateModified: 2026-08-19T20:35:26.566+09:00
 tags:
   - task
 projects:
-  - "[[RAGScope]]"
   - "[[RS-0019 構造化ログのイベントモデルを直和へ再設計する]]"
 branch: RS-0019/event-model-design
 completedDate: 2026-08-19

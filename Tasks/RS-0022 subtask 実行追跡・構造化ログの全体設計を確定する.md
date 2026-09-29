@@ -6,7 +6,6 @@ dateModified: 2026-09-05T06:23:41.398+09:00
 tags:
   - task
 projects:
-  - "[[RAGScope]]"
   - "[[RS-0022 RAGScopeアプリケーションの構造化ログ基盤を現在契約へ移行する]]"
 branch: RS-0022/design-logging-architecture
 timeEntries:

@@ -1,12 +1,11 @@
 ---
-status: todo
+status: dropped
 priority: medium
 dateCreated: 2026-08-18T18:55:00+09:00
-dateModified: 2026-08-18T19:26:00+09:00
+dateModified: 2026-09-29T08:54:40.169+09:00
 tags:
   - task
 projects:
-  - "[[RAGScope]]"
   - "[[RS-0018 AI推論サービスの共通エラー・構造化ログ基盤を実装する]]"
 blockedBy:
   - uid: "[[RS-0018 subtask 共通JSON Schema適合テストを追加する]]"
@@ -14,6 +13,7 @@ blockedBy:
   - uid: "[[RS-0018 subtask 機能処理と必須ログ結果の合成境界を実装する]]"
     reltype: FINISHTOSTART
 branch: RS-0018/design-sync
+completedDate: 2026-09-29
 ---
 
 ## Squash merge commit body

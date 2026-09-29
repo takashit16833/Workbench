@@ -6,7 +6,6 @@ dateModified: 2026-08-27T07:59:10.815+09:00
 tags:
   - task
 projects:
-  - "[[RAGScope]]"
   - "[[RS-0021 構造化ログJSON Schemaとfixtureを現在契約へ更新する]]"
 blockedBy:
   - uid: "[[RS-0021 subtask JSON Schemaとfixtureを現在契約へ更新する]]"

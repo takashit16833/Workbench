@@ -1,14 +1,15 @@
 ---
-status: todo
+status: dropped
 projects:
   - "[[RS-0024 RAGScopeアプリケーションへOpenTelemetry Observability最小基盤を実装する]]"
 blockedBy:
   - "[[RS-0024 subtask Trace境界とSpan実行を実装する]]"
 branch: RS-0024/context-propagation
 dateCreated: 2026-09-08T15:43:45+09:00
-dateModified: 2026-09-08T15:43:45+09:00
+dateModified: 2026-09-29T08:55:02.453+09:00
 tags:
   - task
+completedDate: 2026-09-29
 ---
 
 ## Squash merge commit body

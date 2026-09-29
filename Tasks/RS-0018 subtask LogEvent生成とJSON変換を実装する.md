@@ -1,12 +1,11 @@
 ---
-status: waiting
+status: dropped
 priority: medium
 dateCreated: 2026-08-18T18:55:00+09:00
-dateModified: 2026-08-21T09:25:34.521+09:00
+dateModified: 2026-09-29T08:54:46.824+09:00
 tags:
   - task
 projects:
-  - "[[RAGScope]]"
   - "[[RS-0018 AI推論サービスの共通エラー・構造化ログ基盤を実装する]]"
 blockedBy:
   - uid: "[[RS-0018 subtask 共通エラーと例外変換境界を実装する]]"
@@ -64,6 +63,7 @@ timeEntries:
   - startTime: 2026-08-20T23:02:03.725Z
     description: Work session
     endTime: 2026-08-20T23:27:03.803Z
+completedDate: 2026-09-29
 ---
 
 ## Squash merge commit body

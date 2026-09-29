@@ -8,7 +8,6 @@ tags:
   - task
 due: 2026-08-13
 projects:
-  - "[[RAGScope]]"
   - "[[RS-0015 RAGScopeアプリケーションの共通エラー・構造化ログ基盤を実装する]]"
 blockedBy:
   - uid: "[[RS-0015 subtask ログ出力境界とSink失敗時の挙動を検証する]]"

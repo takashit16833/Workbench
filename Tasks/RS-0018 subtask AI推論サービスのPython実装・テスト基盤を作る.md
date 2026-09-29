@@ -6,7 +6,6 @@ dateModified: 2026-08-18T21:18:00+09:00
 tags:
   - task
 projects:
-  - "[[RAGScope]]"
   - "[[RS-0018 AI推論サービスの共通エラー・構造化ログ基盤を実装する]]"
 branch: RS-0018/python-test-foundation
 ---

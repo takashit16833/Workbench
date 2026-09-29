@@ -1,5 +1,5 @@
 ---
-status: todo
+status: dropped
 projects:
   - "[[RS-0024 RAGScopeアプリケーションへOpenTelemetry Observability最小基盤を実装する]]"
 blockedBy:
@@ -13,9 +13,10 @@ blockedBy:
   - "[[RS-0024 subtask Telemetry失敗を機能処理から隔離する]]"
 branch: RS-0024/app-integration-verification
 dateCreated: 2026-09-08T15:43:45+09:00
-dateModified: 2026-09-16T09:47:00+09:00
+dateModified: 2026-09-29T08:55:00.218+09:00
 tags:
   - task
+completedDate: 2026-09-29
 ---
 
 ## Squash merge commit body

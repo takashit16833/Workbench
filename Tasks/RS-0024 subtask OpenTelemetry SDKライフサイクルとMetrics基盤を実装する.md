@@ -1,12 +1,12 @@
 ---
-status: doing
+status: dropped
 projects:
   - "[[RS-0024 RAGScopeアプリケーションへOpenTelemetry Observability最小基盤を実装する]]"
 blockedBy:
   - "[[RS-0024 subtask OpenTelemetry依存とCabal境界を実装する]]"
 branch: RS-0024/sdk-lifecycle-metrics
 dateCreated: 2026-09-08T15:43:45+09:00
-dateModified: 2026-09-17T12:33:56.397+09:00
+dateModified: 2026-09-29T08:54:57.187+09:00
 tags:
   - task
 timeEntries:
@@ -34,6 +34,7 @@ timeEntries:
   - startTime: 2026-09-17T03:08:56.334Z
     description: Work session
     endTime: 2026-09-17T03:33:56.397Z
+completedDate: 2026-09-29
 ---
 
 ## Squash merge commit body

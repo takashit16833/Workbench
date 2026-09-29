@@ -6,7 +6,6 @@ dateModified: 2026-08-19T12:48:25.849+09:00
 tags:
   - task
 projects:
-  - "[[RAGScope]]"
   - "[[RS-0018 AI推論サービスの共通エラー・構造化ログ基盤を実装する]]"
 blockedBy:
   - uid: "[[RS-0018 subtask AI推論サービスのPython実装・テスト基盤を作る]]"

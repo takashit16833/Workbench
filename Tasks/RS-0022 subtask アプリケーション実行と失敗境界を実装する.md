@@ -6,7 +6,6 @@ dateModified: 2026-09-05T06:23:28.431+09:00
 tags:
   - task
 projects:
-  - "[[RAGScope]]"
   - "[[RS-0022 RAGScopeアプリケーションの構造化ログ基盤を現在契約へ移行する]]"
 blockedBy:
   - uid: "[[RS-0022 subtask trace・spanによる実行追跡とログ関連付けを実装する]]"

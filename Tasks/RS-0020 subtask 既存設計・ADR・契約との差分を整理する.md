@@ -6,7 +6,6 @@ dateModified: 2026-08-26T18:18:52.548+09:00
 tags:
   - task
 projects:
-  - "[[RAGScope]]"
   - "[[RS-0020 共通エラー・構造化ログの論理契約を再設計する]]"
 blockedBy:
   - uid: "[[RS-0020 subtask JSONとSQLiteへの投影で論理契約を検証する]]"

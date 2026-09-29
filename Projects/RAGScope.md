@@ -1,3 +1,0 @@
-# RAGScope
-
-## Context

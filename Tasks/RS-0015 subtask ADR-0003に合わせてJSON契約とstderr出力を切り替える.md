@@ -7,7 +7,6 @@ dateModified: 2026-08-16T17:40:31.135+09:00
 tags:
   - task
 projects:
-  - "[[RAGScope]]"
   - "[[RS-0015 RAGScopeアプリケーションの共通エラー・構造化ログ基盤を実装する]]"
 blockedBy:
   - uid: "[[RS-0015 subtask AesonによるLogEventのJSON serializationを完成させる]]"
