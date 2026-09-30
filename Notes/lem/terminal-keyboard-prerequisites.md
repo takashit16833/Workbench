@@ -555,7 +555,30 @@ ncurses アプリではこの辺りの Terminal 状態を変更することが�
 
 ## stream
 
-Common Lisp の入出力先を表すオブジェクト。
+Common Lisp で、**データそのものではなく、データを読み書きする先を表すオブジェクト**。
+
+`stream` の中に `"hello"` のような文字列が入っている、という意味ではない。
+
+たとえば stream は次のような入出力先を表せる。
+
+- Terminal
+- ファイル
+- 文字列バッファ
+- ソケット
+
+感覚としては、
+
+~~~text
+stream = データ
+~~~
+
+ではなく、
+
+~~~text
+stream = データを書いたり読んだりする先へのハンドル
+~~~
+
+に近い。
 
 たとえば、
 
@@ -563,13 +586,32 @@ Common Lisp の入出力先を表すオブジェクト。
 (format stream "hello")
 ~~~
 
-なら、
+は、
 
-> `stream` へ `hello` を書き込む
+> `stream` が指している出力先へ `hello` を書く
 
 という意味。
 
-今回の Kitty keyboard 実装では、Terminal へ制御シーケンスを書き出すために使う。
+もし `stream` が Terminal を指していれば、画面に `hello` が表示される。
+
+もし文字列へ書き込む stream なら、
+
+~~~lisp
+(let ((stream (make-string-output-stream)))
+  (format stream "hello")
+  (format stream "world")
+  (get-output-stream-string stream))
+~~~
+
+結果は、
+
+~~~lisp
+"helloworld"
+~~~
+
+になる。
+
+今回の Kitty keyboard 実装では、`stream` は Terminal への出力先として使う。
 
 ~~~lisp
 (format stream
@@ -578,13 +620,13 @@ Common Lisp の入出力先を表すオブジェクト。
         +disambiguate-escape-codes+)
 ~~~
 
-これは `stream` を変換しているのではなく、
+この処理は `stream` 自体を変換しているのではない。
 
 ~~~text
 ESC[>1u
 ~~~
 
-を組み立てて `stream` へ書き込んでいる。
+という byte 列を組み立てて、`stream` が指す Terminal へ書き込んでいる。
 
 ---
 
