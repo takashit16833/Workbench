@@ -51,3 +51,20 @@
 
 (lem:make-key :super t :sym "s")
 ~~~
+
+## ASDF system
+
+Lem は複数の ASDF system に分けて構成されている。
+拡張を作るときは、必要な Lem の system を `:depends-on` に指定する。
+
+| 名前 | 概要 |
+| --- | --- |
+| `lem/core` | Lem の基本機能をまとめた ASDF system。Buffer、Window、Command、Project、frame-multiplexer など、エディタの主要な仕組みを含む。 |
+
+~~~lisp
+(defsystem "my-lem-extension"
+  :depends-on ("lem/core")
+  ...)
+~~~
+
+`lem/core` に含まれる機能だけを使う拡張では、Lem 全体や不要な extension system へ依存させる必要はない。
