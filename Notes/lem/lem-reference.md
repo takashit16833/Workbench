@@ -1,6 +1,10 @@
 # Lem リファレンス
 
+Lem の API や仕組みを、エディタの機能領域ごとに整理する。
+
 ## Key
+
+### キーの生成
 
 | 名前 | 概要 |
 | --- | --- |
@@ -28,7 +32,7 @@
  :sym "Up")
 ~~~
 
-## Key symbol
+### キー名
 
 一部の特殊キーは文字ではなく名前で指定する。
 
@@ -52,7 +56,7 @@
 (lem:make-key :super t :sym "s")
 ~~~
 
-## ASDF system
+## ASDF / System
 
 Lem は複数の ASDF system に分けて構成されている。
 拡張を作るときは、必要な Lem の system を `:depends-on` に指定する。
