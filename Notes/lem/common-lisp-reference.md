@@ -279,6 +279,17 @@ REPL で、ロード後に関数や `defstruct` のコンストラクタが実�
 
 引数の最大値を返す。
 
+## `namestring`
+
+pathname を文字列形式で返す。
+
+~~~lisp
+(namestring #P"/tmp/example.lisp")
+;; => "/tmp/example.lisp"
+~~~
+
+pathname をテストするときなど、文字列表現を比較したい場合にも使える。
+
 ## `nil`
 
 空リストを表す。
@@ -326,6 +337,15 @@ pathname designator（文字列や pathname など）から、Common Lisp の pa
 `routing-context` にある `pathname` フィールドは、ファイルの場所を pathname オブジェクトとして保持するために同じ概念名を使っているだけである。
 
 `defstruct` が生成する `routing-context-pathname` は構造体のフィールドを読むアクセサであり、Common Lisp の `pathname` 関数とは別物。
+
+## `pathnamep`
+
+値が pathname オブジェクトなら真を返す。
+
+~~~lisp
+(pathnamep #P"/tmp/example.lisp")
+;; => T
+~~~
 
 ## `plusp`
 
