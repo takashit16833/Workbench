@@ -2,6 +2,58 @@
 
 Lem のソースリーディングや拡張作成中に、コードへ現れた API 名や値から直接引くためのリファレンス。
 
+## `lem:buffer-filename`
+
+Buffer に紐づくファイル名を文字列で返す。
+ファイルに紐づいていない Buffer では `NIL` を返す。
+
+~~~lisp
+(lem:buffer-filename (lem:get-buffer "routing-context.lisp"))
+;; => "/Users/.../routing-context.lisp"
+~~~
+
+`*lisp-repl*` や `*Messages*` のようなファイルを持たない Buffer では `NIL` になる。
+
+## `lem:buffer-list`
+
+現在 Lem が管理している Buffer のリストを返す。
+
+~~~lisp
+(lem:buffer-list)
+~~~
+
+Buffer ごとの名前やファイル名を確認するときは、例えば次のように使える。
+
+~~~lisp
+(mapcar
+ (lambda (buffer)
+   (list
+    (lem:buffer-name buffer)
+    (lem:buffer-filename buffer)))
+ (lem:buffer-list))
+~~~
+
+## `lem:current-buffer`
+
+現在の Buffer を返す。
+REPL 上で評価した場合は、通常その REPL Buffer が current buffer になる。
+
+~~~lisp
+(lem:buffer-name (lem:current-buffer))
+;; => "*lisp-repl*"
+~~~
+
+そのため、別のファイル Buffer を調べたい場合は `lem:get-buffer` などで対象を明示する。
+
+## `lem:get-buffer`
+
+Buffer オブジェクトまたは Buffer 名から Buffer を取得する。
+名前に一致する Buffer がなければ `NIL` を返す。
+
+~~~lisp
+(lem:get-buffer "routing-context.lisp")
+~~~
+
 ## `lem:make-key`
 
 Lem の `Key` オブジェクトを作る。
