@@ -15,6 +15,7 @@
 | `:read-csi-event` | `READ-CSI-EVENT` というシンボル名を export する指定。 |
 | `in-package` | 以降のコードをどのパッケージで読むか指定する。 |
 | `package:symbol` | パッケージから export されたシンボルを参照する。 |
+| `find-package` | 名前から既存のパッケージを探して返す。見つからなければ `nil` を返す。 |
 
 ~~~lisp
 (defpackage :lem-ncurses/kitty-keyboard
@@ -234,3 +235,38 @@ lem-ncurses/kitty-keyboard:read-csi-event
         +disambiguate-escape-codes+)
 
 (force-output stream)
+```
+
+## ASDF
+
+ASDF は Common Lisp のシステム定義・読み込みを行う仕組み。
+Common Lisp 標準そのものではないが、ライブラリやアプリケーションの構成管理で広く使われる。
+
+| 名前 | 概要 |
+| --- | --- |
+| `defsystem` | ASDF のシステムを定義する。システム名、依存関係、構成ファイルなどを記述する。 |
+| `:depends-on` | 先に読み込む必要がある別の ASDF システムを指定する。 |
+| `:serial t` | `:components` に書かれた順番で構成要素を読み込む。 |
+| `:components` | システムを構成するファイルやディレクトリを指定する。 |
+| `:module` | 複数の構成要素をまとめるディレクトリ単位の構成を表す。 |
+| `:file` | 読み込む Common Lisp ソースファイルを指定する。拡張子 `.lisp` は通常省略する。 |
+| `asdf:load-system` | 指定した ASDF システムと、その依存先を読み込む。 |
+
+~~~lisp
+(defsystem "my-system"
+  :depends-on ("some-library")
+  :serial t
+  :components
+  ((:module "src"
+    :components
+    ((:file "package")
+     (:file "main")))))
+~~~
+
+上の定義では、`some-library` を先に読み込み、その後 `src/package.lisp`、`src/main.lisp` の順に読み込む。
+
+~~~lisp
+(asdf:load-system "my-system")
+~~~
+
+`asdf:load-system` の `asdf:` は、`ASDF` パッケージから export された `LOAD-SYSTEM` を参照している。
