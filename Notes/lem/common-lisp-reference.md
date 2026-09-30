@@ -101,6 +101,35 @@ Common Lisp のソースリーディングや実装中に、コードへ現れ�
 
 `:enable`、`:disable`、`:read-value` のように `:export` に並べた名前は、そのパッケージから外部公開するシンボル名を表す。
 
+## `defstruct`
+
+構造体を定義する。
+フィールドをまとめたデータを扱いたいときに使う。
+
+~~~lisp
+(defstruct (routing-context
+             (:constructor %make-routing-context))
+  buffer
+  pathname
+  directory
+  extension
+  project-root)
+~~~
+
+この定義では、主に次のものが自動生成される。
+
+| 名前 | 概要 |
+| --- | --- |
+| `%make-routing-context` | `routing-context` を作るコンストラクタ。 |
+| `routing-context-buffer` | `buffer` フィールドを取得するアクセサ。 |
+| `routing-context-pathname` | `pathname` フィールドを取得するアクセサ。 |
+| `routing-context-directory` | `directory` フィールドを取得するアクセサ。 |
+| `routing-context-extension` | `extension` フィールドを取得するアクセサ。 |
+| `routing-context-project-root` | `project-root` フィールドを取得するアクセサ。 |
+
+`:constructor` を指定すると、生成するコンストラクタ名を明示できる。
+ここでは `%make-routing-context` とし、外部向けではなく内部実装用であることを名前でも示している。
+
 ## `defun`
 
 関数を定義する。
@@ -122,6 +151,17 @@ Common Lisp のソースリーディングや実装中に、コードへ現れ�
 (find-package :cl)
 ;; => #<PACKAGE "COMMON-LISP">
 ~~~
+
+## `fboundp`
+
+シンボルに関数定義が存在するかを調べる。
+関数が定義されていれば真を返す。
+
+~~~lisp
+(fboundp 'lem-project-workspace::%make-routing-context)
+~~~
+
+REPL で、ロード後に関数や `defstruct` のコンストラクタが実際に定義されているか確認するときにも使える。
 
 ## `force-output`
 
@@ -331,6 +371,18 @@ Common Lisp のソースリーディングや実装中に、コードへ現れ�
 
 # リーダー記法・シンボル
 
+## `#P"..."`
+
+pathname リテラル。
+文字列ではなく Common Lisp の pathname オブジェクトとして読み込む。
+
+~~~lisp
+#P"/tmp/example.lisp"
+~~~
+
+ファイルやディレクトリのパスを Common Lisp の pathname として明示したいときに使う。
+
+
 ## `#'foo`
 
 関数 `foo` の関数オブジェクトを取得する。
@@ -396,6 +448,16 @@ my-package:disable
 ASDF は Common Lisp のシステム定義・読み込みを行う仕組み。
 Common Lisp 標準そのものではないが、ライブラリやアプリケーションの構成管理で広く使われる。
 
+## `asdf:load-asd`
+
+指定した `.asd` ファイルを読み込み、その中の ASDF system 定義を ASDF に登録する。
+
+~~~lisp
+(asdf:load-asd #P"/path/to/my-system.asd")
+~~~
+
+開発中の system が ASDF の通常の探索場所にない場合でも、`.asd` の場所を直接指定して読み込める。
+
 ## `asdf:load-system`
 
 指定した ASDF system と、その依存先を読み込む。
@@ -405,6 +467,13 @@ Common Lisp 標準そのものではないが、ライブラリやアプリケ�
 ~~~
 
 `asdf:` は、`ASDF` パッケージから export された `LOAD-SYSTEM` を参照している。
+
+変更した system を明示的に再ロードしたい場合は `:force t` を指定できる。
+
+~~~lisp
+(asdf:load-system "my-system" :force t)
+~~~
+
 
 ## `defsystem`
 
