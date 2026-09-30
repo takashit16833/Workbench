@@ -220,18 +220,17 @@ lem-ncurses/kitty-keyboard:read-csi-event
 
 ## 出力
 
-| 名前 | 概要 |
-| --- | --- |
-| `format` | 書式付きで値を出力する。 |
-| `force-output` | バッファ中の出力をすぐにstreamへ送る。 |
-| `~C` | `format` で文字を出力する。 |
-| `~D` | `format` で10進整数を出力する。 |
+| **名前**         | **概要** |
+| ---------------- | -------- |
+| `format` | 指定した stream へ、書式文字列に従って値を出力する。 |
+| `force-output` | バッファ中の出力をすぐに stream へ送る。 |
+| `~C` | `format` の次の引数を文字として出力する。 |
+| `~D` | `format` の次の引数を10進整数として出力する。 |
 
-~~~lisp
+```lisp
 (format stream
         "~C[>~Du"
         (code-char +escape-code+)
         +disambiguate-escape-codes+)
 
 (force-output stream)
-~~~
