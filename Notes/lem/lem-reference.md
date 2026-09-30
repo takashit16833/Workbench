@@ -54,6 +54,27 @@ Buffer オブジェクトまたは Buffer 名から Buffer を取得する。
 (lem:get-buffer "routing-context.lisp")
 ~~~
 
+## `lem:make-buffer`
+
+Lem の Buffer オブジェクトを作る。
+
+~~~lisp
+(lem:make-buffer nil :temporary t)
+~~~
+
+`:temporary t` を指定した Buffer は通常の Buffer 一覧へ追加されないため、テスト用の一時 Buffer として使いやすい。
+
+## `(setf lem:buffer-filename)`
+
+Buffer に紐づくファイル名を設定する。
+
+~~~lisp
+(setf (lem:buffer-filename buffer)
+      "/tmp/example.lisp")
+~~~
+
+実ファイルを開かなくても、ファイルに紐づく Buffer の状態をテストするときに利用できる。
+
 ## `lem:make-key`
 
 Lem の `Key` オブジェクトを作る。
