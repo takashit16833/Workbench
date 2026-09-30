@@ -6,7 +6,7 @@ agent: レバテック
 company: 株式会社イーディス
 priority: low
 dateCreated: 2026-10-01T06:07:00+09:00
-dateModified: 2026-10-01T06:07:00+09:00
+dateModified: 2026-10-01T06:27:00+09:00
 tags:
   - task
   - job
@@ -68,7 +68,7 @@ Wi-Fi接続情報を用いた施設別限定体験・エンタメ機能を構築
 |---|---|---|
 | JavaScriptフロントエンド | ◎ | HTMLコーダー/フロントエンドを含む長期のJavaScript実務がある。 |
 | Node.js等によるAPI開発 | ◎ | Node.js / Express、Python等でAPI・バックエンド開発経験がある。 |
-| Captive Network Assistantの知識 | ? | 経歴書とPortfolioから確認できない。 |
+| Captive Network Assistantの知識 | × | 知識なし（本人申告）。 |
 | Webセキュリティ知識 | ○ | Web API、認証、Stripe Webhook署名検証等の経験はあるが、募集が期待する範囲は不明。 |
 | AP情報と連携したDB設計 | ? | アクセスポイント情報と連携したデータベース設計経験は確認できない。 |
 
@@ -79,7 +79,7 @@ Wi-Fi接続情報を用いた施設別限定体験・エンタメ機能を構築
 
 ### 注意
 
-- Captive Network Assistantというかなり固有の必須知識が確認できない。
+- Captive Network Assistantの知識はない。
 - Wi-Fiアクセスポイント情報と連携したDB設計経験も確認できない。
 - 週1日で常駐想定という特殊な条件。
 - 掲載単価と実稼働日数の関係が不明確。
