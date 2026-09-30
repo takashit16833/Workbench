@@ -482,9 +482,9 @@ ASDF system を定義する。
 ~~~lisp
 (defsystem "my-system"
   :depends-on ("some-library")
-  :serial t
   :components
   ((:module "src"
+    :serial t
     :components
     ((:file "package")
      (:file "main")))))
