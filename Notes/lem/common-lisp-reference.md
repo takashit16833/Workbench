@@ -5,19 +5,34 @@
 | 名前 | 概要 |
 | --- | --- |
 | `defpackage` | パッケージを定義する。 |
-| `:use` | 他パッケージの外部シンボルを修飾なしで使えるようにする。 |
-| `:export` | 他パッケージから公開するシンボルを指定する。 |
+| `:foo` | キーワードシンボル。`:` で始まるシンボルは `KEYWORD` パッケージに属し、自分自身を値として持つ。 |
+| `:lem-ncurses/kitty-keyboard` | パッケージ名を表すために使っているキーワードシンボル。ここでは `LEM-NCURSES/KITTY-KEYBOARD` という名前のパッケージを定義する。 |
+| `:use` | `defpackage` のオプション。他パッケージの外部シンボルを修飾なしで使えるようにする。 |
+| `:cl` | `COMMON-LISP` パッケージを表すために使っているキーワードシンボル。 |
+| `:export` | `defpackage` のオプション。このパッケージから外部公開するシンボル名を指定する。 |
+| `:enable` | `ENABLE` というシンボル名を export する指定。 |
+| `:disable` | `DISABLE` というシンボル名を export する指定。 |
+| `:read-csi-event` | `READ-CSI-EVENT` というシンボル名を export する指定。 |
 | `in-package` | 以降のコードをどのパッケージで読むか指定する。 |
 | `package:symbol` | パッケージから export されたシンボルを参照する。 |
 
 ~~~lisp
 (defpackage :lem-ncurses/kitty-keyboard
   (:use :cl)
-  (:export :enable :disable))
+  (:export
+   :enable
+   :disable
+   :read-csi-event))
 
 (in-package :lem-ncurses/kitty-keyboard)
+~~~
 
-(lem:make-key ...)
+外部からは export されたシンボルを `パッケージ名:シンボル名` で参照できる。
+
+~~~lisp
+lem-ncurses/kitty-keyboard:enable
+lem-ncurses/kitty-keyboard:disable
+lem-ncurses/kitty-keyboard:read-csi-event
 ~~~
 
 ## 定義
