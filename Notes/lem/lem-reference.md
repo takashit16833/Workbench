@@ -1,20 +1,23 @@
 # Lem リファレンス
 
-Lem の API や仕組みを、エディタの機能領域ごとに整理する。
+Lem のソースリーディングや拡張作成中に、コードへ現れた API 名や値を直接引くためのリファレンス。
 
-## Key
+## API
 
-### キーの生成
+API 名順に追加する。
 
-| 名前 | 概要 |
+### `lem:make-key`
+
+Lem の `Key` オブジェクトを作る。
+
+| 引数 | 概要 |
 | --- | --- |
-| `lem:make-key` | Lem の `Key` オブジェクトを作る。 |
-| `:sym` | キー本体を文字列で指定する。 |
-| `:shift` | Shift modifier の有無を指定する。 |
 | `:ctrl` | Ctrl modifier の有無を指定する。 |
-| `:meta` | Meta modifier の有無を指定する。 |
-| `:super` | Super modifier の有無を指定する。 |
 | `:hyper` | Hyper modifier の有無を指定する。 |
+| `:meta` | Meta modifier の有無を指定する。 |
+| `:shift` | Shift modifier の有無を指定する。 |
+| `:super` | Super modifier の有無を指定する。 |
+| `:sym` | キー本体を文字列で指定する。 |
 
 ~~~lisp
 (lem:make-key
@@ -24,51 +27,41 @@ Lem の API や仕組みを、エディタの機能領域ごとに整理する�
  :super t
  :hyper nil
  :sym "s")
-~~~
 
-~~~lisp
 (lem:make-key
  :ctrl t
  :sym "Up")
 ~~~
 
-### キー名
+## Key symbol
 
-一部の特殊キーは文字ではなく名前で指定する。
+`lem:make-key` の `:sym` などで使う特殊キー名。
 
 | 値 | キー |
 | --- | --- |
-| `"Tab"` | Tab |
-| `"Return"` | Return |
-| `"Escape"` | Escape |
-| `"Space"` | Space |
 | `"Backspace"` | Backspace |
-| `"Up"` | ↑ |
 | `"Down"` | ↓ |
-| `"Left"` | ← |
-| `"Right"` | → |
-| `"Home"` | Home |
 | `"End"` | End |
+| `"Escape"` | Escape |
+| `"Home"` | Home |
+| `"Left"` | ← |
+| `"Return"` | Return |
+| `"Right"` | → |
+| `"Space"` | Space |
+| `"Tab"` | Tab |
+| `"Up"` | ↑ |
 
-~~~lisp
-(lem:make-key :sym "Return")
+## ASDF system
 
-(lem:make-key :super t :sym "s")
-~~~
+Lem が提供する ASDF system。system 名順に追加する。
 
-## ASDF / System
+### `lem/core`
 
-Lem は複数の ASDF system に分けて構成されている。
-拡張を作るときは、必要な Lem の system を `:depends-on` に指定する。
-
-| 名前 | 概要 |
-| --- | --- |
-| `lem/core` | Lem の基本機能をまとめた ASDF system。Buffer、Window、Command、Project、frame-multiplexer など、エディタの主要な仕組みを含む。 |
+Lem の基本機能をまとめた ASDF system。
+Buffer、Window、Command、Project、frame-multiplexer など、エディタの主要な仕組みを含む。
 
 ~~~lisp
 (defsystem "my-lem-extension"
   :depends-on ("lem/core")
   ...)
 ~~~
-
-`lem/core` に含まれる機能だけを使う拡張では、Lem 全体や不要な extension system へ依存させる必要はない。
