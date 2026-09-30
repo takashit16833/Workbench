@@ -313,6 +313,20 @@ REPL で、ロード後に関数や `defstruct` のコンストラクタが実�
 | `:start` | 読み始める位置を指定する。 |
 | `:junk-allowed t` | 数字以外が続いていても、読めた整数部分を返す。 |
 
+## `pathname`
+
+pathname designator（文字列や pathname など）から、Common Lisp の pathname オブジェクトを得る。
+
+~~~lisp
+(pathname "/tmp/example.lisp")
+;; => #P"/tmp/example.lisp"
+~~~
+
+`pathname` は Common Lisp 標準の関数で、`routing-context` 専用の関数ではない。
+`routing-context` にある `pathname` フィールドは、ファイルの場所を pathname オブジェクトとして保持するために同じ概念名を使っているだけである。
+
+`defstruct` が生成する `routing-context-pathname` は構造体のフィールドを読むアクセサであり、Common Lisp の `pathname` 関数とは別物。
+
 ## `plusp`
 
 数値が正なら真を返す。
