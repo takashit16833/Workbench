@@ -111,6 +111,35 @@ cons セルの dotted-pair 記法。連想リストや `use-package :bind` / `:h
   ...)
 ```
 
+### `?CHAR`
+
+```elisp
+?CHAR
+```
+
+1文字を文字コード値として書くための reader 記法。エスケープも使える。
+
+現在の使用例:
+
+```elisp
+?\s
+?│
+```
+
+`?\s` は空白、`?│` はその Unicode 文字を表す。
+
+### `:KEYWORD`
+
+```elisp
+:around
+:url
+:newest
+```
+
+`:` で始まるシンボルは keyword symbol で、自分自身を値として持つため引用なしで使える。オプション名や識別値に多用される。
+
+現在の使用箇所: `config/terminal.el`, `config/ui.el`
+
 ## Special forms and macros
 
 ### `and`
@@ -209,6 +238,20 @@ CONDITION が真のときだけ BODY を評価する。
 現在の使用箇所: `config/ui.el`
 
 ## Functions
+
+### `ignore`
+
+```elisp
+(ignore &rest ARGUMENTS) -> nil
+```
+
+引数をすべて無視して `nil` を返す。コールバックが必要だが何もしたくない場合に使える。
+
+現在の使用例:
+
+```elisp
+(setq ring-bell-function #'ignore)
+```
 
 ### `car`
 
