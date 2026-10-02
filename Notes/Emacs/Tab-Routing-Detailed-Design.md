@@ -1,920 +1,612 @@
-# .emacs.d-cli タブルーティング 詳細設計
+# タブルーティング / Browsing History 詳細設計
 
-## 対象
+## このノートについて
 
-このノートでは、`.emacs.d-cli` のタブルーティング実装を関数単位で追う。
+基本設計の内容を、実装するときに迷わないくらいまで具体化したノート。
 
-基本的な目的と全体像は `Tab-Routing-Basic-Design.md` を参照する。
+ここでも、厳密さより **「読めばすぐ思い出せる」** ことを優先する。
 
-中心となる実装は以下。
+関数名はまだ候補。実装してみて、もっと素直な名前や形があれば変えてよい。
 
-```text
-lisp/my-tab-routing.el
-lisp/my-tab-bar.el
-lisp/my-project-context.el
-lisp/my-navigation.el
+設計で名前を付けて使う言葉は、
+[Tab-Routing-Terminology.md](./Tab-Routing-Terminology.md)
+にまとめてある。
 
-test/my-tab-routing-test.el
-test/my-project-context-test.el
-```
+## まず全体像
 
-## 1. ルーティング結果の表現
+今回の中心は、
 
-ルーティング関数は、
+> **Tab をそれぞれ独立した作業スペースのように見せる**
 
-```elisp
-(ID . NAME)
-```
+こと。
 
-を返す。
-
-例:
-
-```elisp
-(tasks . "Tasks")
-(org . "Org")
-(misc . "Misc")
-((project . "/tmp/work/dotfiles/") . "dotfiles")
-```
-
-`car` が内部識別子、`cdr` が表示名。
-
-プロジェクトだけはID自身が cons になっている。
-
-```elisp
-(project . PROJECT-ROOT)
-```
-
-これにより、
-
-- 種類が project である
-- どの project か
-
-を1つの値で表現する。
-
-## 2. Workbench Tasks 判定
-
-対象ディレクトリは定数で保持する。
-
-```elisp
-(defconst my/tab-routing-workbench-tasks-directory
-  (expand-file-name "~/org/workbench/tasks/"))
-```
-
-判定関数:
-
-```elisp
-my/tab-routing-workbench-task
-```
-
-処理:
-
-1. 対象ディレクトリを末尾 `/` 付きに正規化
-2. FILE を `expand-file-name`
-3. `string-prefix-p` で配下か判定
-4. 一致したら `(tasks . "Tasks")`
-
-拡張子ではなく配置場所で分類するため、Org 判定より先に置かれている。
-
-## 3. Org 判定
-
-関数:
-
-```elisp
-my/tab-routing-org
-```
-
-`file-name-extension` を小文字化し、`org` なら、
-
-```elisp
-(org . "Org")
-```
-
-を返す。
-
-プロジェクト内の Org ファイルも Org タブへ送るため、Project 判定より先に評価される。
-
-## 4. Project 判定
-
-内部関数:
-
-```elisp
-my/tab-routing--project-destination
-```
-
-引数はファイルではなく DIRECTORY。
-
-処理:
+ただし、
 
 ```text
-DIRECTORY
-   ↓
-project-current
-   ↓
-project-root
-   ↓
-root を正規化
-   ↓
-((project . ROOT) . PROJECT-NAME)
+Tab ≠ Project
+Tab ≠ Repository
 ```
 
-プロジェクト名は、
-
-```elisp
-(file-name-nondirectory
- (directory-file-name root))
-```
-
-でルートディレクトリ名から取得する。
-
-ファイル用関数:
-
-```elisp
-my/tab-routing-project
-```
-
-は、
-
-```elisp
-(file-name-directory file)
-```
-
-を取り、`my/tab-routing--project-destination` へ委譲する。
-
-この分離により、xref のようにファイルを持たず DIRECTORY だけ分かる場合にも同じ Project 判定を再利用できる。
-
-## 5. ルーティングフィルター
-
-変数:
-
-```elisp
-my/tab-routing-filters
-```
-
-現在値:
-
-```elisp
-'(my/tab-routing-workbench-task
-  my/tab-routing-org
-  my/tab-routing-project)
-```
-
-実行側:
-
-```elisp
-my/tab-routing--destination
-```
-
-処理:
-
-1. FILE が空でない文字列か確認
-2. `expand-file-name`
-3. `cl-some` でフィルターを上から実行
-4. 最初の non-nil を採用
-5. どれにも一致しなければ `(misc . "Misc")`
-
-つまりフィルター順そのものが仕様。
-
-## 6. バッファからの表示先判定
-
-関数:
-
-```elisp
-my/tab-routing--buffer-destination
-```
-
-対象 BUFFER を取得し、そのバッファへ `with-current-buffer` で入る。
-
-判定:
+どの Tab に入るかはルーティング関数で決める。
 
 ```text
-buffer-file-name がある
-  → ファイルルーティング
-
-xref--xref-buffer-mode
-  → default-directory から Project 判定
-
-その他
-  → nil
-```
-
-特殊バッファを何でも Misc に送るのではなく、所属先が判断できるものだけ動かす。
-
-## 7. タブの識別情報
-
-各タブには、
-
-```elisp
-my/tab-routing-id
-```
-
-という独自エントリを持たせる。
-
-概念例:
-
-```elisp
-(current-tab
- (name . "dotfiles")
- (my/tab-routing-id . (project . "/Users/foo/dotfiles/"))
- ...)
-```
-
-表示名ではなくこのIDを使ってタブを再利用する。
-
-## 8. タブ選択の中心処理
-
-関数:
-
-```elisp
-my/tab-routing--select
-```
-
-引数:
-
-```elisp
-(ID . NAME)
-```
-
-戻り値:
-
-- 新しいタブを作成した場合: non-nil
-- 既存タブを使った場合: nil
-
-### 8.1 現在タブの確認
-
-`tab-bar-tabs` から、
-
-```elisp
-(assq 'current-tab tabs)
-```
-
-で現在タブを得る。
-
-現在タブの `my/tab-routing-id` が目的IDと同じなら何もしない。
-
-### 8.2 既存IDの検索
-
-全タブから、
-
-```elisp
-(alist-get 'my/tab-routing-id candidate)
-```
-
-が目的IDと同じものを探す。
-
-見つかれば、
-
-```elisp
-tab-bar-select-tab
-```
-
-でそのタブへ移動する。
-
-### 8.3 ID未設定の同名タブ
-
-ID一致がなければ、
-
-- `my/tab-routing-id` が未設定
-- `name` が目的NAMEと同じ
-
-タブを探す。
-
-既存の手動タブや旧状態をそのまま再利用して、後からIDを付けるための処理。
-
-### 8.4 新規タブ
-
-再利用候補がなければ、
-
-```elisp
-tab-bar-new-tab
-```
-
-で新規作成し、`tab-bar-rename-tab` で名前を付ける。
-
-同名タブが既にある場合は、表示上も区別できるようIDを含んだ名前へ変更する。
-
-内部では最終的にIDで区別するため、表示名は補助情報。
-
-## 9. タブIDの保存
-
-現在タブの実データは、
-
-```elisp
-tab-bar--current-tab-find
-```
-
-で取得している。
-
-この関数が返すタブ alist に対して、
-
-```elisp
-(my/tab-routing-id . ID)
-```
-
-を追加または更新する。
-
-過去の変更履歴では、単純な `setf (alist-get ...)` では意図した永続化にならず、実際のタブ alist を `setcdr` で更新する形へ修正されている。
-
-この部分は内部APIへの依存でもあるため、新実装時に再検討する。
-
-## 10. 最初の scratch を Misc にする
-
-関数:
-
-```elisp
-my/tab-routing-initialize-misc-tab
-```
-
-以下の条件をすべて満たす場合のみ初期化する。
-
-- タブ数が1
-- 選択ウィンドウのバッファが `*scratch*`
-- `my/tab-routing-id` が未設定
-- `explicit-name` が未設定
-
-処理:
-
-1. タブ名を `Misc` へ変更
-2. `my/tab-routing--select '(misc . "Misc")` を呼ぶ
-3. タブID `misc` を付与
-
-再読み込み時に既存タブを破壊しないため、条件を厳しくしている。
-
-## 11. find-file advice
-
-関数:
-
-```elisp
-my/tab-routing--find-file
-```
-
-`find-file` に `:around` advice として登録する。
-
-処理:
-
-```text
-FILE
+file
  ↓
-my/tab-routing--destination
+ルーティング関数を上から試す
  ↓
-my/tab-routing--select
+行き先が決まる
  ↓
-元の find-file
- ↓
-必要なら bufferlo-clear
+そのTabがあれば移動
+なければ作る
 ```
 
-ポイントは、**ファイルを開く前に目的タブへ移動する**こと。
-
-これにより、新しいファイルバッファは最初から目的タブのウィンドウへ表示される。
-
-## 12. switch-to-buffer advice
-
-関数:
-
-```elisp
-my/tab-routing--switch-to-buffer
-```
-
-既存バッファへ切り替えるときのルーティングを担当する。
-
-処理:
-
-1. `get-buffer`
-2. `my/tab-routing--buffer-destination`
-3. `my/tab-routing--select`
-4. 元の `switch-to-buffer`
-5. 新規タブなら Bufferlo を初期化
-
-これにより、一度開いたファイルへ戻る場合も所属タブへ自動的に戻れる。
-
-## 13. display-buffer advice
-
-関数:
-
-```elisp
-my/tab-routing--display-buffer
-```
-
-`display-buffer` を使う各種コマンドにも対応するための処理。
-
-目的タブを先に選んだあと、元の `display-buffer` をそのまま呼ぶ。
-
-戻り値の Window もそのまま返す。
-
-つまり、
+そして Tab ごとに、
 
 ```text
-どのタブか
+buffer
+Browsing History
+Windowの並び
 ```
 
-だけを制御し、
+をできるだけ独立して見せる。
+
+## ファイル構成
+
+最初はこのくらいで十分。
 
 ```text
-どのウィンドウへどう表示するか
+elisp/
+├── my-tab-routing.el
+├── my-project-context.el
+└── my-browsing-history.el
 ```
 
-は既存の `display-buffer` に任せる。
-
-## 14. switch-to-buffer だけ起動後に有効化する
-
-関数:
-
-```elisp
-my/tab-routing--enable-switch-to-buffer
-```
-
-`find-file` と `display-buffer` はセットアップ時に advice を登録する。
-
-一方 `switch-to-buffer` は、
-
-- すでに起動後なら即時
-- 起動途中なら `emacs-startup-hook`
-
-で有効化する。
-
-理由は、Emacs 起動中に内部で行われる多数のバッファ切り替えへルーティングが干渉するのを避けるため。
-
-## 15. advice の depth
-
-ルーティング advice は、
-
-```elisp
-'((depth . 100))
-```
-
-で登録する。
-
-旧設定では Better Jumper のナビゲーション履歴 advice も同じ基本関数へ入る。
-
-意図する構造は概ね、
+それぞれ、
 
 ```text
-navigation advice
-    ↓
-routing advice
-    ↓
-original function
-```
+my-tab-routing.el
+  → どのTabへ行くか
 
-となる。
-
-ナビゲーション側から見ると、タブ移動を含んだ一連の移動全体を追跡できる。
-
-## 16. セットアップ
-
-関数:
-
-```elisp
-my/tab-routing-setup
-```
-
-主な処理:
-
-1. 最初の scratch を Misc 化
-2. 旧 Org 専用ルーティング advice を除去
-3. 旧 `display-buffer-alist` エントリを除去
-4. `find-file` へ advice
-5. `display-buffer` へ advice
-6. 起動後に `switch-to-buffer` へ advice
-
-`advice-member-p` を使い、再実行時に advice が重複しないようにしている。
-
-旧 Org 専用ルーティング除去処理は移行互換用なので、新 `.emacs.d` には基本的に不要。
-
-## 17. Bufferlo 連携
-
-関数:
-
-```elisp
-my/tab-routing--clear-new-tab
-```
-
-新しいタブを作った場合だけ、
-
-```elisp
-bufferlo-clear
-```
-
-を呼ぶ。
-
-条件:
-
-- 新規タブである
-- `bufferlo-mode` が有効
-- `bufferlo-clear` が存在
-
-目的は、新しいタブへ以前のタブのローカルバッファ一覧を持ち込まないこと。
-
-旧設定では、
-
-```elisp
-bufferlo-prefer-local-buffers 'tabs
-```
-
-も指定され、タブごとのバッファ集合を優先している。
-
-## 18. Misc の非表示
-
-ファイル:
-
-```text
-my-tab-bar.el
-```
-
-関数:
-
-```elisp
-my/tab-bar-format-tabs
-```
-
-`tab-bar-tabs` を順に見て、
-
-```elisp
-(alist-get 'my/tab-routing-id tab)
-```
-
-が `misc` のものだけ除外する。
-
-それ以外は、
-
-```elisp
-tab-bar--format-tab
-```
-
-へ渡す。
-
-Misc はデータとしては存在するが、表示だけ消している。
-
-## 19. Misc を飛ばすタブ移動
-
-関数:
-
-```elisp
-my/tab-bar-adjacent-visible-tab
-```
-
-現在位置から指定方向へ循環し、
-
-```elisp
-my/tab-routing-id != misc
-```
-
-の最初のタブ番号を返す。
-
-この関数を使って、
-
-```elisp
-my/tab-bar-select-visible
-my/tab-bar-move-visible
-```
-
-を実装する。
-
-そのため、
-
-- タブ切り替え
-- タブ並べ替え
-
-のどちらでも Misc を通常操作から除外できる。
-
-## 20. Project Context の取得
-
-ファイル:
-
-```text
 my-project-context.el
+  → Project用Tabとproject.elの橋渡し
+
+my-browsing-history.el
+  → 汎用の「戻る / 進む」と、現在使う History の取得
 ```
 
-関数:
+History のデータ構造と履歴操作は Tab / Window に依存させない。
+Tab / Window の違いは、現在使う History を取得する処理に閉じ込める。
 
-```elisp
-my/project-context-root
-```
+どの移動コマンドを記録対象にするかは Browsing History 本体へ混ぜない。
 
-現在タブの `my/tab-routing-id` が、
+見た目やキー設定は `config/` 側へ置く。
 
-```elisp
-(project . ROOT)
-```
+## ルーティング関数
 
-なら ROOT を返す。
+ルーティング関数は、1つの条件だけを見る小さい関数にする。
 
-それ以外:
-
-- org
-- tasks
-- misc
-- nil
-
-では nil。
-
-TRAMP ルートも文字列のまま保持する。
-
-## 21. project-current advice
-
-関数:
-
-```elisp
-my/project-context--project-current
-```
-
-`project-current` へ `:around` advice として登録する。
-
-優先順位:
+基本は、
 
 ```text
-1. project-current の DIRECTORY 引数
-2. 既存 project-current-directory-override
-3. 現在タブの Project root
-4. 元の project-current の通常判定
+file
+ ↓
+マッチした → Destination
+マッチしない → nil
 ```
 
-DIRECTORY が明示されている場合や既存 override がある場合は何も変えない。
+という形。
 
-それ以外では、
+たとえば `.org` 用なら、
 
 ```elisp
-(let ((project-current-directory-override
-       (my/project-context-root)))
+(defun my/route-org (file)
   ...)
 ```
 
-と動的束縛して元の `project-current` を呼ぶ。
+のようなイメージ。
 
-バッファの `default-directory` 自体は変更しない。
+Project 用なら project.el の判定が必要なので、そこだけ Emacs の状態を見る処理を分けてもよい。
 
-## 22. Magit 連携
+### 順番は設定
 
-関数:
+ルーティング関数はリストで持つ。
 
-```elisp
-my/project-context--magit-status
-```
-
-旧設定では `magit-status` の既定リポジトリも現在タブのプロジェクトへ合わせている。
-
-ポイントは対話的引数取得の前から `default-directory` を一時的にタブルートへ合わせること。
-
-一方、
-
-- prefix argument がある
-- DIRECTORY が明示されている
-
-場合はユーザー指定を優先する。
-
-新しい `.emacs.d` では Lazygit を使う方針なので、この部分は基本的に移植不要。
-
-## 23. Project Context セットアップ
-
-関数:
+候補:
 
 ```elisp
-my/project-context-setup
+my/tab-routing-functions
 ```
 
-処理:
-
-1. `project-current` へ advice
-2. Magit 読み込み後に `magit-status` へ advice
-
-こちらも `advice-member-p` で重複登録を防ぐ。
-
-## 24. 旧初期化構造
-
-`my-navigation.el` が、
+設定例:
 
 ```elisp
-(require 'my-tab-routing)
-(require 'my-project-context)
+(setq my/tab-routing-functions
+      '(my/route-workbench-task
+        my/route-org
+        my/route-project))
 ```
 
-し、
+これは例であって、固定ルールではない。
 
-```elisp
-my/org-tab-routing-setup
-```
-
-から、
-
-```elisp
-(my/tab-routing-setup)
-(my/project-context-setup)
-```
-
-を呼ぶ。
-
-さらにこの `my/org-tab-routing-setup` は Better Jumper の `:config` から呼ばれている。
-
-つまり旧構成は、
+上から順に試して、最初に Destination を返したところで終わる。
 
 ```text
-better-jumper
-  ↓
-my-navigation
-  ↓
-tab routing / project context
+A → nil
+B → nil
+C → Destination
+    ↑
+  ここで決定
 ```
 
-という不要な結合を持っている。
+ルールは自由に追加・削除・並べ替えできる。
 
-新実装では分離候補。
+## Destination
 
-## 25. ERT: Routing
+Destination は、ルーティング関数が返す「行き先」。
 
-`test/my-tab-routing-test.el` では主に次を確認する。
+まずは plist で十分。
 
-### 優先順位
+```elisp
+(:id org
+ :name "Org")
+```
 
-- Workbench Tasks が Org より先
-- Org が Project より先
-- フィルター登録順を尊重
+Project なら、
 
-### Project
+```elisp
+(:id (project . "/work/foo/")
+ :name "foo")
+```
 
-- Project ID にルート全体を使用
-- Project に所属しなければ Misc
+Misc なら、
 
-### 特殊バッファ
+```elisp
+(:id misc
+ :name "Misc")
+```
 
-- 通常のファイルなしバッファは勝手にルーティングしない
-- xref は `default-directory` の Project を使用
+ここで大事なのは、Project だけが特別ではないこと。
 
-### Tab ID
+Destination は、
 
-- 既存タブへIDを保存
-- 次回同じIDなら再利用
+> どの Tab を使いたいか
 
-### Misc 初期化
+を表すだけ。
 
-- 最初の scratch を Misc 化
-- 再実行しても新しい Misc を増やさない
-- 既存タブが複数ある場合は変更しない
+実際に Tab を選ぶ・作る処理はこの後に分ける。
 
-## 26. ERT: Project Context
+## Misc
 
-`test/my-project-context-test.el` では主に次を確認する。
-
-- タブ変更に合わせて Project root が変わる
-- Org / Misc / 未登録タブでは root を返さない
-- TRAMP path を保持
-- `default-directory` を書き換えない
-- 明示 DIRECTORY を優先
-- 既存 override を優先
-- Org / Misc では通常判定を変えない
-- Magit の既定リポジトリにタブルートを使用
-- Magit の明示指定を優先
-
-## 27. 現在テストが薄い部分
-
-新実装では追加テスト候補。
-
-- `find-file` advice 全体
-- `switch-to-buffer` advice 全体
-- `display-buffer` advice 全体
-- Bufferlo 連携
-- 新規タブ後の `bufferlo-clear`
-- Misc のタブバー非表示
-- Misc を飛ばすタブ移動
-- Misc を飛ばす並べ替え
-- Better Jumper と routing advice の順序
-
-純粋関数と Emacs 状態変更を分けて実装すれば、より小さな ERT にできる。
-
-## 28. 変更履歴から分かる設計の発展
-
-旧実装は一度に完成したものではなく、段階的に現在の形へ発展している。
-
-### 最初
-
-- Org
-- Project
-- Misc
-- `find-file`
-- `switch-to-buffer`
-- `display-buffer`
-- Bufferlo
-
-を中心とするファイルルーティングとして導入。
-
-### その後
-
-- タブIDの保存方法を修正
-- 最初の scratch を Misc として再利用
-- Misc をタブバーから非表示
-- タブ単位 Project Context を追加
-- xref のようなファイルなしバッファにも拡張
-- 起動途中の `switch-to-buffer` 干渉を避けるため有効化時期を変更
-- Workbench Tasks ルールを最優先として追加
-
-したがって、現在のコードには「最終設計」と「過去実装との互換処理」が混在する。
-
-新実装ではこれを分離した方がよい。
-
-## 29. 新 .emacs.d への移植時に確認する項目
-
-### Routing
-
-- Tasks / Org / Project / Misc のどれを残すか
-- xref 以外に特殊バッファルーティングが必要か
-- filter API をそのまま使うか
-
-### Tab Identity
-
-- 独自IDをタブ alist へ保存する方式を継続するか
-- 公開APIだけで実現可能か
-- 同名 Project の表示方法
-
-### Advice
-
-- `find-file`
-- `switch-to-buffer`
-- `display-buffer`
-
-すべて必要か実測・動作確認する。
-
-### Project Context
-
-`project-current-directory-override` を使う考え方は比較的きれいなので、有力な再利用候補。
-
-### Bufferlo
-
-タブごとのバッファ分離が本当に必要か、Emacs 31.1 の標準機能も含めて比較する。
-
-### UI
-
-Misc を隠す必要が今もあるか。
-
-### 起動速度
-
-旧実装はタブルーティング・Bufferlo・Better Jumper が起動時に結合している。
-
-新構成では必要になる時点まで読み込まない設計が可能か検討する。
-
-## 30. 実装時の分離案
-
-新実装では責務を次のように分けると理解・テストしやすい。
+file がどのルーティング関数にもマッチしなかったら Misc。
 
 ```text
-Tab Routing
-├── destination calculation
-├── tab lookup
-└── tab selection
-
-Project Context
-├── tab project root
-└── project-current adapter
-
-Tab UI
-├── visible tab filtering
-├── next/previous
-└── move
-
-Tab-local Buffers
-└── Bufferlo or replacement
+fileあり
+ ↓
+全部nil
+ ↓
+Misc
 ```
+
+一方、file を持たない普通の buffer は、何もマッチしなければ今の Tab のまま。
+
+```text
+fileあり + no match → Misc
+fileなし + no match → 何もしない
+```
+
+xref など、file を持たない buffer を特別にルーティングしたくなった場合だけ、専用の処理を追加する。
+
+最初から特殊 buffer 全般を Routing 対象にしない。
+
+## Tab ID と Tab の選び方
+
+Tab には表示名とは別に ID を持たせる。
+
+```text
+表示名: Org
+ID:     org
+```
+
+Project なら、
+
+```elisp
+(project . "/work/foo/")
+```
+
+のようにできる。
+
+Destination が決まったら、現在の Tab 一覧を見て、
+
+```text
+1. 今のTabが同じID
+   → そのまま
+
+2. 別のTabに同じIDがある
+   → そこへ移動
+
+3. 同じIDがない
+   → 新しいTabを作る
+```
+
+とする。
+
+表示名が同じでも ID が違えば別 Tab。
+
+旧設定にあった「ID のない同名 Tab を自動で拾う」互換処理は、新構築では入れない。
+
+### Tab の状態を丸ごと作り直さない
+
+Tab ID を保存するために Tab 一覧全体を作り直すようなことはしない。
+
+現在の Tab に、自分たちの ID だけを追加・更新する。
+
+tab-bar が持っている Window 状態や Bufferlo の情報などを壊さないため。
+
+## file を開く前に行き先を確定する
+
+`find-file "src/foo.el"` のような相対パスは少し注意が必要。
+
+Tab を先に切り替えると `default-directory` が変わり、別の `src/foo.el` を開く可能性がある。
+
+なので、
+
+```text
+今のdefault-directory
+ ↓
+開くfileを絶対パスへ確定
+ ↓
+Routing
+ ↓
+Tab切り替え
+ ↓
+そのfileを表示
+```
+
+という順番にする。
+
+Routing の判定と、実際に開く file が同じものを見るようにする。
+
+## まず1つの表示経路だけつなぐ
+
+最初から `display-buffer` 全体へ広く advice しない。
+
+Emacs では file を開く処理の中で、
+
+```text
+find-file
+find-file-noselect
+pop-to-buffer
+display-buffer
+```
+
+など、いろいろな関数が関わる。
+
+しかも `display-buffer` は「ユーザーが今見たいもの」以外にも使われる。
+
+なので最初は、
+
+> 普通に current window へ file を開く
+
+という1経路だけつないで実動作を見る。
+
+必要な経路は後から1つずつ増やす。
+
+## Routing の再入を防ぐ
+
+Routing の中から file 表示が呼ばれ、その中でまた Routing が走る可能性がある。
+
+そのため Routing 専用の再入防止フラグを持つ。
+
+ただし、
+
+> Routing 中だから全部無視
+
+のような大きすぎる抑制にはしない。
+
+別 file を正当に開いているケースまで止めないよう、実際の呼び出し経路を見ながら最小限にする。
+
+## Bufferlo とつなぐタイミング
+
+新しい Tab を作った時は、
+
+```text
+Tabを作る
+ ↓
+目的のfileを表示する
+ ↓
+表示できた
+ ↓
+Bufferloをそのbufferから始める
+```
+
+の順番にする。
+
+Tab 作成直後に `bufferlo-clear` しない。
+
+その時点ではまだ `*scratch*` が current buffer の可能性があるため。
+
+Routing は Bufferlo を直接呼ばず、
+
+> 新しい Tab で目的の表示が成功した
+
+ことだけ通知する。
+
+Bufferlo 側がその通知を受けて初期化する形が分かりやすい。
+
+表示に失敗した時は、成功通知を出さない。
+
+最初から複雑な rollback は作らない。空 Tab が実際に困ると分かってから考える。
+
+## Project Context
+
+Project 用の Tab では、Tab ID から Project root を取り出せるようにする。
+
+```elisp
+(project . "/work/foo/")
+```
+
+なら、
+
+```text
+/work/foo/
+```
+
+を返す。
+
+Org / Misc / その他の ID なら Project root は返さない。
+
+### Routing 用の Project 判定とは分ける
+
+これは重要。
+
+Routing で、
+
+> この file はどの Project？
+
+を調べる時は、対象 file の directory を明示して project.el に問い合わせる。
+
+概念的には、
+
+```elisp
+(project-current nil target-directory)
+```
+
+の形。
+
+現在いる Tab の Project Context に引っ張られないようにする。
+
+一方で、通常の `project-current` が directory を指定されずに呼ばれた時だけ、
+
+> 今の Tab が Project 用なら、その root を使ってみる
+
+という補助をする。
+
+### Org Tab では Project を固定しない
+
+たとえば、
+
+```text
+Org Tab
+├─ repo-a/foo.org
+└─ repo-b/bar.org
+```
+
+なら、Tab 全体を repo-a や repo-b のどちらかに決めない。
+
+各 buffer の `default-directory` から project.el が普通に判定すればよい。
+
+## Browsing History の利用
+
+Browsing History 本体の設計は、
+[Browsing-History-Design.md](./Browsing-History-Design.md)
+に分ける。
+
+History のデータ構造と履歴操作は Tab / Window に依存しない。
+
+どの単位で History を持つかは設定で切り替える。
+最初は `tab` を使う。
+
+```text
+my/browsing-history-current
+        ↓
+my/browsing-history-scope
+        ↓
+   tab / window
+```
+
+利用側は Tab や Window を直接調べず、
+`my/browsing-history-current` から現在使う History を受け取る。
+
+`tab` の場合は現在の Tab が持つ History、
+`window` の場合は現在の Window が持つ History を返す。
+
+これにより、Tab 単位から Window 単位へ変更しても、
+記録処理や back / forward 側は変更しない。
+
+Tab 単位で使う間は、Tab を複製した時に同じ History オブジェクトを意図せず共有しないこと、
+Tab を閉じたり undo-close した時に壊れないことを確認する。
+
+## どの移動を記録するか
+
+これは Browsing History 本体の責務ではない。
+
+Browsing History は、
+
+> この Location を記録して
+
+と呼ばれたら履歴へ追加するだけ。
+
+どの Emacs コマンドを記録対象にするかは接続側で決める。
+
+旧設定の `my-navigation.el` は、その対象を決める参考として使う。
+
+最初から広い範囲へ advice せず、必要な移動を1つずつ追加する。
+
+Consult の preview のような、
+
+> 候補をちょっと見ただけ
+
+の動作は記録しない。
+
+また、Browsing History 自身の「戻る / 進む」で発生した移動を、
+新しい履歴として再記録しない。
+
+## Tab Routing と Browsing History は直接つながない
+
+Tab Routing は、
+
+> どの Tab で表示するか
+
+だけを考える。
+
+Browsing History は、
+
+> 渡された履歴に対して記録 / 戻る / 進む
+
+だけを考える。
+
+利用側は現在使う Browsing History を取得する関数を通して History を受け取り、
+必要な時に Browsing History の操作を呼ぶ。
+
+Tab / Window のどちらに History を置くかは、その取得処理にだけ閉じ込める。
+
+## Misc の見た目
+
+最初は Misc を普通に表示する。
+
+Routing が正しく動いてから、必要なら隠す。
+
+`tab-bar-tabs-function` で Misc を除外しない。
+
+これは描画専用ではなく、Tab の選択など実際の操作にも使われるため。
+
+隠すなら `tab-bar-format` 側など、表示だけを変える。
+
+必要なら内部 API を1か所だけ使う方が、無理に大きな独自描画を作るより分かりやすい場合もある。
+
+## テスト
+
+### 小さい関数
+
+ERT でまず確認しやすいのは、
+
+- ルーティング関数の順番
+- 最初にマッチしたものを採用すること
+- file の no-match → Misc
+- file なしの no-match → 何もしない
+- Project ID → root
+- Browsing History の追加 / 戻る / 進むの状態変化
+
+あたり。
+
+### Emacs の状態を使うところ
+
+ここは少数の統合 ERT も書く。
 
 特に、
 
+- 同じ Tab ID を再利用できる
+- ID が違えば同名 Tab でも分かれる
+- Bufferlo の buffer が Tab ごとに混ざらない
+- 表示成功後に Bufferlo が初期化される
+- scope が tab の時、Tab A / Tab B が別の Browsing History を使う
+- scope が tab の時、同じ Tab の複数 Window では同じ Browsing History を使う
+- scope が window の時、Window ごとに別の Browsing History を取得できる
+- scope が tab の時、同じ Tab なら別 Repository の file でも同じ Browsing History を使う
+- 相対パスで正しい file を開く
+- 設定再読込で advice / hook が二重にならない
+
+ことを見たい。
+
+UI の見た目まで全部 ERT にしようとはしない。
+
+## 性能
+
+Routing は file を開いたり buffer を切り替えたりするたびに通るので、普段の操作を重くしない。
+
+純粋な判定部分は、
+
 ```text
-判定
+小さいリスト走査
+文字列比較
+ID比較
 ```
 
-と、
+くらいに留める。
+
+気を付けるのは、
+
+- project.el の探索
+- ファイルシステム
+- TRAMP
+- Tab 一覧
+- 外部プロセス
+
+など。
+
+遅く感じたら、先に profiler / benchmark で確認する。
+
+推測でキャッシュを増やさない。
+
+## 起動時の読み込み
+
+数十行程度の自作 Elisp を遅延ロードするために、かえって複雑になるなら普通に `require` してよい。
+
+advice を基本コマンドへ付ける機能は、結局早い段階で必要になる可能性がある。
+
+起動速度は実測して判断する。
+
+Browsing History は小さい自作機能として実装し、不要な外部パッケージ依存を増やさない。
+
+## 実装する順番
+
+一気に全部つながない。
 
 ```text
-Emacs の状態変更
+1. Browsing History 本体を実装 + ERT
+2. ルーティング関数リストと順番を実装 + ERT
+3. Destination / Misc を実装 + ERT
+4. Tab ID を使って stay / select / create
+5. 普通のfile表示1経路へつなぐ
+6. 相対パス / 再入 / 失敗を確認
+7. Bufferloを表示成功後につなぐ
+8. Project Contextを入れる
+9. TabごとにBrowsing Historyを持たせる
+10. 記録対象の移動を少しずつ追加
+11. 最後に必要ならMiscの見た目を調整
 ```
 
-を分ける。
-
-たとえば destination 計算は極力純粋関数へ寄せ、ERT で直接確認できる形が望ましい。
+各段階で一度使ってみてから次へ進む。
 
 ## まとめ
 
-旧実装の詳細を見ると、中心となる設計はかなり明確である。
+実装の軸はシンプル。
 
 ```text
-File / Buffer
-   ↓
-Route rule
-   ↓
+file / buffer
+ ↓
+自由に並べたルーティング関数
+ ↓
 Destination
-   ↓
-Tab ID
-   ↓
-Select / Create Tab
-   ↓
-Project Context / Bufferlo / UI
+ ↓
+Tabを選ぶ / 作る
 ```
 
-新しい `.emacs.d` では、この流れをそのまま前提にせず、
+その Tab の中では、
 
-- Emacs 31.1 の標準機能
-- 公開API
-- 起動時依存
-- Bufferlo の必要性
-- advice の影響範囲
-- ERT のしやすさ
+```text
+buffer     → Bufferlo
+戻る/進む  → Browsing History
+Window     → tab-bar
+Project    → 必要なTabだけproject.elと連携
+```
 
-を一つずつ確認してから再構築する。
+とする。
+
+全部を自作しない。
+
+全部を抽象化しない。
+
+**標準機能や既存パッケージに任せられるところは任せて、必要な接着部分だけ小さく書く。**
+
+このくらいの軽さを保つ。
