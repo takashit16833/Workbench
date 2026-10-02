@@ -1,348 +1,339 @@
-# .emacs.d-cli タブルーティング 基本設計
+# タブルーティング / Browsing History 基本設計
 
-## 目的
+## このノートについて
 
-`.emacs.d-cli` のタブルーティングは、開いたファイルやバッファを用途・所属先ごとの Emacs タブへ自動的に振り分け、**タブを作業コンテキストとして扱う**ための仕組みである。
+これは厳密な仕様書ではなく、
 
-単なる「ファイル種別ごとのタブ切り替え」ではない。タブには表示名とは別の識別情報を持たせ、必要に応じてプロジェクト情報やタブ内バッファ集合も連動させる。
+> 何を作ろうとしていたんだっけ？
 
-新しい `.emacs.d` へ再実装する際は、旧コードをそのまま移植するのではなく、この設計意図を理解したうえで必要な部分だけ採用する。
+をあとからすぐ思い出すためのノート。
 
-## 調査対象
+細かい API 名より、**何をしたいか / なぜそうするか**を優先する。
 
-調査対象は `.emacs.d-cli` の `main` ブランチ。
+設計で名前を付けて使う言葉は、
+[Tab-Routing-Terminology.md](./Tab-Routing-Terminology.md)
+にまとめてある。
 
-中心となるファイルは以下。
+## まずやりたいこと
+
+今回やりたいのは、
+
+> **Emacs の Tab を、それぞれ独立した作業スペースのように使う**
+
+こと。
+
+ただし、
 
 ```text
-lisp/
-├── my-tab-routing.el
-├── my-tab-bar.el
-├── my-project-context.el
-└── my-navigation.el
-
-test/
-├── my-tab-routing-test.el
-└── my-project-context-test.el
+Tab ≠ Project
+Tab ≠ Repository
 ```
 
-### 各ファイルの責務
+ここは大事。
 
-| ファイル | 責務 |
+どの Tab に入るかはルーティング関数が決める。
+
+たとえば `.org` をまとめるルールなら、
+
+```text
+Org Tab
+├─ repo-a/docs/foo.org
+├─ repo-b/notes/bar.org
+└─ ~/memo.org
+```
+
+のように、1つの Tab に複数 Repository のファイルが入ってよい。
+
+Project は、ルーティング方法の1つにすぎない。
+
+## Tab ごとに分けたいもの
+
+まず分けたいのはこのあたり。
+
+```text
+Tab A
+├─ 表示する buffer のまとまり
+├─ 戻る / 進むの履歴
+└─ Window の並び
+
+Tab B
+├─ 表示する buffer のまとまり
+├─ 戻る / 進むの履歴
+└─ Window の並び
+```
+
+使えそうなものはなるべく標準機能や既存パッケージに任せる。
+
+| やりたいこと | 第一候補 |
 | --- | --- |
-| `my-tab-routing.el` | バッファの表示先を決め、必要なタブを選択・作成する |
-| `my-tab-bar.el` | Misc の非表示、タブ移動、並べ替えなど見た目と手動操作を扱う |
-| `my-project-context.el` | 現在のプロジェクトタブを `project.el` の現在プロジェクトとして扱わせる |
-| `my-navigation.el` | 旧設定では初期化の入口。Better Jumper とタブルーティングを結びつけている |
+| Tab ごとの buffer | Bufferlo |
+| 戻る / 進むの履歴 | 自作 Browsing History |
+| Window の並び | tab-bar |
+| Project 判定 | project.el |
 
-## 設計の中心
+足りない接着部分だけ自作する。
 
-旧実装の本質は次の構造にある。
+## Tab Routing
 
-```text
-Buffer / File
-    ↓
-Destination
-    ↓
-Tab ID
-    ↓
-Tab
-```
+Tab Routing の仕事はシンプル。
 
-プロジェクトタブでは、さらに次へつながる。
+> この file / buffer は、どの Tab で表示する？
+
+を決める。
+
+ルーティング関数は自由に追加・削除・並べ替えできる。
 
 ```text
-Tab ID
-    ↓
-Project root
-    ↓
-project-current
+file
+ ↓
+ルーティング関数 A → マッチしない
+ ↓
+ルーティング関数 B → マッチした
+ ↓
+その行き先を使う
 ```
 
-したがって、旧実装におけるタブは単なる表示切り替えではなく、**用途やプロジェクトごとの作業空間**である。
+最初にマッチしたものを採用する。
 
-## タブの種類
+旧設定では Tasks / Org / Project などのルールを使っていたが、これはあくまで当時の設定例。
 
-現在の主なルーティング先は次の通り。
+今回の仕組みが Tasks / Org / Project に固定されるわけではない。
 
-| 種類 | 表示名 | 識別子 |
-| --- | --- | --- |
-| Workbench task | Tasks | `tasks` |
-| Org | Org | `org` |
-| Project | プロジェクト名 | `(project . ROOT)` |
-| その他 | Misc | `misc` |
+### Destination
 
-プロジェクトだけはルートパスを識別子に含める。
-
-例:
-
-```elisp
-((project . "/Users/foo/src/dotfiles/") . "dotfiles")
-```
-
-これにより、同じディレクトリ名を持つ別プロジェクトを区別できる。
-
-## 表示名と識別子を分ける理由
-
-タブ名は人間が見るための表示であり、一意とは限らない。
+ルーティング関数が返す「行き先」を Destination と呼ぶ。
 
 たとえば、
 
-```text
-~/work/foo/
-~/private/foo/
+```elisp
+(:id org
+ :name "Org")
 ```
 
-はどちらも表示名が `foo` になる。
+なら Org Tab が行き先。
 
-そこで内部では、
-
-```text
-(project . "/.../work/foo/")
-(project . "/.../private/foo/")
+```elisp
+(:id (project . "/work/foo/")
+ :name "foo")
 ```
 
-のようにプロジェクトルート全体を使って区別する。
+なら、その Project 用 Tab が行き先。
 
-つまり、
+Destination は「どこへ行くか」を表すだけで、実際の Tab 操作は別で行う。
 
-```text
-タブ名 = 人間向け
-タブID = プログラム向け
-```
+## Misc
 
-という役割分担になっている。
-
-## ルーティング規則
-
-ファイルの振り分け規則は順序付きで登録され、**最初に一致したものを採用する**。
-
-現在の順序は次の通り。
+file がどのルーティング関数にもマッチしなかったら Misc へ送る。
 
 ```text
-1. Workbench Tasks
-2. Org
-3. Project
-4. Misc
+fileあり
+  ↓
+どのルーティング関数にもマッチしない
+  ↓
+Misc
 ```
 
-概念的には以下。
+Misc は通常のルーティング関数というより、最後の受け皿。
+
+一方で、`*Messages*` などの file を持たない buffer は、何にもマッチしなかったからといって Misc へ送らない。
 
 ```text
-File
- │
- ├─ Workbench/tasks 配下?
- │    └─ Yes → Tasks
- │
- ├─ Org ファイル?
- │    └─ Yes → Org
- │
- ├─ project.el が所属プロジェクトを検出?
- │    └─ Yes → Project
- │
- └─ その他
-      └─ Misc
+fileあり + マッチなし  → Misc
+fileなし + マッチなし  → 今のTabのまま
 ```
 
-この順序自体が仕様である。
+## Tab ID
 
-たとえば Workbench の task は Org ファイルでもあるが、Tasks 判定が先なので Tasks タブへ送られる。
-
-## ファイルを持たないバッファ
-
-特殊バッファなど、通常の `buffer-file-name` を持たないバッファは原則として自動ルーティングしない。
-
-例:
+Tab の表示名とは別に、プログラム用の ID を持たせる。
 
 ```text
-*Messages*
-*Help*
-*Completions*
+表示名: Org
+Tab ID: org
 ```
 
-これらは現在のタブに残す。
+Project なら、
 
-ただし xref の検索結果は例外で、`default-directory` からプロジェクトを判定して、そのプロジェクトタブへ送る。
-
-このことから、旧実装は途中から「ファイルの振り分け」ではなく、**バッファが持つ作業コンテキストの振り分け**へ発展している。
-
-## タブの選択・作成
-
-ルーティング結果を受け取ると、概ね次の順で処理する。
-
-```text
-目的の Tab ID を取得
-    ↓
-現在のタブが同じ ID?
-    ├─ Yes → 何もしない
-    └─ No
-         ↓
-同じ ID の既存タブを探す
-    ├─ Found → そのタブを選択
-    └─ Not found
-         ↓
-ID のない同名タブを探す
-    ├─ Found → 再利用して ID を付与
-    └─ Not found → 新規タブを作成
+```elisp
+(project . "/work/foo/")
 ```
 
-同名タブの再利用は、既存タブを自動ルーティング管理下へ移行しやすくするための仕組みでもある。
+のような ID を使える。
 
-## Misc の役割
+同じ ID の Tab があればそこへ移動し、なければ新しく作る。
 
-Misc は、どのルーティング条件にも一致しないファイルの受け皿。
-
-起動直後の最初の `*scratch*` タブは、条件が合えば新しいタブを増やさず Misc として再利用する。
-
-ただし Misc は通常の作業対象ではないため、
-
-- タブバーには表示しない
-- PageUp / PageDown のタブ移動でも飛ばす
-- 並べ替えの対象にも含めない
-
-という扱いになっている。
-
-Misc は削除されているのではなく、**内部には存在するが通常のUIからは隠された裏方タブ**である。
+同じ名前でも ID が違えば別 Tab として扱う。
 
 ## Project Context
 
-プロジェクトタブでは、現在表示しているバッファが何であるかにかかわらず、そのタブが表すプロジェクトを `project.el` の現在プロジェクトとして扱えるようにする。
+Project 用の Tab だけ、少し project.el と連携する。
 
-通常の `project-current` は主に現在バッファの `default-directory` を基準にする。
+たとえば Project A の Tab にいる時は、
 
-旧実装では、現在のタブIDが、
+> 今は Project A を作業中
 
-```elisp
-(project . ROOT)
-```
+という情報を project.el に補助的に渡せるようにする。
 
-なら、その `ROOT` を `project-current-directory-override` として一時的に使う。
+ただし、これをすべての Tab に適用しない。
 
-重要なのは、バッファ自身の `default-directory` を恒久的に変更しないこと。
+たとえば Org Tab に、
 
 ```text
-Buffer state
-    ↓ 変更しない
-
-project-current の呼び出し中だけ
-    ↓
-Tab の Project root を使う
+repo-a/foo.org
+repo-b/bar.org
 ```
 
-という設計になっている。
+が同時にあっても問題ない。
 
-## Bufferlo との関係
+その場合は各 buffer の `default-directory` を使って、project.el が普通に Project を判定すればよい。
 
-旧設定では `bufferlo` を利用し、タブごとにバッファ集合も分離している。
+## Bufferlo
+
+Bufferlo は今回かなり相性がよい。
+
+やりたいのは、
 
 ```text
-Project A tab
-├── a.hs
-├── b.hs
-└── README.md
-
-Project B tab
-├── main.lua
-└── README.md
+Tab A → Aで使っているbufferだけ見える
+Tab B → Bで使っているbufferだけ見える
 ```
 
-タブルーティング自体と Bufferlo は別機能だが、組み合わせることで「タブ = 作業空間」という感覚を強めている。
+という状態。
 
-新しい `.emacs.d` で Bufferlo を再採用するかは別途検討する。
-
-## 旧実装の良い点
-
-新しい `.emacs.d` でも考え方として価値が高いのは以下。
-
-- タブ名と内部IDを分離している
-- ルーティング規則が順序付きの関数リストになっている
-- 最初に一致した規則を採用するので優先順位が明確
-- Routing と Project Context の責務が分かれている
-- 明示的な `project-current` の引数や既存 override を優先する
-- バッファの `default-directory` を書き換えない
-- TRAMP のプロジェクトルートをそのまま扱える
-- ERT で優先順位やプロジェクト判定を確認している
-
-## 新しい .emacs.d で再検討する点
-
-旧実装をそのままコピーせず、次を改めて確認する。
-
-### 初期化場所
-
-旧実装では Better Jumper の設定からタブルーティングを初期化している。
-
-責務としては独立しているため、新構成では分離した方がよい。
-
-### Org / Tasks
-
-現在の `.emacs.d` では Org を中心機能として使わない方針なので、Tasks / Org ルーティングが今も必要か確認する。
-
-### Bufferlo
-
-標準機能だけで十分か、Bufferlo を再採用するかを検討する。
-
-### advice の範囲
-
-旧実装では、
+新しい Tab を作った時だけ注意が必要で、
 
 ```text
-find-file
-switch-to-buffer
-display-buffer
+新しいTabを作る
+ ↓
+目的のfileを表示する
+ ↓
+表示できた
+ ↓
+Bufferloをそのbufferから始める
 ```
 
-という基本関数を advice している。
+という順番にする。
 
-影響範囲が広いため、本当に3つすべて必要か、Emacs 標準の `display-buffer` 系の仕組みでより単純にできないか確認する。
+Tab を作った直後に `bufferlo-clear` すると、まだ `*scratch*` しか表示されていない可能性があるため。
 
-### 内部API
+## Browsing History
 
-旧実装では、
+「戻る / 進む」は、自作の Browsing History を使う。
 
-```elisp
-tab-bar--current-tab-find
-tab-bar--format-tab
-```
+Browsing History 自体は Tab Routing を知らない汎用機能として作る。
 
-など `tab-bar--` で始まる内部関数も使用している。
-
-Emacs 31.1 で公開APIだけに寄せられるか確認したい。
-
-## 再設計時の分割単位
-
-新実装では最低でも次の単位に分けて考える。
+今回の Tab 構成では、
 
 ```text
-1. Tab Routing
-   File / Buffer → Tab
-
-2. Tab Identity
-   Tab → ID
-
-3. Project Context
-   Tab → project.el
-
-4. Tab-local Buffers
-   Tab → buffer set
-
-5. Tab UI
-   表示、移動、並べ替え
+Tab A → Browsing History A
+Tab B → Browsing History B
 ```
 
-特に Routing、Project Context、Buffer isolation、UI は独立して採用・不採用を判断できる。
+のように、各 Tab がそれぞれ1つの Browsing History を利用する。
+
+同じ Tab に Window が複数あっても、使う Browsing History は同じ。
+
+Browsing History の構造や振る舞いは、
+[Browsing-History-Design.md](./Browsing-History-Design.md)
+に分けてまとめる。
+
+## Routing と Browsing History の関係
+
+この2つは別機能として考える。
+
+```text
+Tab Routing
+  → どのTabで表示するか
+
+Browsing History
+  → 渡された履歴に対して記録 / 戻る / 進む
+```
+
+Browsing History は Tab Routing を呼ばない。
+
+Tab 切り替えを履歴に入れるかどうかなど、Tab 固有の使い方は利用側で決める。
+
+## Misc を隠すのは後で
+
+まず Routing を正しく動かす。
+
+Misc を画面上から隠したくなったら、その時に見た目だけ調整する。
+
+`tab-bar-tabs-function` から Misc を除外する方法は使わない。これは表示だけでなく実際の Tab 操作にも影響するため。
+
+## コードの作り方
+
+基本は、
+
+```text
+Emacsの状態を見る
+ ↓
+小さい関数で判断する
+ ↓
+必要な操作をする
+```
+
+という形にする。
+
+純粋にできる判断は純粋関数にする。
+
+ただし、純粋関数にするためだけに大きなデータ構造や抽象化を増やさない。
+
+個人用 Emacs 設定なので、分かりやすさを優先する。
+
+## テスト
+
+ERT は、壊れた時に原因を見つけやすいところへ置く。
+
+特に確認したいのは、
+
+- ルーティング関数の順番
+- 同じ Tab ID の再利用
+- マッチしない file が Misc へ行くこと
+- file のない buffer は勝手に Misc へ行かないこと
+- Bufferlo の buffer が Tab ごとに分かれること
+- Tab A / Tab B が別の Browsing History を使うこと
+- 同じ Tab の複数 Window では同じ Browsing History を使うこと
+- 相対パスを開いても、Tab 切り替えのせいで別 file を開かないこと
+- 設定を再読込しても advice / hook が二重にならないこと
+
+全部を ERT に押し込まず、UI は実際に触って確認する。
+
+## 実装する順番
+
+一気に作らない。
+
+```text
+1. Browsing History 本体を小さく実装 + ERT
+2. ルーティング関数の仕組みを作る
+3. Destination と Tab ID を使って Tab を選ぶ
+4. 普通の file を開く経路へつなぐ
+5. Misc を入れる
+6. Bufferlo とつなぐ
+7. Project Context を入れる
+8. Tab ごとに Browsing History を持たせる
+9. 記録対象の移動を少しずつ増やす
+10. 最後に必要なら Misc の見た目を調整する
+```
 
 ## まとめ
 
-`.emacs.d-cli` のタブルーティングの本質は、
+今回の中心は、
+
+> **Tab をそれぞれ独立した作業スペースのように見せる**
+
+こと。
+
+でも、
 
 ```text
-ファイルを分類する
-    ↓
-対応するタブを見つける
-    ↓
-タブを作業コンテキストとして使う
+Tab ≠ Project
+Tab ≠ Repository
 ```
 
-ことにある。
+どの Tab に入るかは自由なルーティング関数で決める。
 
-新しい `.emacs.d` では、この考え方を残しつつ、依存関係・内部API・advice・Bufferlo の必要性を改めて評価してから実装する。
+Tab ごとの buffer は Bufferlo、戻る / 進むは自作 Browsing History、Window は tab-bar に任せる。
+
+Project は必要な Tab だけ project.el とつなぐ。
+
+なるべく Emacs 標準と既存パッケージを使う。ただし Browsing History は今回の使い方に合わせて小さく自作する。
