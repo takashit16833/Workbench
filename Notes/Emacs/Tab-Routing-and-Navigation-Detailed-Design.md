@@ -65,7 +65,7 @@ my-project-context.el
 my-navigation.el
   Before / After Location → record?
   移動の観測
-  Better Jumper への記録
+  採用した履歴機能への記録
 ```
 
 タブの色・表示・キー操作などは、必要に応じて `config/` 側で設定する。
@@ -1093,7 +1093,7 @@ Tab Routing と Navigation を必要以上に起動時ロードしない。
 
 実測して、単純な `require` のコストが無視できるなら単純さを優先する。
 
-Better Jumper は package の autoload / `use-package` を利用できる部分を確認する。
+Better Jumper を採用する場合だけ、package の autoload / `use-package` を利用できる部分を確認する。xref 採用なら追加パッケージは不要。
 
 ## 39. 実装ステップ
 
@@ -1228,38 +1228,3 @@ Original
 **小さい純粋関数 + 薄い Emacs 境界 + 少数の統合点**
 
 このくらいのバランスを目指す。
-
-
-
-今回の再設計では、旧実装の良い部分、
-
-- Tab ID
-- Project root を使った識別
-- `project-current-directory-override`
-- Navigation の再入防止
-- ERT
-
-を残す。
-
-一方で、
-
-- 判断と状態変更の混在
-- Better Jumper 内部変数への依存
-- Bufferlo への直接依存
-- tab-bar 内部APIへの依存
-- 互換用の同名タブ再利用
-- Routing / Navigation の初期化混在
-
-を整理する。
-
-最終的には、
-
-```text
-小さい純粋関数
-+
-薄い Emacs 境界
-+
-少数の統合点
-```
-
-という構成を目指す。
