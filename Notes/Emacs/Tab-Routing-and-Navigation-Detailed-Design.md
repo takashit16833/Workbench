@@ -1,4 +1,4 @@
-# タブルーティング / Navigation 詳細設計
+# タブルーティング / Browsing History 詳細設計
 
 ## このノートについて
 
@@ -58,7 +58,7 @@ Windowの並び
 elisp/
 ├── my-tab-routing.el
 ├── my-project-context.el
-└── my-navigation.el
+└── my-browsing-history.el
 ```
 
 それぞれ、
@@ -70,9 +70,12 @@ my-tab-routing.el
 my-project-context.el
   → Project用Tabとproject.elの橋渡し
 
-my-navigation.el
-  → 今のTabの中で戻る / 進む
+my-browsing-history.el
+  → Tabを知らない汎用の「戻る / 進む」
 ```
+
+Browsing History と Tab の接続や、どの移動コマンドを記録対象にするかは、
+Browsing History 本体へ混ぜない。
 
 を担当する。
 
@@ -392,140 +395,69 @@ Org Tab
 
 各 buffer の `default-directory` から project.el が普通に判定すればよい。
 
-## Navigation
+## Browsing History の利用
 
-履歴は Tab ごとに1本。
+Browsing History 本体の設計は、
+[Browsing-History-Design.md](./Browsing-History-Design.md)
+に分ける。
 
-```text
-Tab A
-├─ Window 1
-├─ Window 2
-└─ History A
+Browsing History 自体は Tab を知らない。
 
-Tab B
-└─ History B
-```
-
-Window 単位には分けない。
-
-同じ Tab なら、複数 Repository の file 間を移動しても同じ履歴。
-
-別 Tab の履歴とは混ぜない。
-
-## まず xref で試す
-
-第一候補は Emacs 標準の xref。
-
-`xref-history-storage` は、どの履歴を使うかを関数で返せる。
-
-なので、
+今回の Tab 構成では、
 
 ```text
-今のTab
- ↓
-そのTab専用のxref履歴
+Tab A → Browsing History A
+Tab B → Browsing History B
 ```
 
-を返す小さい関数を作れるか試す。
+のように、各 Tab が1つずつ利用する。
 
-確認したいのは、
+同じ Tab に複数 Window があっても同じ Browsing History を使う。
 
-- Tab A と Tab B の履歴が混ざらない
-- 同じ Tab の Window 1 / Window 2 は同じ履歴
-- Tab を切り替えて戻っても履歴が残る
-- Tab 複製で同じ履歴オブジェクトを意図せず共有しない
-- close / undo-close で壊れない
+Tab を複製した時に同じ History オブジェクトを意図せず共有しないこと、
+Tab を閉じたり undo-close した時に壊れないことは Tab 側で確認する。
 
-こと。
+## どの移動を記録するか
 
-これで十分なら Better Jumper は使わない。
+これは Browsing History 本体の責務ではない。
 
-## どの移動を履歴に入れるか
+Browsing History は、
 
-基本は、
+> この Location を記録して
 
-```text
-移動前
- ↓
-コマンド実行
- ↓
-移動後
- ↓
-同じTab？
-```
+と呼ばれたら履歴へ追加するだけ。
 
-を見る。
+どの Emacs コマンドを記録対象にするかは接続側で決める。
 
-別 Tab に移動したなら記録しない。
+旧設定の `my-navigation.el` は、その対象を決める参考として使う。
 
-同じ Tab なら、
+最初から広い範囲へ advice せず、必要な移動を1つずつ追加する。
 
-```text
-別bufferへ移動した
-same bufferでpointが変わった
-```
-
-ような時に記録する。
-
-単に Window を選び直しただけなら記録しない。
-
-移動元は marker で持つ。
-
-point の整数だけより、処理中に編集が入っても位置へ追従できるため。
-
-ただし比較ロジックには marker そのものを持ち込まず、必要な値だけ渡す。
-
-## xref 自身との二重記録
-
-xref のジャンプは、xref 自身でも履歴を積む。
-
-その上から自作 Navigation まで同じ移動を記録すると二重になる。
-
-なので最初は xref 自身のジャンプコマンドを、自作追跡の対象から外す。
-
-LSP / Consult / Avy などは、実際にどのコマンドが何を呼ぶか確認してから追加する。
-
-Consult のプレビューのような、
+Consult の preview のような、
 
 > 候補をちょっと見ただけ
 
-の動作は履歴に入れない。
+の動作は記録しない。
 
-## Navigation の再入と「戻る / 進む」
+また、Browsing History 自身の「戻る / 進む」で発生した移動を、
+新しい履歴として再記録しない。
 
-Navigation にも再入防止が必要。
+## Tab Routing と Browsing History は直接つながない
 
-上位コマンドと下位コマンドの両方を追跡してしまった時に、同じ移動を二重記録しないため。
-
-また `xref-go-back` / `xref-go-forward` 自身を、新しい移動として記録しない。
-
-Routing の再入防止とは別の状態にする。
-
-```text
-Routingの再入防止
-Navigationの追跡中
-Navigationの履歴再生中
-```
-
-を1つの汎用フラグにまとめない。
-
-## Routing と Navigation は直接つながない
-
-Routing は、
+Tab Routing は、
 
 > どの Tab で表示するか
 
 だけを考える。
 
-Navigation は、
+Browsing History は、
 
-> 今の Tab の中でどこへ戻るか
+> 渡された履歴に対して記録 / 戻る / 進む
 
 だけを考える。
 
-同じコマンドへ両方の advice が必要になった時だけ、実際の呼び出し順を見て調整する。
-
-最初から advice の順番を設計上の決まりにしない。
+Tab 側が現在の Tab に対応する Browsing History を選び、
+必要な時に Browsing History の操作を呼ぶ。
 
 ## Misc の見た目
 
@@ -552,7 +484,7 @@ ERT でまず確認しやすいのは、
 - file の no-match → Misc
 - file なしの no-match → 何もしない
 - Project ID → root
-- 同じ / 別 Tab を含む Navigation の記録判定
+- Browsing History の追加 / 戻る / 進むの状態変化
 
 あたり。
 
@@ -566,9 +498,9 @@ ERT でまず確認しやすいのは、
 - ID が違えば同名 Tab でも分かれる
 - Bufferlo の buffer が Tab ごとに混ざらない
 - 表示成功後に Bufferlo が初期化される
-- Tab A / Tab B の Navigation 履歴が混ざらない
-- 同じ Tab の複数 Window では同じ履歴になる
-- 同じ Tab なら別 Repository の file も同じ履歴になる
+- Tab A / Tab B が別の Browsing History を使う
+- 同じ Tab の複数 Window では同じ Browsing History を使う
+- 同じ Tab なら別 Repository の file でも同じ Browsing History を使う
 - 相対パスで正しい file を開く
 - 設定再読込で advice / hook が二重にならない
 
@@ -612,14 +544,14 @@ advice を基本コマンドへ付ける機能は、結局早い段階で必要�
 
 起動速度は実測して判断する。
 
-xref で済めば追加パッケージも増えない。
+Browsing History は小さい自作機能として実装し、不要な外部パッケージ依存を増やさない。
 
 ## 実装する順番
 
 一気に全部つながない。
 
 ```text
-1. xrefでTabごとの履歴を作れるか小さく試す
+1. Browsing History 本体を実装 + ERT
 2. ルーティング関数リストと順番を実装 + ERT
 3. Destination / Misc を実装 + ERT
 4. Tab ID を使って stay / select / create
@@ -627,8 +559,8 @@ xref で済めば追加パッケージも増えない。
 6. 相対パス / 再入 / 失敗を確認
 7. Bufferloを表示成功後につなぐ
 8. Project Contextを入れる
-9. TabごとのNavigationを入れる
-10. 必要な表示経路を少しずつ追加
+9. TabごとにBrowsing Historyを持たせる
+10. 記録対象の移動を少しずつ追加
 11. 最後に必要ならMiscの見た目を調整
 ```
 
@@ -652,7 +584,7 @@ Tabを選ぶ / 作る
 
 ```text
 buffer     → Bufferlo
-履歴       → まずxref
+戻る/進む  → Browsing History
 Window     → tab-bar
 Project    → 必要なTabだけproject.elと連携
 ```
