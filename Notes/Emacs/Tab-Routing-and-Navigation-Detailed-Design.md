@@ -454,8 +454,10 @@ Browsing History は、
 
 だけを考える。
 
-Tab 側が現在の Tab に対応する Browsing History を選び、
+利用側は現在使う Browsing History を取得する関数を通して History を受け取り、
 必要な時に Browsing History の操作を呼ぶ。
+
+Tab / Window のどちらに History を置くかは、その取得処理にだけ閉じ込める。
 
 ## Misc の見た目
 
@@ -496,8 +498,9 @@ ERT でまず確認しやすいのは、
 - ID が違えば同名 Tab でも分かれる
 - Bufferlo の buffer が Tab ごとに混ざらない
 - 表示成功後に Bufferlo が初期化される
-- Tab A / Tab B が別の Browsing History を使う
-- 同じ Tab の複数 Window では同じ Browsing History を使う
+- scope が tab の時、Tab A / Tab B が別の Browsing History を使う
+- scope が tab の時、同じ Tab の複数 Window では同じ Browsing History を使う
+- scope が window の時、Window ごとに別の Browsing History を取得できる
 - 同じ Tab なら別 Repository の file でも同じ Browsing History を使う
 - 相対パスで正しい file を開く
 - 設定再読込で advice / hook が二重にならない
