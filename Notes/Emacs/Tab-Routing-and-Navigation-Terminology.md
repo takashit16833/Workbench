@@ -18,8 +18,7 @@ Emacs / Bufferlo / project.el / xref など、もともと存在する名前は�
 | **Destination** | Routing Function が返す「行き先」。どの Tab を使うか判断するための情報。 |
 | **Tab ID** | 表示名とは別に Tab を識別する値。Destination の ID を Tab に覚えさせる。 |
 | **Project Context** | Project 用の Tab にいる時だけ、その Project root を project.el に補助的に伝える仕組み。 |
-| **Navigation** | 現在の Tab の中で「戻る / 進む」を扱う機能。 |
-| **Navigation History** | Navigation が使う移動履歴。今回の方針では Tab ごとに1本。 |
+| **Browsing History** | ブラウザのような「戻る / 進む」を行うための履歴機能。Tab には依存しない。今回は各 Tab がそれぞれ1つ利用する。 |
 
 ## Destination だけ少し補足
 
@@ -59,6 +58,7 @@ Destination は Project 専用ではない。
 - Project Workspace
 - Routing Facts
 - History Backend
+- Navigation History
 - Workspace Manager
 
 必要になれば、その時に改めて「名前を付けるほどの概念か」を考える。
