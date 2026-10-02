@@ -108,9 +108,9 @@ back / forward では、復元に成功してから idx を変更する。
 公開する操作名は、
 
 ```text
-my/browsing-history-push
-my/browsing-history-back
-my/browsing-history-forward
+browsing-history-push
+browsing-history-back
+browsing-history-forward
 ```
 
 とする。
@@ -162,7 +162,7 @@ A → B
 scope は「履歴を分ける単位」。
 
 ```elisp
-(defcustom my/browsing-history-scope 'tab
+(defcustom browsing-history-scope 'tab
   "Browsing History をどの単位で持つか。"
   :type '(choice (const tab)
                  (const window)))
@@ -173,11 +173,11 @@ scope は「履歴を分ける単位」。
 取得は2つに分ける。
 
 ```text
-my/browsing-history-current
+browsing-history-current
   → 現在の History を取得
   → なければ nil
 
-my/browsing-history-ensure-current
+browsing-history-ensure-current
   → 現在の History を取得
   → なければ作って保存
   → History を返す
@@ -265,10 +265,70 @@ Consult / xref / Avy など、どの移動コマンドを記録するかは旧�
 - 復元できない場合は idx が変わらない
 - back / forward の復元が新しい履歴を作らない
 
+## パッケージとしての境界
+
+Browsing History は `.emacs.d` の内部機能ではなく、独立した Emacs Lisp パッケージとして実装する。
+
+リポジトリ名は、
+
+```text
+emacs-browsing-history
+```
+
+を候補とする。
+
+パッケージ側に置くもの:
+
+```text
+History / Location
+push
+back / forward
+scope
+Tab / Window への History 保存・取得
+Location の復元
+Browsing History 自身の ERT
+```
+
+`.emacs.d` 側に残すもの:
+
+```text
+Consult を記録対象にする
+xref を記録対象にする
+Avy を記録対象にする
+どのキーへ back / forward を割り当てるか
+Tab Routing と同時に使う時の接続
+```
+
+つまり、
+
+```text
+パッケージ
+  → Browsing History の仕組み
+
+.emacs.d
+  → 自分の Emacs で何を履歴として記録するか
+```
+
+と分ける。
+
+Tab Router には依存しない。
+Tab Router 側からも Browsing History を必須依存にしない。
+
+パッケージとして公開する関数・変数は `browsing-history-` を prefix にする。
+`.emacs.d` 専用の `my/` prefix は使わない。
+
+`use-package` からは package-vc 経由で読み込む想定。
+
+```elisp
+(use-package browsing-history
+  :vc (:url "https://github.com/takashit16833/emacs-browsing-history.git"
+       :rev :newest))
+```
+
 ## 実装ファイル
 
 ```text
-elisp/my-browsing-history.el
+browsing-history.el
 ```
 
 History のデータ構造と履歴操作には Tab / Window 固有の処理を入れない。
