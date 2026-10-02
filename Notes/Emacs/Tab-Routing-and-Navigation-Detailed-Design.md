@@ -44,7 +44,7 @@ file
 
 ```text
 buffer
-移動履歴
+Browsing History
 Windowの並び
 ```
 
@@ -76,8 +76,6 @@ my-browsing-history.el
 
 Browsing History と Tab の接続や、どの移動コマンドを記録対象にするかは、
 Browsing History 本体へ混ぜない。
-
-を担当する。
 
 見た目やキー設定は `config/` 側へ置く。
 
