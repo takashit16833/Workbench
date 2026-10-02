@@ -1,21 +1,43 @@
 # タブルーティング / Navigation 新基本設計
 
-## 目的
+## このノートについて
 
-新しい `.emacs.d` では、タブルーティングと Better Jumper を別々の機能として実装する。
+これは厳密な仕様書というより、あとで自分たちが読み返して、
 
-ただし両者は `find-file` や `switch-to-buffer` など同じ移動経路に関わるため、完全に無関係な機能ではない。コード上の依存は持たせず、最後に統合動作だけ確認する。
+> 何を作ろうとしていたんだっけ？
 
-設計の中心は次の方針。
+をすぐ思い出すための設計ノート。
 
-- 小さな純粋関数を組み合わせる
-- Emacs の状態を読む処理と変更する処理を外側へ寄せる
-- 判断と副作用を分離する
-- タブルーティングと Navigation は互いを知らない
-- 必要な接点だけ hook / advice / 統合テストで結ぶ
-- 拡張性のためだけの抽象化は作らない
+細かい API 名よりも、**責務・データの流れ・採用理由**が分かることを優先する。
 
-Functional Core / Imperative Shell に近い構成を目指す。
+## まず結論
+
+新しい `.emacs.d` では、Tab Routing / Project Context / Navigation を別々の機能として作る。
+
+```text
+Tab Routing
+  ファイル / バッファを適切なタブへ送る
+
+Project Context
+  現在のタブが表す Project を project.el に伝える
+
+Navigation
+  「ここに戻りたい」という移動履歴を記録する
+```
+
+Tab Routing と Navigation は同じ移動コマンドに関わるけれど、**お互いを直接呼ばない**。
+
+共通の考え方はこれ。
+
+```text
+Emacs の状態を観測
+        ↓
+小さな純粋関数で判断
+        ↓
+Emacs の状態を変更
+```
+
+Functional Core / Imperative Shell に近い形にする。ただし、関数型っぽく見せるための抽象化はしない。
 
 ## 全体構造
 
@@ -322,84 +344,107 @@ Misc
 
 外部からルールを追加する必要が生じた時点で、初めてルール一覧への抽象化を検討する。
 
-## Better Jumper と Routing の関係
+## Navigation の履歴方式は先に小さく試す
 
-両者は同じコマンドへ advice を付ける可能性がある。
+ここは実装前に決める。
 
-意図する順序は、
+旧設定は Better Jumper を使っていたが、`window` 単位の履歴と Tab Routing の組み合わせは少し複雑。
+
+一方、Emacs 標準の xref には global history があり、タブをまたぐ「戻る / 進む」と相性がよさそう。
+
+なので、まだどちらかに決め打ちしない。
+
+```text
+Project A / a.el
+    ↓
+Project B / b.el
+    ↓
+戻る
+    ↓
+Project A / a.el
+
+進む
+    ↓
+Project B / b.el
+```
+
+この最小実験で、file / point / tab が全部正しいことを確認してから xref か Better Jumper を採用する。
+
+Better Jumper を使う場合でも、自作コードから `better-jumper--jumping` のような内部変数は参照しない。
+
+## Routing と Navigation の advice の関係
+
+同じコマンドへ両方の advice が付く場合は、Navigation を外側、Routing を内側にする。
 
 ```text
 Navigation advice
-    ↓
-Tab Routing advice
-    ↓
+        ↓
+Routing advice
+        ↓
 Original command
 ```
 
-Navigation は移動全体の前後を観測する。
-
-Routing は実際の移動処理の内側で、必要なら先にタブを選択する。
-
-この順序だけを明示的な統合点とし、双方の実装は互いを呼ばない。
-
-## Better Jumper のジャンプ中
-
-旧実装では Better Jumper の内部変数 `better-jumper--jumping` を参照していた。
-
-新設計では、可能な限り外部パッケージの内部変数へ依存しない。
-
-自作 Navigation 側で「現在は Navigation 自身による履歴移動中」という状態を動的変数で管理する。
-
-概念:
-
-```elisp
-(let ((my/navigation--recording-disabled t))
-  (better-jumper-jump-backward))
-```
-
-これにより、Better Jumper の内部実装変更への依存を減らす。
-
-詳細な接続方法は実装前に Better Jumper の公開 API を再確認して決める。
+ただし、この順序だけで Better Jumper の履歴保存先問題が解決するわけではない。だから履歴方式の最小実験を先に行う。
 
 ## Bufferlo
 
-Tab Routing 本体から Bufferlo を直接呼ばない。
+現在の新 `.emacs.d` では Bufferlo はすでに採用済み。
 
-Routing が新しいタブを作成した事実を、必要なら hook で通知する。
+大事なのは `bufferlo-clear` を呼ぶタイミング。
 
-概念:
+やりたいのはこれ。
 
 ```text
-Tab Routing
-   ↓
-tab-created-hook
-   ↓
+新しいタブを作る
+    ↓
+目的のファイルを表示
+    ↓
+表示成功
+    ↓
+Bufferlo をそのバッファだけに初期化
+```
+
+タブ作成直後はまだ `*scratch*` の可能性があるので、その時点では clear しない。
+
+Routing は Bufferlo を直接知らず、**表示成功後の通知**だけ出す。
+
+```text
+Routing
+  ↓
+after-display
+  ↓
 Bufferlo
 ```
 
-これにより、
+作成直後専用 hook は、別の用途が出るまで作らない。
+
+## Misc の非表示は最後に考える
+
+最初の実装では Misc を普通に表示したまま Routing を完成させる。
+
+Misc を隠す場合も、内部の全タブ一覧から消してはいけない。表示だけを変える。
+
+`tab-bar-tabs-function` はタブの描画だけでなく選択・作成・移動にも使われるため、Misc 除外には使わない。
+
+必要になったら `tab-bar-format` 側の描画だけを調整する。
+
+公開 API だけにこだわって実装が大きくなるなら、内部 API を1か所へ隔離して使う方が分かりやすい場合もある。
+
+## Project の2つの文脈を混ぜない
+
+Routing と Project Context は同じ `project-current` を使うが、意味が違う。
 
 ```text
-Routing → Bufferlo
+Routing
+  このファイルはどの Project？
+  → 対象 directory を明示して調べる
+
+Project Context
+  今いるタブはどの Project？
+  → directory が省略された時だけタブの root を補う
 ```
 
-という直接依存を避ける。
-
-Bufferlo を採用しない場合も Routing の実装を変更しなくてよい。
-
-## 公開API優先
-
-旧実装で使用していた `tab-bar--...` のような内部APIは、可能な限り避ける。
-
-新実装時には Emacs 31.1 の公開 API を確認し、
-
-- `tab-bar-tabs`
-- `tab-bar-tabs-set`
-- `tab-bar-tabs-function`
-
-などで構成できる部分はそちらを優先する。
-
-内部APIが本当に必要な場合だけ、理由を設計書とコードコメントへ残す。
+この2つを混ぜると、現在タブの Project に別 Project のファイル判定が引っ張られる可能性がある。
 
 ## 過度な抽象化を避ける
 
@@ -430,77 +475,81 @@ elisp/
 
 ## テスト方針
 
-テストは純粋関数を中心にする。
+純粋関数を中心に ERT を書く。ただし、今回壊れやすいのは Emacs 状態との境界なので、統合 ERT も少数は必須にする。
 
-### Tab Routing
+### 純粋関数
 
-優先して ERT にするもの:
+- Facts → Destination
+- Destination + Tab Snapshot → Plan
+- Project ID → root
+- Navigation の before / after → record?
 
-- Facts から Destination を決める
-- Destination と Tab Snapshot から Plan を作る
-- 同じIDなら stay
-- 既存IDなら select
-- IDがなければ create
-- 同名でもIDが違えば別タブとして扱う
+### 統合 ERT
 
-### Navigation
+- タブ往復後も Tab ID が残る
+- 同名 Project を分離できる
+- 相対パスを開いてもタブ切替で対象ファイルが変わらない
+- Bufferlo は目的バッファの表示成功後に初期化される
+- 戻る / 進むで file + point + tab が正しく戻る
+- 履歴再生自身が新しい履歴を作らない
+- 設定再読込で advice / hook が重複しない
 
-優先して ERT にするもの:
+全部を自動化する必要はないが、状態境界を「手動確認だけ」にはしない。
 
-- before / after が同じなら記録しない
-- point が変われば記録する
-- buffer が変われば記録する
-- 必要なら window が変わった場合の扱い
+## 相対パスと再入も境界の仕様
 
-### 統合確認
+`find-file "src/foo.el"` のような相対パスは、タブを切り替える前の `default-directory` を基準に対象を確定する。
 
-少数だけ用意する。
+また、Routing / Navigation / 履歴再生の再入防止は別々の動的状態として持つ。1つのフラグへまとめない。
 
-例:
-
-```text
-Project A
-  ↓
-Project B
-  ↓
-jump backward
-```
-
-このとき、
-
-- Navigation の履歴が正しい
-- Routing が正しいタブへ戻す
-- 戻る操作自体が新しい履歴として増殖しない
-
-ことを確認する。
+表示失敗時は最初から複雑な rollback を作らず、成功後通知を出さないところから始める。
 
 ## 実装順
 
-1. Tab Routing の純粋な Destination 判定
-2. Tab Plan
-3. Tab Plan の実行境界
-4. Project Context
-5. Tab UI / Bufferlo 接続
-6. Better Jumper 本体の設定
-7. Navigation の純粋な transition 判定
-8. Navigation の advice
-9. 両者の統合確認
+レビュー後は、Navigation の履歴方式だけ Routing 完成後まで先送りしない。
 
-Tab Routing を先に完成させ、Navigation はその最終的な移動挙動を観測する形にする。
+```text
+0. xref / Better Jumper の最小実験
+        ↓
+1. Destination + ERT
+        ↓
+2. Tab Snapshot / Plan + ERT
+        ↓
+3. Tab 操作 / ID 保存 + 統合ERT
+        ↓
+4. 普通のファイル表示1経路へ接続
+   相対パス / 再入 / 失敗を確認
+        ↓
+5. Bufferlo を表示成功後へ接続
+        ↓
+6. Project Context
+   必要なら Magit の挙動も確認
+        ↓
+7. Navigation
+        ↓
+8. Routing + Navigation の統合確認
+        ↓
+9. 実際に使う表示経路を1つずつ追加
+        ↓
+10. 必要なら Misc 非表示
+```
 
-## 旧実装から変更する主な点
+## 旧実装から変える主なところ
 
-| 旧実装 | 新設計 |
+| 旧実装 / 旧案 | 新しい方針 |
 | --- | --- |
-| Destination 判定中に `project-current` | 外側で Project root を観測し、純粋関数へ渡す |
-| `my/tab-routing--select` が判断と状態変更を両方担当 | Plan と Execute に分離 |
-| `tab-bar--...` 内部APIを利用 | 公開APIを優先 |
-| IDなし同名タブを自動採用 | 新構築では原則削除 |
-| Routing が Bufferlo を直接知る | hook で接続 |
-| Navigation が Better Jumper 内部変数を見る | 自分たちの記録抑制状態を持つ |
-| 移動判定と履歴記録が一体 | Location / transition 判定 / record に分離 |
-| Routing と Navigation の初期化が混在 | 独立して初期化 |
-| advice 順序が構成依存 | Navigation 外側 / Routing 内側を明示 |
+| Destination 判定と Emacs 状態取得が近い | 観測と純粋な判定を分ける |
+| `my/tab-routing--select` が判断と状態変更を担当 | Plan と Execute に分ける |
+| IDなし同名タブを自動採用 | 新構築ではやめる |
+| タブ一覧全体を作り直す案 | Tab ID だけを境界で局所更新 |
+| `tab-bar-tabs-function` で Misc を除外する案 | やめる。必要なら描画だけ変える |
+| Routing が Bufferlo を直接呼ぶ | 表示成功後通知で接続 |
+| Bufferlo をタブ作成直後に clear | 目的バッファ表示成功後に clear |
+| Better Jumper 前提 | xref と最小実験で比較して決める |
+| Better Jumper 内部変数へ依存 | しない |
+| point を整数だけで保持する案 | marker は境界で保持し、純粋判定は整数で行う |
+| Routing 完成後に履歴統合を確認 | 履歴方式だけ先に最小実験 |
+| 境界テストは薄め | 壊れやすい境界は少数の統合 ERT を必須にする |
 
 ## まとめ
 
