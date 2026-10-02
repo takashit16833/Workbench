@@ -1,19 +1,43 @@
 # タブルーティング / Navigation 新詳細設計
 
-## 目的
+## このノートの読み方
 
-この文書は `Tab-Routing-and-Navigation-Basic-Design.md` の方針を、実装可能な単位まで具体化する。
+基本設計の「どういう考え方で作るか」を、実装できるところまで具体化したノート。
 
-ここでは最終コードを固定するのではなく、
+ここに書いた関数名は候補。API 名を守ることより、**観測 → 純粋な判断 → 副作用** の境界が分かりやすいことを優先する。
 
-- どの処理を純粋にするか
-- どこを Emacs 状態との境界にするか
-- タブルーティングと Navigation をどう独立させるか
-- どの単位で ERT を書くか
+実装前に Emacs 31.1 / Better Jumper / Bufferlo の実際の挙動を確認し、もっと単純な形があれば変えてよい。
 
-を定義する。
+## 実装前にやる小さな実験
 
-実装時には Emacs 31.1 と Better Jumper の現在の公開 API を再確認し、API 名や細部は実測に合わせる。
+まず Navigation の履歴方式だけを小さく試す。
+
+```text
+A. Emacs標準 xref の global history
+B. Better Jumper
+```
+
+確認したい動作はこれ。
+
+```text
+Project A / a.el : 10
+        ↓
+Project B / b.el : 20
+        ↓
+戻る
+        ↓
+Project A / a.el : 10
+
+進む
+        ↓
+Project B / b.el : 20
+```
+
+file / point / tab が全部正しいかを見る。
+
+さらに、buffer を kill した後の戻り方と、タブをまたいだ時の履歴保存先も確認する。
+
+この実験で xref / Better Jumper のどちらを使うか決めてから、本実装へ進む。
 
 ## 1. モジュール構成
 
@@ -223,37 +247,31 @@ kind         = file
 
 ## 7. Project root の観測
 
-境界関数候補:
+Routing 用の Project 判定では、**対象ファイル側の directory を必ず明示する**。
+
+概念:
 
 ```elisp
-my/tab-routing--project-root
+(project-current nil target-directory)
 ```
 
-入力:
-
-```elisp
-directory
-```
-
-処理:
+流れ:
 
 ```text
-project-current
-    ↓
+target file
+  ↓
+target directory
+  ↓
+project-current nil TARGET-DIRECTORY
+  ↓
 project-root
-    ↓
-正規化
 ```
 
-戻り値:
+現在タブの Project Context に引っ張られないことが重要。
 
-```text
-"/work/foo/"
-```
+Project root は `project-root` が返す表記を基本にし、末尾 `/` を揃える程度にする。
 
-または nil。
-
-この関数自体は副作用を起こさないが、Emacs の project 状態へ問い合わせるため、純粋関数としては扱わない。
+`file-truename` は最初から使わない。symlink / TRAMP で実際に困ってから考える。
 
 ## 8. Buffer から Facts を作る境界
 
@@ -437,32 +455,25 @@ my/tab-routing--execute-plan
 
 ## 14. Tab ID の保存
 
-旧実装では `tab-bar--current-tab-find` と alist の直接変更を使っていた。
+ここは無理に「非破壊更新」へ寄せない。
 
-新実装では、まず Emacs 31.1 の公開 API で実現できるか確認する。
-
-候補:
-
-- `tab-bar-tabs`
-- `tab-bar-tabs-set`
-
-考え方:
+`tab-bar-tabs` から現在タブを取得し、そのタブの独自 ID だけを境界内で更新する。
 
 ```text
-tab-bar-tabs
-    ↓
-現在タブを含む値を取得
-    ↓
-新しい ID を反映した値を作る
-    ↓
-tab-bar-tabs-set
+純粋:
+  どの ID にするか
+
+境界:
+  実タブへ ID を書き込む
 ```
 
-可能なら「内部リストを破壊的に変更する」のではなく、「新しい状態を作って反映する」形を優先する。
+これで十分。
 
-ただし Emacs の tab-bar API がその用途を想定していない場合、無理に関数型へ寄せず、最小限の内部変更に留める。
+Snapshot からタブ alist 全体を作り直さない。window configuration、履歴、Bufferlo や将来の独自情報を落とす危険があるため。
 
-実装前に Emacs 31.1 の挙動を実測する。
+`tab-bar--current-tab-find` を使わず `tab-bar-tabs` から current tab を取れるならそちらを優先する。
+
+ただし内部 API を避けるためだけにコードが複雑になるなら、その複雑さの方を避ける。
 
 ## 15. Misc 初期化
 
@@ -491,107 +502,111 @@ my/tab-routing-initial-misc-p
 
 入力を単純値にできるなら ERT 対象にする。
 
-## 16. find-file / switch-to-buffer / display-buffer
+## 16. Routing の入口で対象を先に確定する
 
-すべて advice が必要とは最初から決めない。
+相対パスをそのまま持ってタブを切り替えない。
 
-実装は1つずつ追加し、実測する。
+たとえば、
 
-### 第1候補: find-file
-
-ファイルを新規に開く経路。
-
-必要性が高い。
-
-### 第2候補: switch-to-buffer
-
-既存バッファへ切り替える経路。
-
-起動中の内部 `switch-to-buffer` へ干渉する可能性があるため、旧実装と同様に起動後だけ有効化する案を検討する。
-
-### display-buffer
-
-影響範囲が広い。
-
-xref など必要なケースが `display-buffer` なしで処理できるなら、採用しない可能性もある。
-
-まず挙動を観測してから決める。
-
-## 17. Routing advice の役割
-
-advice 関数自体は薄くする。
-
-理想:
-
-```text
-入力を観測
-    ↓
-Destination
-    ↓
-Snapshot
-    ↓
-Plan
-    ↓
-Execute
-    ↓
-Original command
+```elisp
+(find-file "src/foo.el")
 ```
 
-advice の中へルール判定を直接書かない。
+なら、タブ変更前の `default-directory` を基準に絶対パスへしておく。
 
-## 18. Tab Created Hook
+```elisp
+(expand-file-name file original-default-directory)
+```
 
-新規タブ作成後に必要な処理は hook で接続する。
+分類するときと本当に開くときで同じ対象を使う。
+
+wildcard や複数ファイル展開は最初から頑張らない。必要になったら仕様を追加する。
+
+## 17. まず接続する表示経路
+
+最初から `find-file` / `switch-to-buffer` / `display-buffer` 全部へ advice しない。
+
+まず「現在ウィンドウで普通にファイルを開く」1経路だけを観測して接続する。
+
+Emacs 31.1 では `find-file` が `switch-to-buffer` を必ず通るわけではない。逆に汎用 `display-buffer` advice は影響範囲が広い。
+
+だから実際の呼び出し経路を見て1つずつ足す。
+
+`find-file-noselect` のように「読むだけ」でも使われる関数は、自動タブ切替の入口にしない。
+
+## 18. Routing の再入防止
+
+タブ作成・切替の途中で別の表示処理が呼ばれる可能性がある。
+
+Routing 用の動的変数を持ち、同じ Routing 処理の再入だけを止める。
 
 候補:
 
 ```elisp
-my/tab-routing-tab-created-hook
+my/tab-routing--routing
 ```
 
-Routing 本体:
+Navigation の `--tracking` や履歴再生抑制とは別の状態にする。
+
+何でも一律に捨てず、wildcard など別対象の処理まで抑制しない。
+
+## 19. 表示成功後通知
+
+Bufferlo は新規タブ作成直後ではなく、**目的バッファの表示成功後**に接続する。
 
 ```text
-create tab
-    ↓
-ID 設定
-    ↓
-run-hooks
+Plan
+ ↓
+タブ作成
+ ↓
+ID設定
+ ↓
+標準の表示処理
+ ↓
+表示成功
+ ↓
+after-display 通知
+ ↓
+Bufferlo
 ```
 
-Bufferlo 側:
-
-```text
-hook
-  ↓
-bufferlo-clear
-```
-
-Routing は Bufferlo の存在を知らない。
-
-## 19. Tab UI
-
-Misc を非表示にする場合、旧実装の `tab-bar--format-tab` 直接利用を避ける。
-
-まず `tab-bar-tabs-function` など公開拡張点で、
-
-```text
-all tabs
-   ↓
-visible tabs
-```
-
-を作れるか確認する。
-
-純粋関数候補:
+候補:
 
 ```elisp
-my/tab-routing-visible-tabs
+my/tab-routing-after-display-functions
 ```
 
-これは Tab Snapshot またはタブ alist を受けて Misc を除外する。
+引数は実装時に最小化する。`created-p` と実際に表示した window くらいで足りるかを確認する。
 
-UI境界はその結果を tab-bar へ渡すだけにする。
+表示失敗、または表示されず `nil` が返った場合は通知しない。
+
+作成直後 hook は別用途が出るまで作らない。
+
+## 19.1 失敗時の扱い
+
+表示前にタブを作ったあと、元の表示処理が失敗する可能性はある。
+
+最初から rollback は作らない。
+
+```text
+表示失敗
+  ↓
+成功後通知は出さない
+  ↓
+空タブが残る可能性はある
+```
+
+本当に困ることが確認できてから rollback を考える。
+
+## 19.2 Misc UI
+
+最初は Misc を表示したまま Routing を完成させる。
+
+`tab-bar-tabs-function` で Misc を除外しない。この値は描画だけでなく実際のタブ選択などにも使われるため。
+
+後で隠すなら描画だけを変える。
+
+`tab-bar-format` 側で十分ならそこで処理し、必要なら `tab-bar--format-tab` の内部 API 利用を1か所へ隔離する。
 
 ## 20. Project Context
 
@@ -637,203 +652,162 @@ my/project-context-root
 
 ## 21. project-current の優先順位
 
-新設計でも旧設計の良い部分を残す。
+旧実装の良い部分を残す。
 
 ```text
-1. 呼び出し側の DIRECTORY 明示指定
+1. 呼び出し側が DIRECTORY を明示
 2. 既存 project-current-directory-override
 3. 現在タブの Project root
 4. project.el 標準判定
 ```
 
-Tab Context は「明示指定を上書きしない」。
+大事なのは Routing の Project 検出と Project Context を混ぜないこと。
 
-この規則は純粋関数として分ける必要はない。advice 自体が十分小さいため、過度に抽象化しない。
+```text
+Routing
+  この対象はどの Project？
+  → target-directory を明示
 
-## 22. Navigation Location
+Project Context
+  今のタブはどの Project？
+  → directory 省略時だけ root を補助
+```
 
-Navigation が扱う移動地点。
+古いタブの root が削除・移動された場合の挙動は統合テストで確認する。
 
-初期候補:
+現在の新 `.emacs.d` では Magit も採用済みなので、Project Context 完成後に `magit-status` が期待どおり現在タブの Project を使うか確認する。
+
+標準連携だけで十分なら Magit 専用コードは追加しない。
+
+## 22. Navigation で保持するもの
+
+移動元は marker で保持する。
+
+整数 point だけだと、移動処理中に編集が入った時に元位置へ追従できないため。
+
+ただし純粋関数へ marker は渡さない。
+
+```text
+境界:
+  marker を保持
+
+純粋判定:
+  marker-position を整数へ変換
+
+履歴:
+  必要なら marker を引き渡す
+```
+
+記録しなかった marker は自分たちで解放する。履歴側へ渡した marker は勝手に解放しない。
+
+## 23. Navigation の単純値
+
+純粋判定へ渡す値は小さくする。
+
+例:
 
 ```elisp
-(:buffer BUFFER
+(:buffer BUFFER-ID
  :point 123
- :window WINDOW)
+ :window WINDOW-ID
+ :eligible t)
 ```
 
-必要にならない限り、
+`eligible` は「この移動元を履歴へ記録してよいか」を境界側で判断した結果。
 
-- file name
-- tab id
-- project root
-- line / column
-
-などを追加しない。
-
-Better Jumper へ記録するために必要な最小情報だけ持つ。
-
-## 23. Location の観測
-
-境界関数:
-
-```elisp
-my/navigation--capture
-```
-
-読むもの:
-
-- `current-buffer`
-- `point`
-- `selected-window`
-
-この関数は Emacs 状態依存。
-
-戻り値は通常の plist にし、比較ロジックへ渡す。
+buffer / marker の生存確認を純粋 predicate の中で行わない。
 
 ## 24. 移動判定
 
-純粋関数:
+純粋関数候補:
 
 ```elisp
 my/navigation-transition-p
 ```
 
-入力:
+基本規則:
 
 ```text
-before
-after
-```
+eligible = false
+  → false
 
-基本規則候補:
-
-```text
 buffer が変わった
-    → record
+  → true
 
 同じ buffer で point が変わった
-    → record
+  → true
 
-何も変わっていない
-    → record しない
+同じ場所
+  → false
 ```
 
-window が変わった場合を「ジャンプ」とみなすかは、旧挙動と実際の使い方を確認して決める。
+window だけ変わった場合は、履歴方式の最小実験を見て決める。
 
-ここは ERT で簡単に検証できる。
+旧 Navigation は前後の selected window が同じ時だけ記録していた。そこを変えるなら仕様変更として扱う。
 
-## 25. Navigation advice
+## 25. xref を使う場合
 
-薄い組み立て関数にする。
+第一候補として試す価値がある。
 
-概念:
-
-```elisp
-(defun my/navigation--track (original &rest args)
-  (let ((before (my/navigation--capture)))
-    (prog1
-        (apply original args)
-      (let ((after (my/navigation--capture)))
-        (when (my/navigation-transition-p before after)
-          (my/navigation--record before))))))
+```text
+xref-push-marker-stack
+xref-go-back
+xref-go-forward
+xref-history-storage
+xref-global-history
 ```
 
-実際には、
+global history なら、タブや selected window が変わっても履歴保存先が分かりやすい。
 
-- 記録抑制中
-- Better Jumper mode が有効か
-- source buffer が有効か
+Navigation は「何を積むか」だけ自作し、保存・戻る・進むは xref に任せられる。
 
-などの境界条件が必要。
+ただし xref 自身の定義ジャンプも履歴を記録する。最初は xref 自身のジャンプコマンドを自作追跡対象から外し、二重記録を避ける。
 
-それらを advice 内へ大量に書かず、必要なら小さい predicate へ分離する。
+kill 済み buffer への戻りでは、Better Jumper と挙動が違うので最小実験で確認する。
 
-## 26. Better Jumper への記録
+## 26. Better Jumper を使う場合
 
-境界関数:
+kill 済み buffer のファイルを開き直して戻れることや履歴件数制限など、必要な利点があるなら採用する。
 
-```elisp
-my/navigation--record
+ただし旧設定の `better-jumper-context 'window` は Tab Routing と組み合わせると履歴保存先が分かりにくくなる可能性がある。
+
+Navigation advice を Routing の外側に置くだけでは十分とは限らない。
+
+```text
+A → B → backward → forward
 ```
 
-Better Jumper の公開関数を使う。
+を小さい統合試作で確認してから採用する。
+
+自作コードから `better-jumper--jumping` は参照しない。
+
+## 27. Navigation の再入防止
+
+上位と下位の両コマンドへ advice が付いた場合の二重記録を防ぐ。
 
 候補:
 
 ```elisp
-better-jumper-set-jump
+my/navigation--tracking
 ```
 
-Navigation の純粋部分は Better Jumper の関数を直接呼ばない。
+最外側だけが before / after を観測し、内側は original をそのまま呼ぶ。
 
-## 27. Better Jumper の戻る / 進む
+## 28. 履歴再生中の記録抑制
 
-Better Jumper 自身のジャンプ操作中に、新しい履歴を記録しない必要がある。
+back / forward 自身を新しい履歴として記録しない。
 
-旧実装では `better-jumper--jumping` を見ていた。
+これは `--tracking` とは別。
 
-新設計では自作の動的変数を候補にする。
+候補:
 
 ```elisp
-(defvar my/navigation--recording-disabled nil)
+my/navigation--recording-disabled
 ```
 
-Better Jumper のジャンプコマンドを実行している間だけ、
+公開 back / forward コマンドを around advice で包み、`let` で動的束縛する。
 
-```elisp
-(let ((my/navigation--recording-disabled t))
-  ...)
-```
-
-とする。
-
-接続方法:
-
-- Better Jumper の公開 hook
-- 公開 command への advice
-
-のどちらがより自然か、実装前に現行 Better Jumper の API を確認する。
-
-内部変数への直接依存は避ける。
-
-## 28. Better Jumper の Context
-
-旧設定では `better-jumper-context` が `window`。
-
-新設計でも有力候補。
-
-理由:
-
-- タブは window configuration を持つ
-- window ごとの履歴と相性が良い
-- 「タブ = 作業空間」という設計と自然に組み合わさる可能性が高い
-
-ただし次の操作を実測する。
-
-```text
-Project A
-  ↓
-Project B
-  ↓
-jump backward
-```
-
-期待する仕様が、
-
-```text
-A へ戻る
-```
-
-なのか、
-
-```text
-B タブ内だけの履歴を戻る
-```
-
-なのかを先に決める。
-
-この点は推測で実装しない。
+pre/post hook で手動 `t` / `nil` するより、エラーや中断時にも元へ戻りやすい。
 
 ## 29. Advice の順序
 
@@ -878,58 +852,39 @@ Routing:     50
 
 ## 30. Navigation が対象にするコマンド
 
-旧実装では多くのコマンドへ advice していた。
-
-新実装では一度に全部入れない。
-
-候補を段階的に追加する。
-
-最初:
-
-```text
-find-file
-switch-to-buffer
-```
-
-必要に応じて:
-
-```text
-project-find-file
-xref-find-definitions
-lsp-find-definition
-consult-buffer
-consult-recent-file
-consult-line
-avy-goto-char-timer
-```
-
-ただし下位の `find-file` / `switch-to-buffer` を捕まえれば上位コマンドを個別に捕まえる必要がない場合もある。
-
-実際の呼び出し経路を観測してから追加する。
-
-## 31. 「同じ移動を二重記録」しない
-
-上位コマンドと下位コマンドの両方へ advice すると、
-
-```text
-project-find-file
-  ↓
-find-file
-```
-
-のような呼び出しで二重記録する可能性がある。
-
-Navigation には再入防止用の動的状態を持たせる。
+旧実装の一覧を一度に移植しない。
 
 候補:
 
-```elisp
-my/navigation--tracking
+```text
+find-file
+project-find-file
+switch-to-buffer
+xref
+Consult
+Bufferlo
+Dired
+LSP
+Avy
 ```
 
-外側の最初の Navigation advice だけが before / after を記録し、内側ではそのまま original を呼ぶ。
+ただし上位コマンドが下位コマンドを呼ぶだけなら、両方へ advice を付けない。
 
-旧実装の良い考え方なので継続する。
+Consult の候補プレビューのように「見ただけ」を確定した移動として記録しない。
+
+実際の呼び出し経路を観測して1つずつ追加する。
+
+## 31. Routing と Navigation は別の再入状態を持つ
+
+```text
+Routing の再入防止
+Navigation の追跡再入防止
+Navigation の履歴再生抑制
+```
+
+は別の責務。
+
+1つの汎用フラグへまとめない。
 
 ## 32. ERT: Destination
 
@@ -1055,42 +1010,55 @@ different buffer
 
 ## 36. 統合テスト / 実動作確認
 
-純粋関数では確認できない境界だけを少数確認する。
+純粋関数が正しくても、壊れやすいのは境界なので、少数の統合 ERT を必須候補にする。
 
-### Routing
-
-```text
-find-file Project A/file
-  → Project A tab
-```
+### Tab ID
 
 ```text
-switch-to-buffer Project B buffer
-  → Project B tab
+A → B → A
 ```
 
-### Navigation + Routing
+で ID が残る。同名 Project を分離し、IDなし同名の手動タブを奪わない。
+
+### 相対パス
+
+`default-directory = A` で `(find-file "src/foo.el")` した時、途中のタブ切替に影響されず A/src/foo.el を開く。
+
+### Bufferlo
+
+新規タブでは目的 buffer の表示成功後、その buffer だけを残す。既存タブでは一覧を消さない。
+
+### Navigation
 
 ```text
-A/file1
-  ↓
-B/file2
-  ↓
-jump backward
+A:10
+↓
+B:20
+↓
+back
+↓
+A:10
+↓
+forward
+↓
+B:20
 ```
 
-確認:
+file / point / tab を全部確認する。
 
-- 正しい履歴へ戻る
-- 必要なら正しいタブへ移動する
-- jump backward 自体が新しい履歴として記録されない
+### 履歴再生
 
-### 起動
+back / forward が新しい履歴を作らない。途中でエラーや中断があっても、その後の通常記録が復活する。
 
-`switch-to-buffer` advice を使う場合:
+### 初期化
 
-- 起動途中に不要なタブが作られない
-- 起動完了後は通常ルーティングされる
+設定再読込で advice / hook が重複しない。
+
+### 実動作で1つずつ見るもの
+
+`tab-line` / Bufferlo / Consult / Dired / xref / 別 window / 背景 `display-buffer` / 専用 window / 起動時ファイル / TRAMP。
+
+全部を ERT に押し込まず、UI は実際に触って確認してよい。
 
 ## 37. 性能
 
@@ -1129,134 +1097,139 @@ Better Jumper は package の autoload / `use-package` を利用できる部分�
 
 ## 39. 実装ステップ
 
-### Step 1
+```text
+Step 0
+xref / Better Jumper の最小実験
 
-`my-tab-routing.el`
+Step 1
+Destination + ERT
 
-- Destination
-- ERT
+Step 2
+Tab Snapshot / Plan + ERT
 
-Emacs のタブはまだ操作しない。
+Step 3
+Tab 操作 / ID 保存 + 統合 ERT
 
-### Step 2
+Step 4
+普通のファイル表示1経路へ接続
+相対パス / 再入 / 失敗を確認
 
-- Tab Snapshot
-- Plan
-- ERT
+Step 5
+Bufferlo を表示成功後へ接続
 
-まだ advice は入れない。
+Step 6
+Project Context
+必要なら Magit の挙動確認
 
-### Step 3
+Step 7
+Navigation
+marker / transition / record
 
-- Plan Execute
-- 手動で関数を呼んで動作確認
+Step 8
+Routing + Navigation 統合
 
-### Step 4
+Step 9
+実際に使う表示経路を1つずつ追加
 
-- `find-file` へ接続
-- 実測
-
-### Step 5
-
-必要なら `switch-to-buffer`。
-
-### Step 6
-
-Project Context。
-
-### Step 7
-
-Misc UI / Bufferlo。
-
-### Step 8
-
-Better Jumper を単体導入。
-
-### Step 9
-
-Navigation の Location / transition。
-
-### Step 10
-
-Navigation advice。
-
-### Step 11
-
-Routing + Navigation の統合確認。
+Step 10
+必要なら Misc 非表示
+```
 
 ## 40. 実装時に避けること
 
-### 推測による API 採用
+きれいにするために、逆に複雑にしない。
 
-Emacs 31.1 の tab-bar API、Better Jumper API は実装時に確認する。
+最初から作らないもの:
 
-### 一度に複数 advice を追加
+```text
+汎用 Rule Registry
+汎用 History Backend interface
+巨大な Context object
+Tab Identity 専用モジュール
+高度な rollback
+早すぎる cache
+```
 
-まず1経路を実測する。
+xref と Better Jumper を切り替えられる汎用バックエンドも作らない。比較して、どちらかを採用する。
 
-### 先回りした Rule abstraction
+公開 API だけにこだわって実装が大きくなるのも避ける。
 
-要件が出るまで `defcustom` の rule registry 等は作らない。
-
-### 巨大な Context object
-
-3引数で十分なら3引数を使う。
-
-### 内部APIへの安易な依存
-
-公開APIでできるか先に確認する。
-
-### 境界まで無理に純粋化する
-
-Emacs の状態を操作するコードは必ず存在する。
-
-目的は副作用を消すことではなく、**副作用がある場所を狭く明確にすること**。
+目的は副作用を消すことではなく、**副作用がある場所を短く、分かりやすくすること**。
 
 ## 41. 完成形のイメージ
 
-Tab Routing:
+### Routing
 
 ```text
-Emacs state
-   ↓
-facts
-   ↓
-destination       pure
-   ↓
-snapshot
-   ↓
-plan              pure
-   ↓
-execute           effect
+対象を確定
+ ↓
+Projectなどを観測
+ ↓
+Destination        pure
+ ↓
+Tab Snapshot
+ ↓
+Plan               pure
+ ↓
+Tab操作             effect
+ ↓
+標準の表示処理      effect
+ ↓
+成功後通知           effect
 ```
 
-Navigation:
+### Navigation
 
 ```text
-capture before    effect/read
-   ↓
-original command  effect
-   ↓
-capture after     effect/read
-   ↓
-transition?       pure
-   ↓
-record            effect
+markerで移動元保持   effect/read
+ ↓
+original command     effect
+ ↓
+移動後を観測         effect/read
+ ↓
+単純値へ変換
+ ↓
+record?             pure
+ ↓
+履歴へ保存           effect
 ```
 
-両者:
+### 両者
 
 ```text
 Navigation advice
         ↓
 Routing advice
         ↓
-Original command
+Original
 ```
 
-コード上は互いを直接呼ばない。
+直接依存はさせない。
 
 ## まとめ
+
+今回の軸はシンプル。
+
+**純粋にできる判断だけ純粋にする。**
+
+**Emacs を触るところは、無理に隠さず短くまとめる。**
+
+旧実装の Tab ID / Project Context / 再入防止という良い部分は残しつつ、
+
+- Misc 非表示を Routing 本体から切り離す
+- Bufferlo は表示成功後に接続する
+- marker は境界で扱う
+- xref / Better Jumper は先に最小実験する
+- 相対パス・再入・失敗を境界の仕様として扱う
+- 統合 ERT を軽視しない
+
+という形に直す。
+
+**小さい純粋関数 + 薄い Emacs 境界 + 少数の統合点**
+
+このくらいのバランスを目指す。
+
+
 
 今回の再設計では、旧実装の良い部分、
 
