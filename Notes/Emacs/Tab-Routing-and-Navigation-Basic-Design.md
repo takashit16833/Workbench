@@ -12,32 +12,42 @@
 
 ## まず結論
 
-新しい `.emacs.d` では、Tab Routing / Project Context / Navigation を別々の機能として作る。
+今回の中心は **「Tab を独立した Workspace に見せる」** こと。
+
+ただし、
 
 ```text
-Tab Routing
-  ファイル / バッファを適切なタブへ送る
-
-Project Context
-  現在のタブが表す Project を project.el に伝える
-
-Navigation
-  「ここに戻りたい」という移動履歴を記録する
+Tab ≠ Project
+Tab ≠ Repository
 ```
 
-Tab Routing と Navigation は同じ移動コマンドに関わるけれど、**お互いを直接呼ばない**。
+である。
 
-共通の考え方はこれ。
+Tab は **Routing が決めた作業文脈**。同じ Tab に複数 Repository のファイルが入ってもよい。
+
+たとえば Routing 関数が `.org` を同じ Destination へ送るなら、
 
 ```text
-Emacs の状態を観測
-        ↓
-小さな純粋関数で判断
-        ↓
-Emacs の状態を変更
+Org Tab
+├─ repo-a/docs/foo.org
+├─ repo-b/notes/bar.org
+└─ ~/memo.org
 ```
 
-Functional Core / Imperative Shell に近い形にする。ただし、関数型っぽく見せるための抽象化はしない。
+のような状態は普通にあり得る。
+
+Workspace ごとに独立させたい状態は、まず次の3つ。
+
+```text
+Tab Workspace
+├─ Buffer Set          → Bufferlo が有力
+├─ Navigation History → Emacs標準 xref を第一候補
+└─ Window Configuration → tab-bar 標準
+```
+
+Project は Destination の一種類にすぎない。Project 型の Tab だけ、必要に応じて `project.el` と連携する。
+
+Tab Routing / Project Context / Navigation は別々の機能として作り、直接依存させない。
 
 ## 全体構造
 
@@ -85,27 +95,27 @@ Navigation では、
 
 ### Tab Routing
 
-責務は「このファイル・バッファをどのタブへ表示するか」。
+観測:
 
-知ってよいもの:
+- `buffer-file-name`
+- `default-directory`
+- Routing 関数が必要とする最小限の Emacs 状態
+- `tab-bar-tabs`
 
-- ファイルパス
-- バッファ種別
-- プロジェクトルート
-- タブ一覧
-- タブの内部ID
+変更:
 
-知らないもの:
-
-- Navigation の履歴保存先（xref / Better Jumper）
-- ジャンプ履歴
-- Navigation の記録方針
+- `tab-bar-select-tab`
+- `tab-bar-new-tab`
+- `tab-bar-rename-tab`
+- Tab ID の反映
 
 ### Project Context
 
-責務は「現在のプロジェクトタブが表すプロジェクトを project.el に伝えること」。
+責務は、**Project 型の Destination を持つ Tab** にいるとき、その Project root を `project.el` へ補助的に伝えること。
 
-Tab Routing とは別機能だが、Tab ID の project 情報を読み取る。
+Routing 全体が Project 前提になるわけではない。
+
+Org / Misc / 任意の独自 Destination では、通常の `project.el` の判定に任せる。
 
 ### Tab UI
 
@@ -121,182 +131,20 @@ Routing の判定ロジックとは分離する。
 
 ### Navigation
 
-責務は「意味のある移動をジャンプ履歴へ記録すること」。
-
-知ってよいもの:
-
-- 移動前後のバッファ
-- point
-- window
-- 採用した履歴機能の公開 API
-
-知らないもの:
-
-- Destination の決め方
-- Tab ID の構造
-- Routing の内部関数
-
-### 履歴機能
-
-履歴の保存・戻る・進むは、最小実験で選んだ xref または Better Jumper に任せる。
-
-自作 Navigation 層は履歴機能そのものを再実装せず、「どの移動を履歴へ記録するか」だけを担当する。
-
-## Tab Routing のデータフロー
-
-基本形は次の通り。
-
-```text
-File / Buffer
-    ↓
-Routing Facts
-    ↓
-Destination
-    ↓
-Tab Snapshot
-    ↓
-Tab Plan
-    ↓
-Plan 実行
-```
-
-### Routing Facts
-
-Emacs から読み取った事実。
-
-例:
-
-```text
-file path
-project root
-buffer kind
-```
-
-この段階だけが `project-current` や現在バッファなど Emacs の状態へ依存する。
-
-### Destination
-
-純粋な分類結果。
-
-例:
-
-```elisp
-(:id (project . "/work/foo/")
- :name "foo")
-```
-
-Destination は「どこへ行くべきか」だけを表す。
-
-### Tab Snapshot
-
-現在のタブ状態を、判断に必要な最小限のデータへ変換したもの。
-
-例:
-
-```elisp
-((:index 1 :current t   :id misc :name "Misc")
- (:index 2 :current nil :id (project . "/work/bar/") :name "bar"))
-```
-
-純粋関数は `tab-bar` の生の内部構造ではなく、この小さな値を扱う。
-
-### Tab Plan
-
-Destination と Tab Snapshot から生成する操作計画。
-
-例:
-
-```elisp
-(:action stay)
-```
-
-```elisp
-(:action select
- :index 2)
-```
-
-```elisp
-(:action create
- :id (project . "/work/foo/")
- :name "foo")
-```
-
-「何をするか」を決めるところまでを純粋にし、実際の `tab-bar-select-tab` や `tab-bar-new-tab` は外側で行う。
-
-## Navigation のデータフロー
-
-Navigation も同じ形に揃える。
-
-```text
-Emacs
-  ↓
-Location(before)
-  ↓
-original command
-  ↓
-Location(after)
-  ↓
-transition?
-  ↓
-Better Jumper へ記録
-```
-
-Location は判断に必要な最小情報だけ持つ。
-
-例:
-
-```elisp
-(:buffer BUFFER
- :point 123
- :window WINDOW)
-```
-
-移動前後の Location を比較する純粋関数を用意する。
-
-## IO境界
-
-「IO」はファイル入出力だけではなく、ここでは Emacs の可変状態へ触る処理全般を指す。
-
-主な境界は以下。
-
-### Tab Routing
-
-観測:
-
-- `buffer-file-name`
-- `default-directory`
-- `project-current`
-- `project-root`
-- `tab-bar-tabs`
-
-変更:
-
-- `tab-bar-select-tab`
-- `tab-bar-new-tab`
-- `tab-bar-rename-tab`
-- タブIDの反映
-
-### Project Context
-
-観測:
-
-- 現在タブのID
-
-変更ではなく一時的な環境設定:
-
-- `project-current-directory-override` の動的束縛
-
-### Navigation
-
 観測:
 
 - `current-buffer`
-- `point`
-- `selected-window`
+- `point` / marker
+- 現在の Tab
 
 変更:
 
-- `better-jumper-set-jump`
+- xref の marker stack
+- 現在 Tab の Navigation History
+
+履歴 storage の具体的な Tab パラメータ名などは、最小実験で決める。
+
+純粋関数の内部からこれらを直接触らない。
 
 純粋関数の内部からこれらを直接呼ばない。
 
@@ -325,65 +173,83 @@ Tab ID = プログラム向け
 
 同じIDのタブがあれば再利用し、なければ作成する。
 
-## Routing Rule
+## Routing Functions
 
-旧実装の `my/tab-routing-filters` のような拡張用リストは、最初から必須とはしない。
+旧実装の `my/tab-routing-filters` に近い **順序付きの関数リスト** を基本にする。
 
-ルール数が少なく固定的なら、単純な `cond` の方が読みやすい。
-
-例:
+これは過度な抽象化ではなく、今回の要件そのもの。
 
 ```text
-特別な用途
-  ↓
-Project
-  ↓
-Misc
+routing-functions
+  ├─ function A
+  ├─ function B
+  ├─ function C
+  └─ ...
 ```
 
-外部からルールを追加する必要が生じた時点で、初めてルール一覧への抽象化を検討する。
+上から評価し、最初に non-nil の Destination を返したところで終了する。
 
-## Navigation の履歴方式は先に小さく試す
+具体的な Routing 関数は固定しない。
 
-ここは実装前に決める。
+旧設定の Tasks / Org / Project は参考例であって、設計上の必須ルールではない。
 
-旧設定は Better Jumper を使っていたが、`window` 単位の履歴と Tab Routing の組み合わせは少し複雑。
+そして、どの関数にもマッチしなかった **ファイル** だけ Misc へ送る。
 
-一方、Emacs 標準の xref には global history があり、タブをまたぐ「戻る / 進む」と相性がよさそう。
+## Navigation History は Tab-local
 
-なので、まだどちらかに決め打ちしない。
+ここは仕様として固定する。
 
 ```text
-Project A / a.el
-    ↓
-Project B / b.el
-    ↓
-戻る
-    ↓
-Project A / a.el
+Tab A
+  a.el → b.el → c.el
 
-進む
-    ↓
-Project B / b.el
+Tab B
+  x.el → y.el
 ```
 
-この最小実験で、file / point / tab が全部正しいことを確認してから xref か Better Jumper を採用する。
+Tab A で戻ると `b.el`。Tab B には行かない。
 
-Better Jumper を使う場合でも、自作コードから `better-jumper--jumping` のような内部変数は参照しない。
+Window が2つあっても、その Tab の履歴は1本。
 
-## Routing と Navigation の advice の関係
+実装手段の第一候補は Emacs 標準 xref。
 
-同じコマンドへ両方の advice が付く場合は、Navigation を外側、Routing を内側にする。
+`xref-history-storage` に現在 Tab の履歴を返す関数を設定できるか、小さく試す。
 
 ```text
-Navigation advice
-        ↓
-Routing advice
-        ↓
-Original command
+current tab
+   ↓
+my/xref-tab-history
+   ↓
+そのTab専用の history
 ```
 
-ただし、この順序だけで Better Jumper の履歴保存先問題が解決するわけではない。だから履歴方式の最小実験を先に行う。
+確認すること:
+
+- Tab A / Tab B の履歴が混ざらない
+- 同一 Tab の Window 1 / Window 2 では同じ履歴を使う
+- Tab を切り替えて戻っても履歴が残る
+- Tab 複製時に履歴が意図せず共有されない
+- Tab close / undo-close で状態が破綻しない
+
+xref で要件を満たせない点が見つかった場合だけ Better Jumper や小さな自作履歴を再検討する。
+
+## Routing と Navigation の関係
+
+両者は直接依存しない。
+
+```text
+Routing
+  どの Workspace で表示するか
+
+Navigation
+  現在 Workspace 内の移動履歴
+```
+
+Navigation は移動前後の Tab を観測し、**Tab が変わった移動は自作履歴へ記録しない**。
+
+同じコマンドへ advice が必要になった場合だけ、実際の呼び出し経路を見て順序を決める。
+
+最初から advice の順序を機能間の契約にしない。
 
 ## Bufferlo
 
@@ -429,21 +295,26 @@ Misc を隠す場合も、内部の全タブ一覧から消してはいけない
 
 公開 API だけにこだわって実装が大きくなるなら、内部 API を1か所へ隔離して使う方が分かりやすい場合もある。
 
-## Project の2つの文脈を混ぜない
+## Project は Destination の一種類
 
-Routing と Project Context は同じ `project-current` を使うが、意味が違う。
+Routing は Project を特別扱いしない。
 
-```text
-Routing
-  このファイルはどの Project？
-  → 対象 directory を明示して調べる
+Project 用 Routing 関数が、たとえば
 
-Project Context
-  今いるタブはどの Project？
-  → directory が省略された時だけタブの root を補う
+```elisp
+(:id (project . "/work/foo/")
+ :name "foo")
 ```
 
-この2つを混ぜると、現在タブの Project に別 Project のファイル判定が引っ張られる可能性がある。
+を返すだけ。
+
+Project Context は、この **Project 型 ID の Tab にいる時だけ** project root を解釈する。
+
+Org / Misc / その他の Tab では Tab 由来の Project override を入れない。
+
+そのため、同じ Org Tab に複数 Repository の `.org` が混在しても問題ない。
+
+各 buffer の `default-directory` を使った通常の `project.el` 判定はそのまま利用できる。
 
 ## 過度な抽象化を避ける
 
@@ -478,20 +349,27 @@ elisp/
 
 ### 純粋関数
 
-- Facts → Destination
+- Routing 関数のうち純粋に書けるもの
+- Routing 関数群の first-match
 - Destination + Tab Snapshot → Plan
 - Project ID → root
-- Navigation の before / after → record?
+- Navigation の before / after / tab → record?
 
 ### 統合 ERT
 
-- タブ往復後も Tab ID が残る
-- 同名 Project を分離できる
+- 任意の Routing 関数順序が守られる
+- ファイルの no-match は Misc へ行く
+- ファイルなし no-match は Tab を動かさない
+- 同じ Destination ID は同じ Tab を再利用する
+- 同名・別 ID の Tab を分離できる
+- Bufferlo の buffer set が Tab ごとに分離される
+- Navigation History が Tab ごとに分離される
+- 同一 Tab の複数 Window では同じ Navigation History を使う
+- Tab をまたぐ移動は Navigation History に混ざらない
 - 相対パスを開いてもタブ切替で対象ファイルが変わらない
-- Bufferlo は目的バッファの表示成功後に初期化される
-- 戻る / 進むで file + point + tab が正しく戻る
-- 履歴再生自身が新しい履歴を作らない
 - 設定再読込で advice / hook が重複しない
+
+全部を自動化する必要はないが、状態境界を「手動確認だけ」にはしない。
 
 全部を自動化する必要はないが、状態境界を「手動確認だけ」にはしない。
 
@@ -505,28 +383,25 @@ elisp/
 
 ## 実装順
 
-レビュー後は、Navigation の履歴方式だけ Routing 完成後まで先送りしない。
-
 ```text
-0. xref / Better Jumper の最小実験
+0. xref の Tab-local history 最小実験
         ↓
-1. Destination + ERT
+1. Routing function contract / first-match + ERT
         ↓
-2. Tab Snapshot / Plan + ERT
+2. Destination + Tab Snapshot / Plan + ERT
         ↓
 3. Tab 操作 / ID 保存 + 統合ERT
         ↓
 4. 普通のファイル表示1経路へ接続
    相対パス / 再入 / 失敗を確認
         ↓
-5. Bufferlo を表示成功後へ接続
+5. Misc fallback
         ↓
-6. Project Context
-   必要なら Magit の挙動も確認
+6. Bufferlo を表示成功後へ接続
         ↓
-7. Navigation
+7. Project Context
         ↓
-8. Routing + Navigation の統合確認
+8. Tab-local Navigation
         ↓
 9. 実際に使う表示経路を1つずつ追加
         ↓
@@ -537,20 +412,56 @@ elisp/
 
 | 旧実装 / 旧案 | 新しい方針 |
 | --- | --- |
-| Destination 判定と Emacs 状態取得が近い | 観測と純粋な判定を分ける |
+| Tab を Project Workspace 寄りに説明 | Tab = Routing が決める独立 Workspace |
+| 具体的な Routing ルールを設計の中心に置く | 順序付き Routing 関数群 + first-match を中心にする |
+| Misc を通常ルールのように扱う | file の no-match fallback として扱う |
 | `my/tab-routing--select` が判断と状態変更を担当 | Plan と Execute に分ける |
 | IDなし同名タブを自動採用 | 新構築ではやめる |
-| タブ一覧全体を作り直す案 | Tab ID だけを境界で局所更新 |
-| `tab-bar-tabs-function` で Misc を除外する案 | やめる。必要なら描画だけ変える |
 | Routing が Bufferlo を直接呼ぶ | 表示成功後通知で接続 |
-| Bufferlo をタブ作成直後に clear | 目的バッファ表示成功後に clear |
-| Better Jumper 前提 | xref と最小実験で比較して決める |
-| Better Jumper 内部変数へ依存 | しない |
-| point を整数だけで保持する案 | marker は境界で保持し、純粋判定は整数で行う |
-| Routing 完成後に履歴統合を確認 | 履歴方式だけ先に最小実験 |
+| Navigation を global / window 単位で検討 | Tab-local の1本の履歴にする |
+| Better Jumper 前提 | Emacs標準 xref を第一候補にする |
+| Project Context を Tab 全体の前提に見せる | Project 型 Destination だけの追加機能にする |
 | 境界テストは薄め | 壊れやすい境界は少数の統合 ERT を必須にする |
 
 ## まとめ
+
+今回の中心は **Tab-local Workspace**。
+
+```text
+Tab Workspace
+├─ Routing Destination ID
+├─ Buffer Set
+├─ Navigation History
+└─ Window Configuration
+```
+
+Project はその一種類にすぎない。
+
+Routing は、
+
+```text
+順序付きの任意の Routing 関数群
+        ↓
+first match
+        ↓
+Destination
+        ↓
+no match + file → Misc
+```
+
+Navigation は、
+
+```text
+現在 Tab の中だけで戻る / 進む
+```
+
+Buffer は Bufferlo、Navigation History は標準 xref、Window Configuration は tab-bar をまず使い、足りないところだけ薄く自作する。
+
+**小さい純粋関数 + 薄い Emacs 境界 + Tab-local な状態**
+
+このバランスを目指す。
+
+
 
 新設計では、Tab Routing と Navigation を別機能として維持しながら、両方に同じ設計原則を適用する。
 
