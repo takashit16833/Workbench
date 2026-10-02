@@ -76,7 +76,7 @@ Navigation では、
         ↓
 履歴へ記録すべきか判断
         ↓
-必要なら Better Jumper へ記録
+必要なら履歴へ記録
 ```
 
 となる。
@@ -97,9 +97,8 @@ Navigation では、
 
 知らないもの:
 
-- Better Jumper
+- Navigation の履歴保存先（xref / Better Jumper）
 - ジャンプ履歴
-- Better Jumper の内部変数
 - Navigation の記録方針
 
 ### Project Context
@@ -129,7 +128,7 @@ Routing の判定ロジックとは分離する。
 - 移動前後のバッファ
 - point
 - window
-- Better Jumper の公開機能
+- 採用した履歴機能の公開 API
 
 知らないもの:
 
@@ -137,11 +136,11 @@ Routing の判定ロジックとは分離する。
 - Tab ID の構造
 - Routing の内部関数
 
-### Better Jumper
+### 履歴機能
 
-外部パッケージとしてジャンプ履歴の保存・戻る・進むを担当する。
+履歴の保存・戻る・進むは、最小実験で選んだ xref または Better Jumper に任せる。
 
-自作 Navigation 層は Better Jumper そのものを再実装せず、「どの移動を履歴へ記録するか」だけを担当する。
+自作 Navigation 層は履歴機能そのものを再実装せず、「どの移動を履歴へ記録するか」だけを担当する。
 
 ## Tab Routing のデータフロー
 
@@ -553,7 +552,7 @@ elisp/
 
 ## まとめ
 
-新設計では、タブルーティングと Better Jumper を別機能として維持しながら、両方に同じ設計原則を適用する。
+新設計では、Tab Routing と Navigation を別機能として維持しながら、両方に同じ設計原則を適用する。
 
 ```text
 観測
@@ -582,6 +581,6 @@ Location(before/after) → transition? → Record
 - 変更理由が局所化する
 - ERT を小さく書ける
 - 問題発生時の切り分けが容易になる
-- Better Jumper / Bufferlo / tab-bar の変更へ追従しやすくなる
+- 履歴機能 / Bufferlo / tab-bar の変更へ追従しやすくなる
 
 という構成を目指す。
