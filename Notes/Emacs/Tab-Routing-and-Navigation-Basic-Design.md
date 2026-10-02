@@ -1,4 +1,4 @@
-# タブルーティング / Navigation 基本設計
+# タブルーティング / Browsing History 基本設計
 
 ## このノートについて
 
@@ -67,7 +67,7 @@ Tab B
 | やりたいこと | 第一候補 |
 | --- | --- |
 | Tab ごとの buffer | Bufferlo |
-| Tab ごとの移動履歴 | Emacs 標準 xref |
+| 戻る / 進むの履歴 | 自作 Browsing History |
 | Window の並び | tab-bar |
 | Project 判定 | project.el |
 
@@ -215,60 +215,42 @@ Bufferloをそのbufferから始める
 
 Tab を作った直後に `bufferlo-clear` すると、まだ `*scratch*` しか表示されていない可能性があるため。
 
-## Navigation
+## Browsing History
 
-Navigation は、
+「戻る / 進む」は、自作の Browsing History を使う。
 
-> 今いる Tab の中だけで戻る / 進む
+Browsing History 自体は Tab Routing を知らない汎用機能として作る。
 
-ようにしたい。
-
-```text
-Tab A
-  a.el → b.el → c.el
-
-Tab B
-  x.el → y.el
-```
-
-Tab A で「戻る」を押したら `b.el` に戻る。
-
-Tab B には行かない。
-
-Window が2つあっても履歴は Tab で1本。
+今回の Tab 構成では、
 
 ```text
-Tab A
-├─ Window 1
-├─ Window 2
-└─ 共有する移動履歴
+Tab A → Browsing History A
+Tab B → Browsing History B
 ```
 
-まずは Emacs 標準の xref で実現できるか試す。
+のように、各 Tab がそれぞれ1つの Browsing History を利用する。
 
-Better Jumper を使うこと自体は目的ではない。xref で十分なら追加パッケージは使わない。
+同じ Tab に Window が複数あっても、使う Browsing History は同じ。
 
-## Routing と Navigation の関係
+Browsing History の構造や振る舞いは、
+[Browsing-History-Design.md](./Browsing-History-Design.md)
+に分けてまとめる。
+
+## Routing と Browsing History の関係
 
 この2つは別機能として考える。
 
 ```text
-Routing
+Tab Routing
   → どのTabで表示するか
 
-Navigation
-  → 今のTabの中でどこへ戻るか
+Browsing History
+  → 渡された履歴に対して記録 / 戻る / 進む
 ```
 
-別 Tab へ移動したこと自体は Navigation の履歴に入れない。
+Browsing History は Tab Routing を呼ばない。
 
-A から B の Tab に移動したなら、A に戻る方法は「戻る」ではなく Tab 切り替え。
-
-この方が、
-
-> Tab 同士は独立している
-
-という見え方に合う。
+Tab 切り替えを履歴に入れるかどうかなど、Tab 固有の使い方は利用側で決める。
 
 ## Misc を隠すのは後で
 
@@ -309,8 +291,8 @@ ERT は、壊れた時に原因を見つけやすいところへ置く。
 - マッチしない file が Misc へ行くこと
 - file のない buffer は勝手に Misc へ行かないこと
 - Bufferlo の buffer が Tab ごとに分かれること
-- Navigation の履歴が Tab ごとに分かれること
-- 同じ Tab の複数 Window では同じ履歴になること
+- Tab A / Tab B が別の Browsing History を使うこと
+- 同じ Tab の複数 Window では同じ Browsing History を使うこと
 - 相対パスを開いても、Tab 切り替えのせいで別 file を開かないこと
 - 設定を再読込しても advice / hook が二重にならないこと
 
@@ -321,15 +303,15 @@ ERT は、壊れた時に原因を見つけやすいところへ置く。
 一気に作らない。
 
 ```text
-1. xref で Tab ごとの履歴を作れるか小さく試す
+1. Browsing History 本体を小さく実装 + ERT
 2. ルーティング関数の仕組みを作る
 3. Destination と Tab ID を使って Tab を選ぶ
 4. 普通の file を開く経路へつなぐ
 5. Misc を入れる
 6. Bufferlo とつなぐ
 7. Project Context を入れる
-8. Navigation を入れる
-9. 必要な表示経路を少しずつ増やす
+8. Tab ごとに Browsing History を持たせる
+9. 記録対象の移動を少しずつ増やす
 10. 最後に必要なら Misc の見た目を調整する
 ```
 
@@ -350,8 +332,8 @@ Tab ≠ Repository
 
 どの Tab に入るかは自由なルーティング関数で決める。
 
-Tab ごとの buffer は Bufferlo、移動履歴はまず xref、Window は tab-bar に任せる。
+Tab ごとの buffer は Bufferlo、戻る / 進むは自作 Browsing History、Window は tab-bar に任せる。
 
 Project は必要な Tab だけ project.el とつなぐ。
 
-なるべく Emacs 標準と既存パッケージを使い、足りないところだけ小さく自作する。
+なるべく Emacs 標準と既存パッケージを使う。ただし Browsing History は今回の使い方に合わせて小さく自作する。
