@@ -71,11 +71,13 @@ my-project-context.el
   → Project用Tabとproject.elの橋渡し
 
 my-browsing-history.el
-  → Tabを知らない汎用の「戻る / 進む」
+  → 汎用の「戻る / 進む」と、現在使う History の取得
 ```
 
-Browsing History と Tab の接続や、どの移動コマンドを記録対象にするかは、
-Browsing History 本体へ混ぜない。
+History のデータ構造と履歴操作は Tab / Window に依存させない。
+Tab / Window の違いは、現在使う History を取得する処理に閉じ込める。
+
+どの移動コマンドを記録対象にするかは Browsing History 本体へ混ぜない。
 
 見た目やキー設定は `config/` 側へ置く。
 
@@ -399,21 +401,30 @@ Browsing History 本体の設計は、
 [Browsing-History-Design.md](./Browsing-History-Design.md)
 に分ける。
 
-Browsing History 自体は Tab を知らない。
+History のデータ構造と履歴操作は Tab / Window に依存しない。
 
-今回の Tab 構成では、
+どの単位で History を持つかは設定で切り替える。
+最初は `tab` を使う。
 
 ```text
-Tab A → Browsing History A
-Tab B → Browsing History B
+my/browsing-history-current
+        ↓
+my/browsing-history-scope
+        ↓
+   tab / window
 ```
 
-のように、各 Tab が1つずつ利用する。
+利用側は Tab や Window を直接調べず、
+`my/browsing-history-current` から現在使う History を受け取る。
 
-同じ Tab に複数 Window があっても同じ Browsing History を使う。
+`tab` の場合は現在の Tab が持つ History、
+`window` の場合は現在の Window が持つ History を返す。
 
-Tab を複製した時に同じ History オブジェクトを意図せず共有しないこと、
-Tab を閉じたり undo-close した時に壊れないことは Tab 側で確認する。
+これにより、Tab 単位から Window 単位へ変更しても、
+記録処理や back / forward 側は変更しない。
+
+Tab 単位で使う間は、Tab を複製した時に同じ History オブジェクトを意図せず共有しないこと、
+Tab を閉じたり undo-close した時に壊れないことを確認する。
 
 ## どの移動を記録するか
 
@@ -501,7 +512,7 @@ ERT でまず確認しやすいのは、
 - scope が tab の時、Tab A / Tab B が別の Browsing History を使う
 - scope が tab の時、同じ Tab の複数 Window では同じ Browsing History を使う
 - scope が window の時、Window ごとに別の Browsing History を取得できる
-- 同じ Tab なら別 Repository の file でも同じ Browsing History を使う
+- scope が tab の時、同じ Tab なら別 Repository の file でも同じ Browsing History を使う
 - 相対パスで正しい file を開く
 - 設定再読込で advice / hook が二重にならない
 
