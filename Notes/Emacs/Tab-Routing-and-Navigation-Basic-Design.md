@@ -460,38 +460,3 @@ Buffer は Bufferlo、Navigation History は標準 xref、Window Configuration �
 **小さい純粋関数 + 薄い Emacs 境界 + Tab-local な状態**
 
 このバランスを目指す。
-
-
-
-新設計では、Tab Routing と Navigation を別機能として維持しながら、両方に同じ設計原則を適用する。
-
-```text
-観測
- ↓
-純粋な判断
- ↓
-副作用
-```
-
-タブルーティングは、
-
-```text
-Facts → Destination → Plan → Execute
-```
-
-Navigation は、
-
-```text
-Location(before/after) → transition? → Record
-```
-
-とする。
-
-これにより、
-
-- 変更理由が局所化する
-- ERT を小さく書ける
-- 問題発生時の切り分けが容易になる
-- 履歴機能 / Bufferlo / tab-bar の変更へ追従しやすくなる
-
-という構成を目指す。
