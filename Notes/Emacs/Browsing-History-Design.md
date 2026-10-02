@@ -7,7 +7,7 @@
 History のデータ構造や「戻る / 進む」の処理は、Tab や Window に依存しない。
 
 どの単位で History を持つかは設定で切り替える。
-最初は Tab 単位で使う。
+初期値は Tab。
 
 ## データ構造
 
@@ -22,6 +22,10 @@ Location
 ├─ position
 └─ marker
 ```
+
+History / Location は `cl-defstruct` で表す。
+
+項目が固定されたデータであり、専用の型と accessor を持てるため。
 
 - `ring`: 移動履歴
 - `idx`: 現在見ている履歴位置
@@ -50,11 +54,20 @@ A → B → E
 
 となり、C / D への forward 履歴は捨てる。
 
+公開する操作名は、
+
+```text
+my/browsing-history-back
+my/browsing-history-forward
+```
+
+とする。
+
+ブラウザの Back / Forward と同じ意味で使うため。
+
 ## History の取得
 
-利用側は Tab や Window を直接調べず、「現在使う History」を返す関数を通す。
-
-候補:
+scope は設定で切り替える。
 
 ```elisp
 (defcustom my/browsing-history-scope 'tab
@@ -63,21 +76,35 @@ A → B → E
                  (const window)))
 ```
 
+初期値を `tab` にするのは、今回の構成では Tab ごとに履歴を分けたいから。
+
+取得は2つに分ける。
+
 ```text
 my/browsing-history-current
-        ↓
-my/browsing-history-scope
-        ↓
-   tab / window
+  → 現在の History を取得
+  → なければ nil
+
+my/browsing-history-ensure-current
+  → 現在の History を取得
+  → なければ作って保存
+  → History を返す
 ```
 
-`tab` の場合は現在の Tab が持つ History を返し、
-`window` の場合は現在の Window が持つ History を返す。
+使い分けは、
 
-History がまだなければ、その場で新しく作って保存してから返す。
+```text
+back / forward
+  → current
 
-記録処理や back / forward はこの取得関数だけを使う。
-そのため scope を Tab から Window に変えても、advice や履歴操作の処理は変更しない。
+履歴追加
+  → ensure-current
+```
+
+とする。
+
+利用側は Tab や Window を直接調べず、この取得処理を通す。
+そのため scope を Tab から Window に変えても、advice や back / forward の処理は変更しない。
 
 ## 記録対象
 
@@ -85,7 +112,7 @@ Browsing History は「何を記録するか」を判断しない。
 
 利用側が Location を渡して記録する。
 
-Consult / xref / Avy など、どの移動を記録するかは別途決める。
+Consult / xref / Avy など、どの移動を記録するかは旧設計を基準に別途つなぐ。
 
 ## テスト
 
@@ -94,7 +121,8 @@ Consult / xref / Avy など、どの移動を記録するかは別途決める�
 - 戻った途中から追加した時に forward 履歴が消える
 - 複数の History が混ざらない
 - scope が tab / window のどちらでも対応する History を取得できる
-- History がない場合は新しく作られる
+- `current` は History がなければ nil を返す
+- `ensure-current` は History がなければ作成する
 - marker が編集後の位置へ追従する
 - marker が使えない場合に file + position へフォールバックする
 
@@ -108,3 +136,5 @@ History のデータ構造と履歴操作には Tab / Window 固有の処理を�
 Tab / Window の違いは、現在使う History を取得する処理に閉じ込める。
 
 Better Jumper の履歴構造を参考にしつつ、今回はセッション内だけで使うため、marker は Location が直接持つ。
+
+Tab 複製時に History をどう扱うかは、必要になった時に決める。
