@@ -57,13 +57,19 @@ A → B → E
 公開する操作名は、
 
 ```text
+my/browsing-history-push
 my/browsing-history-back
 my/browsing-history-forward
 ```
 
 とする。
 
-ブラウザの Back / Forward と同じ意味で使うため。
+- `push`: Location を履歴へ追加する
+- `back`: 1つ前の Location へ戻る
+- `forward`: 1つ後の Location へ進む
+
+`back` / `forward` はブラウザと同じ意味で使う。
+`push` は History の ring に Location を積む操作なので、そのままの名前にする。
 
 ## History の取得
 
@@ -97,7 +103,7 @@ my/browsing-history-ensure-current
 back / forward
   → current
 
-履歴追加
+push
   → ensure-current
 ```
 
@@ -110,7 +116,7 @@ back / forward
 
 Browsing History は「何を記録するか」を判断しない。
 
-利用側が Location を渡して記録する。
+利用側が Location を `my/browsing-history-push` に渡して記録する。
 
 Consult / xref / Avy など、どの移動を記録するかは旧設計を基準に別途つなぐ。
 
