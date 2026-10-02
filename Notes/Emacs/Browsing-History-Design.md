@@ -110,6 +110,17 @@ push
 とする。
 
 利用側は Tab や Window を直接調べず、この取得処理を通す。
+
+History の保存場所は scope に応じて変える。
+
+```text
+scope = tab
+  → Tab の独自パラメータに保存 / 取得
+
+scope = window
+  → window parameter に保存 / 取得
+```
+
 そのため scope を Tab から Window に変えても、advice や back / forward の処理は変更しない。
 
 ## 記録対象
