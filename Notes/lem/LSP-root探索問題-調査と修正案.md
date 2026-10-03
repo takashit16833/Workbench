@@ -1,25 +1,25 @@
 # Lem LSP root 探索問題 - 調査結果と修正案
 
-## このノートの目的
+## このノートの位置づけ
 
-Lem の LSP root 探索で確認された不具合について、2026-10-04 時点の現行コード、実機での再現結果、原因分析、修正案、テスト方針、PR 分割案を記録する。
+Lem の LSP root 探索で確認された不具合について、現行コード、ユーザー環境での実測、追加レビュー結果を統合した調査・設計ノート。
 
-このノートは AI による設計レビューを主目的とする。
+2026-10-04 の初版を、`LSP-root探索問題-修正案レビュー.md` の指摘を反映して改訂した。
 
-そのため、
+このノートでは以下を明確に分ける。
 
-- 実測で確認済みの事実
-- 現行コードから論理的に導けること
+- ユーザー環境で実測済みの事実
+- 現行ソースから確認できる事実
 - 修正案
-- まだ実装・検証していないこと
+- 修正時に維持すべき互換性
+- テスト要件
+- 未検証事項
 
-をできるだけ明確に分ける。
-
-このノート作成時点では、Lem 本体への修正、commit、push、PR はまだ行っていない。
+このノートの改訂時点では、Lem 本体への修正、commit、push、PR はまだ行っていない。
 
 ---
 
-## 調査対象
+# 対象
 
 Lem fork:
 
@@ -27,19 +27,37 @@ Lem fork:
 https://github.com/takashit16833/lem
 ```
 
-調査した `main`:
+ユーザー調査時に確認した fork main:
 
 ```text
 27572e42923a99d1dee0be8b991e0bfd2113b24d
 ```
 
-確認時点で fork の `main` は upstream の現行コードと同内容だった。
+レビュー時点の upstream main:
 
-主な対象ファイル:
+```text
+da26ca8443a17b9e681f191491c453dbf24e3dd9
+```
+
+レビュー時点では upstream が fork main より 1 commit 先に進んでいた。
+
+差分は今回の root 探索とは無関係な ncurses terminal color palette 修正であり、以下の関連部分は fork と upstream で同じだった。
+
+- `src/ext/language-mode.lisp`
+- LSP language spec
+- workspace 管理
+- test 定義
+
+ただし実装開始時には upstream を再取得し、最新 `main` から branch を作ること。
+
+主な確認対象:
 
 ```text
 src/ext/language-mode.lisp
+src/buffer/file-utils.lisp
+src/commands/project.lisp
 extensions/lsp-mode/lsp-mode.lisp
+extensions/lsp-mode/spec.lisp
 extensions/lua-mode/lsp-config.lisp
 extensions/clojure-mode/lsp-config.lisp
 extensions/typst-mode/lsp-config.lisp
@@ -47,114 +65,75 @@ extensions/python-mode/lsp-config.lisp
 extensions/go-mode/lsp-config.lisp
 extensions/js-mode/lsp-config.lisp
 extensions/dockerfile-mode/lsp-config.lisp
-src/commands/project.lisp
+extensions/lisp-mode/lisp-mode.lisp
+extensions/lisp-mode/v2/lsp-config.lisp
+extensions/lisp-mode/lem-lisp-mode.asd
 extensions/lisp-mode/ext/package-inferred-system.lisp
+extensions/wat-mode/lsp-config.lisp
+extensions/tramp/tramp.lisp
 lem-tests.asd
 tests/legit.lisp
+tests/lsp-mode/test-utils.lisp
 ```
 
-関連する別問題である JSON-RPC validation 問題は別ノートに記録済み。
+関連する JSON-RPC validation 問題は別件として解決済み。
 
 ```text
 Notes/lem/LSP-JSONRPC-invalid-request調査.md
 ```
 
-今回扱う root 探索問題は JSON-RPC 問題とは独立している。
+今回の root 探索問題はその問題とは独立している。
 
 ---
 
-## 結論
+# 結論
 
-現行の LSP root 探索には、少なくとも次の 2 件の独立した不具合がある。
+現行 LSP root 探索には少なくとも 2 件の独立した不具合がある。
 
-### 不具合 1: HOME 外から探索するとファイルシステム root で停止できない
+## 不具合 1: HOME に到達しない探索経路で filesystem root から先へ停止できない
 
-`find-root-directory-1` の再帰停止条件が `user-homedir-pathname` への到達しか考慮していない。
+`find-root-directory-1` の停止条件は HOME だけである。
 
-そのため `/tmp` など HOME 配下ではないパスから探索を開始し、途中に root marker が存在しない場合、
+HOME に到達しない ancestor 探索で marker が見つからない場合、POSIX root では parent が自分自身になるため通常の経路で停止できない。
+
+ユーザー環境では、
 
 ```text
 /tmp/
-  ↓
-/
-  ↓
-/
-  ↓
+→ /
+→ /
+→ /
 ...
 ```
 
-となり終了しない。
+を実測した。
 
-実機で `/tmp/` の親を繰り返し取得すると、`/` の親は `/` 自身になることを確認した。
+正確には「HOME 外なら必ず無限再帰する」ではない。
 
-### 不具合 2: string root marker の判定方法が不適切
+途中に marker があれば停止するし、filesystem I/O のエラー等で別の終了をする可能性もある。
 
-現行コードはディレクトリ内を列挙し、各 pathname に対して `file-namestring` を取り、その文字列へ `search` している。
+不具合の本質は、
 
-このため同時に次の問題が起きる。
+> HOME に到達しない経路で marker が見つからない場合、filesystem root で探索を正常終了する条件がない
 
-1. 普通の Git repository の `.git/` ディレクトリを検出できない
-2. `.gitconfig` や `.gitconfig.local` を `".git"` marker と誤認する
-3. `package.json.bak` のような名前も `"package.json"` marker と誤認し得る
-4. Clojure の `".lsp/config.edn"` のように階層を含む marker を現在の方式では正しく扱えない
+こと。
 
-今回の Lua LSP で `rootUri = file:///Users/.../` になった直接の経路は、実測により次のように確定した。
+## 不具合 2: string root marker の判定方法が不適切
 
-```text
-Git repository root
-  ↓
-.git/ directory を file-namestring すると ""
-  ↓
-".git" marker に一致しない
-  ↓
-親へ探索
-  ↓
-HOME に到達
-  ↓
-.gitconfig / .gitconfig.local を列挙
-  ↓
-(search ".git" ".gitconfig") が真
-  ↓
-HOME を project root と誤認
-```
+現行実装は candidate directory を列挙し、各 pathname の `file-namestring` に対して string pattern を `search` する。
+
+このため以下が起きる。
+
+1. 普通の Git repository の `.git/` directory を検出できない
+2. `.gitconfig` 等を `".git"` と誤認する
+3. `package.json.bak` 等を `"package.json"` と誤認し得る
+4. `".lsp/config.edn"` のような nested relative path を表現できない
+
+さらに、string pattern の意味を「具体的な相対 path」へ変更する場合、現在 repository 内で利用されている `".asd"` の substring semantics を移行する必要がある。
 
 ---
 
 # 現行実装
-
-## Lua の language spec
-
-`extensions/lua-mode/lsp-config.lisp`:
-
-```lisp
-(define-language-spec (lua-spec lem-lua-mode:lua-mode)
-  :language-id "lua"
-  ;; I have no idea what a correct file may identify a root of a Lua project
-  :root-uri-patterns '(".git")
-  :command '("lua-language-server")
-  :readme-url "https://github.com/luals/lua-language-server"
-  :connection-mode :stdio)
-```
-
-Lua では `".git"` のみを root marker にしている。
-
-## LSP から root 探索への接続
-
-`extensions/lsp-mode/lsp-mode.lisp` では、language spec の `root-uri-patterns` を `lem/language-mode:find-root-directory` に渡して root URI を計算している。
-
-概略:
-
-```lisp
-(defun compute-root-uri (spec buffer)
-  (pathname-to-uri
-   (language-mode:find-root-directory
-    (buffer-directory buffer)
-    (spec-root-uri-patterns spec))))
-```
-
-したがって `src/ext/language-mode.lisp` の root 探索結果が、そのまま LSP workspace の root URI に影響する。
-
-## root 探索本体
 
 `src/ext/language-mode.lisp`:
 
@@ -183,113 +162,83 @@ Lua では `".git"` のみを root marker にしている。
       directory))
 ```
 
-重要な点:
+重要な性質:
 
-- string pattern は `search` による部分一致
-- function pattern は各 entry の `file-namestring` を受け取る
-- explicit な `root-uri-patterns` が NIL の場合、function pattern で `.git` を探す
-- marker が見つからず `find-root-directory-1` が NIL を返した場合、外側の `find-root-directory` は探索開始時の `directory` を返す
-- 再帰停止条件は HOME のみ
-- ファイルシステム root の判定はない
+- string pattern は substring 検索
+- function pattern は直下 entry の `file-namestring` を受け取る
+- directory pathname の `file-namestring` は空文字になり得る
+- patterns が NIL の場合の default `.git` も function callback 経由なので directory `.git/` を検出できない
+- candidate ごとに `list-directory` を 1 回行い、entry → pattern の順に評価する
+- marker が見つからなければ HOME まで上る
+- filesystem root の停止条件はない
+- `find-root-directory-1` が NIL なら外側の `find-root-directory` は開始 directory へ fallback する
 
 ---
 
-# 実測 1: `.git` ファイルなら現行実装でも検出できる
+# LSP との接続
 
-最初に作ったテストディレクトリでは `.git` を普通の空ファイルとして作成していた。
+`extensions/lsp-mode/lsp-mode.lisp` の `compute-root-uri` は、spec の `root-uri-patterns` を `lem/language-mode:find-root-directory` へ渡す。
 
-shell:
+したがって root finder の結果が LSP initialize の root URI に使われる。
+
+ただし workspace の再利用に注意する。
+
+現行は概略として:
+
+1. language-id に対応する既存 workspace を探す
+2. 既存 workspace があれば再利用する
+3. なければ server を起動
+4. `make-workspace`
+5. `compute-root-uri`
+6. initialize
+
+つまり、root finder を修正・再定義した後でも、既存の同言語 workspace が残っていれば root URI が再計算されない場合がある。
+
+実機確認は **修正版の新しい Lem プロセスで、その言語のファイルを最初に開く** こと。
+
+`lsp-restart-server` だけで必ず新しい root 計算になるとは現行ソースから保証できない。
+
+これは今回の root finder 修正とは別の workspace 管理上の問題であり、今回の PR へ混ぜない。
+
+---
+
+# ユーザー環境での実測
+
+## 1. `.git` が普通の file の場合
+
+最初のテストでは `.git` は空 file だった。
 
 ```text
-$ ls -ld ~/lem-lua-test/.git
 -rw-r--r-- ... /Users/.../lem-lua-test/.git
-
-$ file ~/lem-lua-test/.git
 /Users/.../lem-lua-test/.git: empty
 ```
 
-Lem REPL:
-
-```lisp
-(mapcar
- (lambda (p)
-   (list
-    (namestring p)
-    (uiop:directory-pathname-p p)
-    (file-namestring p)))
- (lem/buffer/file-utils:list-directory
-  #P"/Users/.../lem-lua-test/"))
-```
-
-結果:
+Lem から見ると:
 
 ```lisp
 (("/Users/.../lem-lua-test/.git" NIL ".git")
  ("/Users/.../lem-lua-test/test.lua" NIL "test.lua"))
 ```
 
-この場合、
+この場合 `file-namestring` は `".git"` なので現行実装でも一致する。
 
-```lisp
-(file-namestring pathname)
-;; => ".git"
-```
+前回この fixture で root が正しく見えたのはこれで説明できる。
 
-なので、
+## 2. 普通の `.git/` directory
 
-```lisp
-(search ".git" ".git")
-```
-
-が成立し、現行コードでも root として検出される。
-
-前回 `~/lem-lua-test` で root が正しくなった理由はこれで説明できる。
-
-これは通常の `git init` が作る `.git/` ディレクトリのケースとは異なる。
-
----
-
-# 実測 2: 普通の `.git/` ディレクトリは検出できない
-
-通常の Git repository を作成した。
-
-shell:
-
-```sh
-testdir="$(mktemp -d "$HOME/lem-lua-git-test.XXXXXX")"
-git init "$testdir"
-echo "$testdir"
-ls -ld "$testdir/.git"
-```
-
-結果:
+`git init` した通常 repository:
 
 ```text
-Initialized empty Git repository in /Users/.../lem-lua-git-test.Wrylg0/.git/
-/Users/.../lem-lua-git-test.Wrylg0
-drwxr-xr-x ... /Users/.../lem-lua-git-test.Wrylg0/.git
+/Users/.../lem-lua-git-test.Wrylg0/.git/
 ```
 
 Lem REPL:
 
 ```lisp
-(mapcar
- (lambda (p)
-   (list
-    (namestring p)
-    (uiop:directory-pathname-p p)
-    (file-namestring p)))
- (lem/buffer/file-utils:list-directory
-  #P"/Users/.../lem-lua-git-test.Wrylg0/"))
-```
-
-結果:
-
-```lisp
 (("/Users/.../lem-lua-git-test.Wrylg0/.git/" T ""))
 ```
 
-重要なのは、
+つまり:
 
 ```lisp
 (uiop:directory-pathname-p p)
@@ -299,27 +248,11 @@ Lem REPL:
 ;; => ""
 ```
 
-であること。
+よって現行コードは `.git/` 自体を `".git"` marker として検出できない。
 
-したがって現行処理では、
+## 3. HOME 誤認
 
-```lisp
-(match-pattern-p ".git" "")
-```
-
-相当になり、`.git/` ディレクトリ自体には一致しない。
-
-この結果により、
-
-> 通常の Git repository の `.git/` directory を現行の `file-namestring` ベース探索では検出できない
-
-ことを実測で確認した。
-
----
-
-# 実測 3: `.git/` を見逃した後、HOME を root と誤認する
-
-同じ通常 Git repository に対して直接 root 探索を実行した。
+通常 Git repository に対して:
 
 ```lisp
 (lem/language-mode:find-root-directory
@@ -333,57 +266,32 @@ Lem REPL:
 #P"/Users/.../"
 ```
 
-期待する結果は、
-
-```lisp
-#P"/Users/.../lem-lua-git-test.Wrylg0/"
-```
-
-である。
-
-HOME の何に一致しているか確認した。
-
-```lisp
-(remove-if-not
- (lambda (p)
-   (search ".git" (file-namestring p)))
- (lem/buffer/file-utils:list-directory
-  (user-homedir-pathname)))
-```
-
-結果:
+HOME 内で `".git"` に substring match するもの:
 
 ```lisp
 (#P"/Users/.../.gitconfig"
  #P"/Users/.../.gitconfig.local")
 ```
 
-したがって今回の誤判定経路は推測ではなく実測で確定した。
+したがって今回の Lua root 誤判定経路は実測で確定している。
 
 ```text
 project/.git/
-    │
-    │ file-namestring => ""
-    │
-    └─ marker ".git" に一致しない
-          ↓
-      parent を探索
-          ↓
-      HOME
-          ↓
-      .gitconfig
-      .gitconfig.local
-          ↓
-      search ".git" が一致
-          ↓
-      HOME を root として返す
+  ↓
+file-namestring => ""
+  ↓
+".git" を見逃す
+  ↓
+HOME へ上る
+  ↓
+.gitconfig / .gitconfig.local
+  ↓
+(search ".git" ...) が成立
+  ↓
+HOME を root と誤認
 ```
 
----
-
-# 実測 4: HOME 外ではファイルシステム root が自己参照する
-
-`/tmp/` から親を 5 回辿った。
+## 4. filesystem root の parent
 
 ```lisp
 (loop
@@ -399,113 +307,22 @@ project/.git/
 (#P"/tmp/" #P"/" #P"/" #P"/" #P"/")
 ```
 
-さらに root の親との比較:
+さらに:
 
 ```lisp
-(let ((root #P"/"))
-  (uiop:pathname-equal
-   root
-   (uiop:pathname-parent-directory-pathname root)))
+(uiop:pathname-equal
+ #P"/"
+ (uiop:pathname-parent-directory-pathname #P"/"))
+;; => T
 ```
 
-結果:
+以前 `/tmp/lem-lua-test` で Lem が固まり、LuaLS 側では `$/hello` 後に initialize が来なかった現象はこの問題と整合する。
 
-```lisp
-T
-```
-
-したがって HOME 外から marker なしで探索した場合、
-
-```text
-/tmp/
-  ↓
-/
-  ↓
-/
-  ↓
-...
-```
-
-となる。
-
-現行コードの停止条件は、
-
-```lisp
-((uiop:pathname-equal directory (user-homedir-pathname)) nil)
-```
-
-しかないため、`/` では停止できない。
-
-実際に `/tmp/lem-lua-test` で Lua ファイルを開いた際、Lem が固まり、LuaLS 側ログは `$/hello` までで Lem から `initialize` が来なかった。
-
-この症状は上記無限再帰と整合する。
-
-今回、Lem を再度固める直接実験は行わず、親 pathname の遷移を有限回観測することで原因を確認した。
+ただし当時 debugger/backtrace で root finder 内停止を直接捕捉したわけではないため、そのログ単独で停止箇所を証明したとは書かない。
 
 ---
 
-# 現行コード内にある類似実装
-
-## ファイルシステム root の判定
-
-`extensions/lisp-mode/ext/package-inferred-system.lisp` には既に次の実装がある。
-
-```lisp
-(defun root-directory-p (directory)
-  (uiop:pathname-equal
-   (uiop:pathname-parent-directory-pathname directory)
-   directory))
-```
-
-これは今回必要な停止判定と同じ考え方である。
-
-特定の `"/"` 文字列を比較するより、
-
-> parent directory が自分自身なら filesystem root
-
-と判定する方が pathname ベースで扱える。
-
-## project 機能では file marker と directory marker を分けている
-
-`src/commands/project.lisp` では、
-
-```lisp
-*root-directories*
-*root-files*
-```
-
-を別管理している。
-
-`*root-directories*` には、
-
-```text
-.git
-.hg
-_FOSSIL_
-.bzr
-_darcs
-```
-
-等がある。
-
-directory marker は `uiop:subdirectories` と pathname 比較で検出し、file marker は `uiop:directory-files` の `file-namestring` を完全一致で比較している。
-
-つまり Lem 内の project root 探索は、LSP root 探索とは別実装だが、少なくとも
-
-- directory marker を `file-namestring` で判定しない
-- file marker は完全一致で扱う
-
-という点では今回の問題を避けている。
-
-ただし今回の修正で project root 探索と LSP root 探索を統合することは提案しない。
-
-理由は、LSP 側には言語ごとの relative path marker があり、既存 project API と責務が完全には一致しないため。
-
----
-
-# 他言語への影響
-
-現行の有効な language spec で確認した例。
+# 他言語・既存利用者
 
 ## Lua
 
@@ -513,9 +330,7 @@ directory marker は `uiop:subdirectories` と pathname 比較で検出し、fil
 :root-uri-patterns '(".git")
 ```
 
-通常の `.git/` directory を見逃す。
-
-`.gitconfig` 等への部分一致が起こり得る。
+今回の主要再現対象。
 
 ## Typst
 
@@ -523,39 +338,25 @@ directory marker は `uiop:subdirectories` と pathname 比較で検出し、fil
 :root-uri-patterns '("typst.toml" ".git")
 ```
 
-`typst.toml` があれば先に検出可能だが、`.git` fallback は Lua と同じ問題を持つ。
+candidate directory は近いものから順に評価される。
 
-## Dockerfile
+`typst.toml` が patterns の前にあるから ancestor 間でも優先される、という意味ではない。
 
-```lisp
-:root-uri-patterns '(".git" "Dockerfile" "Containerfile" "dockerfile" "containerfile")
+例えば子に `.git`、親に `typst.toml` があれば、最も近い子 candidate が選ばれ得る。
+
+## Dockerfile / JavaScript / Python / Go
+
+以下のような exact marker 名を substring で評価している。
+
+```text
+Dockerfile
+package.json
+tsconfig.json
+pyproject.toml
+go.mod
 ```
 
-`.git` 問題に加え、`Dockerfile.bak` 等も `search` では部分一致する。
-
-## JavaScript
-
-```lisp
-:root-uri-patterns '("package.json" "tsconfig.json")
-```
-
-`package.json.bak` や `tsconfig.json.old` のような名前も現行 `search` では一致し得る。
-
-## Python
-
-```lisp
-:root-uri-patterns '("setup.py" "pyproject.toml" "requirements.txt" "poetry.lock")
-```
-
-同様に marker 名を含む別ファイルへ部分一致し得る。
-
-## Go
-
-```lisp
-:root-uri-patterns '("go.mod")
-```
-
-`go.mod.bak` 等へ部分一致し得る。
+そのため `.bak`, `.old` 等を含む別名に誤一致し得る。
 
 ## Clojure
 
@@ -568,542 +369,133 @@ directory marker は `uiop:subdirectories` と pathname 比較で検出し、fil
   ".lsp/config.edn")
 ```
 
-特に `".lsp/config.edn"` は current directory の entry を `file-namestring` にして比較する現行方式では構造的に扱えない。
+`".lsp/config.edn"` は現行の直下 entry の `file-namestring` 方式では扱えない。
 
-`list-directory` で得るのは current directory 直下の `.lsp/` pathname であり、その directory pathname の `file-namestring` は空になる。
+## Lisp v2 — 重要な互換性対象
 
-つまり、文字列 marker を単なる「entry 名への部分一致」と解釈する設計では relative path marker を表現できない。
+`extensions/lisp-mode/v2/lsp-config.lisp`:
+
+```lisp
+:root-uri-patterns '(".asd")
+```
+
+この system は標準 `lem` system の通常依存ではないが、reader で無効化されておらず、`lem-lisp-mode/v2` をロードすれば有効になる。
+
+現行の substring semantics では:
+
+```text
+sample.asd
+```
+
+に `".asd"` が一致する。
+
+string marker を「具体的な relative path」と変更すると:
+
+```text
+project/.asd
+```
+
+という literal path しか探さなくなり、`sample.asd` を見つけられない。
+
+したがって PR 2 では Lisp v2 の利用者を必ず移行する。
+
+最小の互換移行は function pattern を使うこと。
+
+旧挙動をそのまま維持するなら概念的に:
+
+```lisp
+:root-uri-patterns
+(list (lambda (name)
+        (search ".asd" name)))
+```
+
+ただしこれだと `sample.asd.bak` も従来通り一致する。
+
+`.asd` suffix のみに正確化するなら別の挙動変更なので、その変更を同時に行う場合は明示・テストする。
+
+今回の root marker 契約変更だけを目的とするなら、まず旧 semantics の移行を優先する。
+
+通常の `extensions/lisp-mode/lisp-mode.lisp` にも editor variable として:
+
+```lisp
+(setf (variable-value 'root-uri-patterns) '(".asd"))
+```
+
+が残っている。
+
+現行 `compute-root-uri` は spec slot を読むため、この editor variable が現在の LSP root finder へ直接渡される経路は確認できていない。
+
+ただし残存設定として記録し、PR 2 で共通契約を整理する際に扱いを判断する。
+
+## WAT
+
+無効コード内に:
+
+```lisp
+'("*.wat" "*.wast")
+```
+
+があるが、reader condition により現行 spec として登録されない。
+
+これを理由に glob support を PR 2 へ追加しない。
 
 ---
 
-# 修正案 1: filesystem root で探索を停止する
+# 修正案 1: filesystem root で停止する
 
-## 目的
+## 方針
 
-HOME 外の path から探索した場合でも必ず終了させる。
+既存の HOME stop と match-first の順序を維持し、filesystem root 判定を追加する。
 
-## 最小修正の考え方
+Lem 内には既に同じ判定方式がある。
 
-現行の HOME 判定は既存挙動として残す。
-
-それに加えて、
-
-```lisp
-(uiop:pathname-equal
- directory
- (uiop:pathname-parent-directory-pathname directory))
-```
-
-が真なら filesystem root に到達したとみなし NIL を返す。
-
-概念的には:
+`extensions/lisp-mode/ext/package-inferred-system.lisp`:
 
 ```lisp
 (defun root-directory-p (directory)
+  (uiop:pathname-equal
+   (uiop:pathname-parent-directory-pathname directory)
+   directory))
+```
+
+概念:
+
+```lisp
+(defun filesystem-root-p (directory)
   (uiop:pathname-equal
    directory
    (uiop:pathname-parent-directory-pathname directory)))
 ```
 
-を用意し、
-
-```lisp
-(cond ((matchp directory) directory)
-      ((uiop:pathname-equal directory (user-homedir-pathname)) nil)
-      ((root-directory-p directory) nil)
-      (t
-       (recursive
-        (uiop:pathname-parent-directory-pathname directory))))
-```
-
-とする。
-
-### 順序について
-
-現行コードは `matchp` を HOME 判定より先に行う。
-
-したがって HOME 自身に正しい marker が存在すれば HOME を root として返し得る。
-
-修正 1 ではこの既存順序を変えない方が変更範囲が小さい。
-
-filesystem root についても同様に、root 自身に marker が存在する場合にそれを root として返すかどうかは議論可能だが、既存の「match first」の構造を保つなら、
+探索順:
 
 ```text
-match
-HOME stop
-filesystem-root stop
-parent
+1. current candidate に marker があるか
+2. HOME なら停止
+3. parent == current なら filesystem root として停止
+4. parent へ
 ```
 
-となる。
+match を stop condition より先にする現行順序を維持する。
 
-今回の不具合修正だけならこの方が挙動変更が少ない。
+したがって HOME 自身や filesystem root 自身に marker がある場合はその candidate を採用できる。
 
-## `find-root-directory` の fallback は維持される
+marker が見つからず `find-root-directory-1` が NIL なら、外側の `find-root-directory` が開始 directory へ fallback する既存仕様も維持する。
 
-`find-root-directory-1` が NIL を返すと、
+## PR 1 の scope
 
-```lisp
-(or (find-root-directory-1 ...)
-    directory)
-```
-
-により、探索開始時の directory が返る。
-
-したがって filesystem root まで探して marker がなかった場合でも、最終的な外部挙動は既存の「marker が見つからなければ開始 directory」に揃う。
-
----
-
-# 修正案 2: string pattern を root 候補からの relative path として扱う
-
-## 問題設定
-
-現在の string pattern:
-
-```lisp
-".git"
-"package.json"
-".lsp/config.edn"
-```
-
-を「directory entry の file name に対する部分文字列」と解釈すると、
-
-- directory marker を扱えない
-- exact file marker を誤認する
-- relative path marker を扱えない
-
-という複数の問題が発生する。
-
-これらを個別の特殊ケースで修正するより、string pattern の意味を次のように定義する案が自然である。
-
-> string pattern は、現在調べている root 候補 directory からの relative path を表す。
-
-例:
-
-```text
-directory = /project/
-pattern   = ".git"
-
-=> /project/.git が存在するか
-```
-
-```text
-directory = /project/
-pattern   = "package.json"
-
-=> /project/package.json が存在するか
-```
-
-```text
-directory = /project/
-pattern   = ".lsp/config.edn"
-
-=> /project/.lsp/config.edn が存在するか
-```
-
-## UIOP API
-
-UIOP 公式ドキュメントで次を確認した。
-
-### `uiop:subpathname`
-
-```text
-subpathname pathname subpath &key type
-```
-
-base pathname に relative subpath を解釈・結合する。
-
-string subpath は relative pathname として解析され、base の directory pathname と merge される。
-
-### `uiop:probe-file*`
-
-```text
-probe-file* p &key truename
-```
-
-file または directory の存在を確認できる。
-
-存在する場合、デフォルトでは入力 pathname を返し、存在しなければ NIL。
-
-したがって string pattern は概念的に、
-
-```lisp
-(uiop:probe-file*
- (uiop:subpathname directory pattern))
-```
-
-で判定できる。
-
-この方式なら `.git` が directory でも file でも検出可能。
-
-これは Git worktree 等で `.git` が file になるケースも自然に扱える。
-
-## 期待される改善
-
-### `.git/`
-
-```text
-/project/.git/
-```
-
-が存在すれば真。
-
-`file-namestring` を経由しないので directory marker を見失わない。
-
-### `.git` file
-
-```text
-/project/.git
-```
-
-が file でも `probe-file*` は存在を検出できる。
-
-今回最初の手動テストで使った空 `.git` file のケースも維持できる。
-
-### `.gitconfig`
-
-```text
-/project/.gitconfig
-```
-
-しかなく `/project/.git` が存在しない場合、
-
-```lisp
-(uiop:probe-file*
- (uiop:subpathname directory ".git"))
-```
-
-は NIL。
-
-したがって誤一致しない。
-
-### `package.json.bak`
-
-`package.json` の exact path を probe するので `package.json.bak` は一致しない。
-
-### `.lsp/config.edn`
-
-relative path を直接 probe するため扱える。
-
----
-
-# function pattern の互換性
-
-現行 `match-pattern-p` は pattern に function も許している。
-
-```lisp
-(function (funcall pattern file))
-```
-
-この function は現在、各 `list-directory` entry の `file-namestring` を受け取る。
-
-string pattern の意味を relative path existence に変更しても、function pattern は既存互換のため現在の callback 契約を維持する方が安全。
-
-例えば概念的には、
-
-```lisp
-(defun match-pattern-p (pattern directory)
-  (etypecase pattern
-    (function
-     (loop :for pathname :in (list-directory directory)
-           :thereis (funcall pattern (file-namestring pathname))))
-    (string
-     (uiop:probe-file*
-      (uiop:subpathname directory pattern)))))
-```
-
-のように責務を移せる。
-
-ここでは第 2 引数の意味が `file` から `directory` に変わるが、`match-pattern-p` は package export されていない内部関数である。
-
-ただし実装前に repository 内の直接参照を最終確認すること。
-
----
-
-# 重要: default `.git` pattern も修正対象
-
-現行 `find-root-directory` は explicit な `root-uri-patterns` が NIL の場合、
-
-```lisp
-(list (lambda (name) (string= name ".git")))
-```
-
-を使う。
-
-この lambda は function pattern なので、function pattern の既存契約を維持すると普通の `.git/` directory を引き続き検出できない。
-
-したがって修正案 2 では default marker も string pattern に変更する必要がある。
-
-概念的には、
-
-```lisp
-(or root-uri-patterns
-    '(".git"))
-```
-
-または、
-
-```lisp
-(or root-uri-patterns
-    (list ".git"))
-```
-
-とする。
-
-これにより explicit な `(".git")` と default `.git` が同じ判定経路を通る。
-
-この変更を忘れると Lua 等の explicit pattern は直っても、pattern 未指定の language mode では同じ directory marker bug が残る。
-
----
-
-# 単純な `search` → `string=` 変更を推奨しない理由
-
-一見すると、
-
-```lisp
-(search pattern file)
-```
-
-を、
-
-```lisp
-(string= pattern file)
-```
-
-に変えれば `.gitconfig` 誤認は止まる。
-
-しかしそれだけでは不十分。
-
-理由:
-
-1. `.git/` directory の `file-namestring` は `""` なので、完全一致にしても検出できない
-2. `.lsp/config.edn` のような relative path を扱えない
-3. file と directory の違いを `file-namestring` に潰している根本構造が残る
-
-したがって修正の中心は「比較方法を部分一致から完全一致へ変える」ことではなく、
-
-> string pattern を root candidate からの path として存在確認する
-
-ことに置く方が整合的。
-
----
-
-# 以前の調査中に出た `".asd"` についての訂正
-
-調査途中で、
-
-> Lisp LSP が `".asd"` を root pattern として使っており、部分一致が必要
-
-という仮説を一度置いた。
-
-最新 `main` を再確認した結果、この `".asd"` を現行有効 language spec の設計根拠として扱うのは不適切と判断した。
-
-少なくとも今回確認した現行有効 spec 群では、root marker は exact file/directory/relative path として解釈できるものだった。
-
-したがって、
-
-> 既存 `search` の部分一致 semantics を string pattern の互換性として維持しなければならない
-
-という根拠には使わない。
-
-この点は AI レビュー時にも過去の仮説と混同しないこと。
-
----
-
-# テスト方針
-
-root 探索は LSP から利用されるが、実装本体は `src/ext/language-mode.lisp` にある。
-
-そのためテストは LSP server を起動する integration test ではなく、まず `lem/language-mode:find-root-directory` の filesystem unit/regression test として追加するのが適切と考える。
-
-候補:
-
-```text
-tests/language-mode.lisp
-```
-
-を追加し、`lem-tests.asd` に component を登録する。
-
-既存 `tests/legit.lisp` には、
-
-- `uiop:temporary-directory`
-- `ensure-directories-exist`
-- `unwind-protect`
-- `uiop:delete-directory-tree`
-
-を使う temporary repository helper の実例がある。
-
-その流儀を参考にする。
-
----
-
-# 修正 1 のテスト候補
-
-## filesystem root 判定
-
-最低限、
-
-```lisp
-(let ((root ...filesystem-root...))
-  (ok
-   (uiop:pathname-equal
-    root
-    (uiop:pathname-parent-directory-pathname root))))
-```
-
-という基礎確認ではなく、可能なら `find-root-directory` の挙動として、
-
-> HOME 外、marker なしでも終了し、開始 directory に fallback する
-
-ことを確認したい。
-
-ただし修正前コードでこの regression test を実行すると無限ループになるため、テスト suite 自体が停止する問題がある。
-
-選択肢:
-
-1. root 判定 helper を分離し、その helper を直接テストする
-2. SBCL の timeout をテスト限定で使う
-3. 修正後の `find-root-directory` を直接テストし、回帰時の hang リスクは許容する
-4. recursion 自体を loop 化し、root 判定を独立してテストする
-
-portable test を優先するなら 1 が最小。
-
-Lem 内に既に `root-directory-p` 相当実装があるため、同じ考え方の helper を `language-mode` 側へ置く案は不自然ではない。
-
----
-
-# 修正 2 のテスト候補
-
-PR 2 を PR 1 に依存させない場合、marker が見つからないテストで filesystem root まで到達させると現行 bug で hang する。
-
-したがって「誤一致しない」テストは、さらに上位の directory に正しい marker を置き、必ず有限範囲で探索を終了させると独立性を保てる。
-
-## 1. `.git/` directory を検出する
-
-構造:
-
-```text
-temp/
-└── project/
-    ├── .git/
-    └── src/
-```
-
-`src/` から `(".git")` で探索し、`project/` を返すこと。
-
-## 2. `.git` file を検出する
-
-構造:
-
-```text
-temp/
-└── project/
-    ├── .git
-    └── src/
-```
-
-`project/` を返すこと。
-
-Git worktree 形式との互換性を担保する意味もある。
-
-## 3. `.gitconfig` を `.git` と誤認しない
-
-PR 1 に依存しない構造:
-
-```text
-temp/
-├── .git/
-└── child/
-    ├── .gitconfig
-    └── src/
-```
-
-`child/src/` から `(".git")` で探索する。
-
-期待:
-
-```text
-temp/
-```
-
-修正前:
-
-```text
-child/
-```
-
-になり得る。
-
-これなら `child/` の `.gitconfig` を誤認しなかった場合も、親 `temp/` の本物の `.git/` で探索が止まるため、filesystem root bug に依存しない。
-
-## 4. `package.json.bak` を誤認しない
-
-構造:
-
-```text
-temp/
-├── package.json
-└── child/
-    ├── package.json.bak
-    └── src/
-```
-
-`child/src/` から `("package.json")` で探索。
-
-期待:
-
-```text
-temp/
-```
-
-修正前は `child/` を返す。
-
-## 5. nested relative path marker を検出する
-
-構造:
-
-```text
-temp/
-└── project/
-    ├── .lsp/
-    │   └── config.edn
-    └── src/
-```
-
-`src/` から `(".lsp/config.edn")` で探索し、`project/` を返す。
-
-これは Clojure の現行 language spec を直接カバーする。
-
-## 6. NIL patterns の default `.git` を検出する
-
-`root-uri-patterns` に NIL を渡し、普通の `.git/` directory を持つ project root を検出できること。
-
-このテストは default lambda を string marker へ変更し忘れる回帰を防ぐ。
-
----
-
-# PR 分割案
-
-2 PR に分けるのが妥当と考える。
-
-## PR 1: filesystem root で root 探索を停止する
-
-目的:
-
-> HOME 外から LSP root を探索したとき、filesystem root で無限再帰しないようにする。
-
-含める変更:
+含める:
 
 - filesystem root 判定
 - `find-root-directory-1` の停止条件
-- regression test
+- 公開 `find-root-directory` を通る回帰テスト
 
 含めない:
 
-- string marker semantics
-- `.git` directory 検出
-- `.gitconfig` 部分一致
-- Clojure relative path marker
+- string pattern semantics
+- default `.git` の変更
+- workspace 管理
+- project finder 統合
 
 候補 branch:
 
@@ -1111,24 +503,375 @@ temp/
 fix/language-mode-root-recursion
 ```
 
-この PR は既存 root pattern の意味を変えないため、変更範囲が小さい。
+---
 
-## PR 2: root string marker を relative path として判定する
+# 修正案 2: string marker の契約を「具体的な relative path」にする
+
+## 正式な方向性
+
+string pattern は:
+
+> candidate directory からの、特定の相対 path を表す。
+
+substring、正規表現、glob ではない。
+
+例:
+
+```text
+".git"
+"package.json"
+".lsp/config.edn"
+```
+
+はそれぞれ:
+
+```text
+candidate/.git
+candidate/package.json
+candidate/.lsp/config.edn
+```
+
+の存在を調べる。
+
+file / directory のどちらでも存在すれば match とする。
+
+language spec 内の separator は `/` を使う。
+
+候補 API:
+
+```lisp
+(uiop:probe-file*
+ (uiop:subpathname directory pattern))
+```
+
+この方向性は UIOP の用途と整合する。
+
+## UIOP で注意する点
+
+`probe-file*` の NIL は「存在しない」だけでなく、内部の `ignore-errors` により「存在確認に失敗した」を含み得る。
+
+一方 `subpathname` は先に評価されるので、不正な relative path 等の parse error は `probe-file*` の `ignore-errors` の外に出る。
+
+したがって:
+
+- probe が NIL → この marker では candidate を採用しない
+- marker の形式が契約外 → 設定エラーとして扱う方向
+- function callback のエラー → 広い `ignore-errors` で隠さない
+
+と分ける。
+
+permission error の詳細表示まで今回の PR に追加する必要はない。
+
+## string marker に許す path
+
+単に「relative path」とだけ定義すると以下が問題になる。
+
+```text
+""
+"."
+"../sentinel"
+"/absolute"
+```
+
+レビュー実験では:
+
+- `""` は base directory 自体
+- `"."` も実質 base 自身
+- `"../sentinel"` は candidate 外の parent を参照可能
+- absolute path は `subpathname` でエラー
+
+となる。
+
+root marker としては candidate 内の具体的 path を指す必要があるため、PR 2 実装前に最低限次を仕様化する。
+
+推奨:
+
+- 空文字は禁止
+- candidate 自身だけを示す `.` は禁止
+- absolute path は禁止
+- parent traversal `..` は禁止
+- string は candidate 配下を指す具体的 relative path
+- glob / regex semantics はない
+
+入力検証を `match-pattern-p` 周辺で行うか、spec 定義時に行うかは実装前に決める。
+
+大規模な validation framework は不要。
+
+## default `.git`
+
+現行 default:
+
+```lisp
+(list (lambda (name)
+        (string= name ".git")))
+```
+
+は `.git/` directory を検出できない。
+
+PR 2 では string marker 経路へ合わせる。
+
+概念:
+
+```lisp
+(or root-uri-patterns
+    '(".git"))
+```
+
+これを忘れると explicit `(".git")` は直っても default path は壊れたままになる。
+
+## function pattern
+
+function pattern は既存の引数契約を維持する。
+
+> 直下 entry の `file-namestring` を callback へ渡す。
+
+directory entry では空文字が渡ることも含む。
+
+ただし「完全互換」とは言わない。
+
+実装方式を変えると callback の:
+
+- 呼び出し順
+- 呼び出し回数
+- 短絡停止位置
+
+が変わり得る。
+
+副作用を持つ callback まで完全互換にすることは保証しない。
+
+最低限、
+
+- 引数の型・内容
+- 純粋な predicate としての OR semantics
+
+を維持する。
+
+また string と function を別経路にすることで、function pattern ごとに `list-directory` を繰り返すような不要 I/O は導入しない。
+
+function pattern が 1 つ以上ある candidate では directory entries を 1 回だけ列挙し、必要な callback で再利用する設計を優先する。
+
+---
+
+# virtual filesystem / TRAMP
+
+現行 `list-directory` は UIOP の local directory 列挙を使いつつ、entry の存在確認には Lem の virtual probe の仕組みも関係する。
+
+一方、提案の `uiop:probe-file*` は Lem の virtual handler を経由しない。
+
+ただし現行 root finder 自体が完全な remote filesystem abstraction 上にあるわけではなく、LSP の URI も file URI 前提の部分がある。
+
+そのため:
+
+> 現在 TRAMP LSP root が正常に動いており、新案で壊れる
+
+とまでは実証されていない。
+
+今回の PR 2 は local filesystem の root marker 修正として scope を明確にする。
+
+単純に `virtual-probe-file` へ置き換えれば解決するとも断定しない。remote file / directory の判定方法は別設計として扱う。
+
+---
+
+# project finder との関係
+
+`src/commands/project.lisp` は file marker と directory marker を分けているため参考にはなる。
+
+ただし:
+
+- HOME / root の扱い
+- marker 検査順
+- path 表現
+- file / directory semantics
+
+が LSP finder と異なる。
+
+今回統合しない。
+
+---
+
+# テスト配置
+
+候補:
+
+```text
+tests/language-mode.lisp
+```
+
+を新設し、`lem-tests.asd` に登録する。
+
+LSP server を起動する integration test ではなく、まず公開:
+
+```lisp
+lem/language-mode:find-root-directory
+```
+
+を直接通す filesystem regression test にする。
+
+`tests/legit.lisp` の temporary directory + `unwind-protect` + cleanup の考え方は参考にするが、その helper をそのままコピーしない。
+
+root finder test では Git subprocess は不要。
+
+空の file / directory を直接 fixture に作れば十分。
+
+一時 directory 名は衝突しない方式にし、作成した fixture だけを cleanup する。
+
+---
+
+# PR 1 のテスト要件
+
+helper 単体テストだけでは不十分。
+
+root helper を正しく実装しても `find-root-directory` から呼び忘れれば regression を検出できないため、公開関数を実際に呼ぶ。
+
+また修正前コードは停止しないので、テスト自体に実行上限が必要。
+
+候補:
+
+- SBCL timeout を使う
+- 別プロセスにして親側 timeout
+- テスト用に directory 列挙を制御して candidate visit budget を設ける
+
+本番 API に test 専用の上限値は追加しない。
+
+必須ケース:
+
+| 条件 | 期待 |
+|---|---|
+| HOME に届かない absolute path、全候補不一致 | 終了し開始 directory へ fallback |
+| filesystem root 自身、全候補不一致 | 終了し開始 root を返す |
+| filesystem root 自身に match | root を採用 |
+| HOME 自身に match | HOME を採用 |
+| HOME 自身に不一致 | fallback |
+| HOME の子に不一致、HOME より上だけに match | HOME で止まり開始へ fallback |
+
+修正前にも suite 全体を hang させず、有限時間で失敗すること。
+
+---
+
+# PR 2 のテスト要件
+
+PR 2 は PR 1 未マージの最新 main から独立 branch にする予定。
+
+そのため、修正前・部分 regression 時にも fixture 外へ無制限に探索しないように設計する。
+
+単に「上位に `.git/` directory を置く」だけでは、directory marker 検出が壊れた実装では止まらない。
+
+修正前でも確実に認識できる **file 型 sentinel** や function callback を上位に用意する。
+
+また開始 directory と期待 root は必ず分ける。
+
+例えば `project/.git/` の検出試験は:
+
+```text
+fixture/
+├── .git          ; 修正前も検出できる停止用 file
+└── project/
+    ├── .git/     ; 本当に検証したい marker
+    └── src/      ; start
+```
+
+期待:
+
+```text
+project/
+```
+
+修正前:
+
+```text
+fixture/
+```
+
+となり、fallback と marker 検出を混同しない。
+
+必須ケース:
+
+| 条件 | 期待 |
+|---|---|
+| project/.git/、start project/src/ | project/ |
+| project/.git file、start project/src/ | project/ |
+| child/.gitconfig、上位に正しい停止 marker | child を誤認せず上位 |
+| child/package.json.bak、上位 package.json | child を誤認せず上位 |
+| project/.lsp/config.edn、start project/src/ | project/ |
+| NIL patterns、project/.git/、start project/src/ | project/ |
+| 複数 ancestor に marker | 最も近い candidate |
+| string + function 混在 | どちらか成立した最も近い candidate |
+| callback に通常 file 名と directory の空文字 | 既存引数契約 |
+| Lisp v2 相当、sample.asd | 移行後も project/ |
+| 同じ candidate に複数 marker | candidate 自体を返す |
+
+特に default `.git` テストでは:
+
+- start を project root 自身にしない
+- 期待値と fallback を同じにしない
+- 上位に修正前でも止まれる sentinel を置く
+
+こと。
+
+---
+
+# Lisp v2 の移行テスト
+
+PR 2 の string semantics 変更を入れる場合、`.asd` 互換を必須テストにする。
+
+fixture:
+
+```text
+fixture/
+└── project/
+    ├── sample.asd
+    └── src/
+```
+
+Lisp v2 の移行後 pattern で `src/` から探索し、`project/` を返すこと。
+
+PR 2 では:
+
+- default `.git` の変更を戻すと該当 test が失敗する
+- Lisp v2 migration を外すと `.asd` test が失敗する
+
+ことも確認する。
+
+---
+
+# LSP 接続確認
+
+core unit test に加え、必要なら `compute-root-uri` を実 buffer + spec で 1 ケース確認する。
+
+既存 mock workspace helper は root URI を固定して workspace を作るため、root finder の計算を自動的にはカバーしない。
+
+LuaLS を unit test に持ち込む必要はない。
+
+実機受け入れ確認では **新しい Lem プロセス**を使う。
+
+確認対象:
+
+- HOME 内の普通の Git repository
+- HOME 外
+- marker なし
+- LuaLS initialize の rootUri
+- diagnostics
+- completion
+
+JSON-RPC vector params 問題とは切り分けて記録する。
+
+---
+
+# PR 分割
+
+## PR 1 — filesystem root 終端
+
+候補 branch:
+
+```text
+fix/language-mode-root-recursion
+```
 
 目的:
 
-> LSP root marker を、候補 directory からの path として正確に判定する。
+> HOME に到達しない LSP root 探索でも filesystem root で正常終了できるようにする。
 
-含める変更:
-
-- string pattern を path existence で判定
-- `.git/` directory 対応
-- `.git` file 対応維持
-- `.gitconfig` 等への誤一致防止
-- exact file marker の誤一致防止
-- nested relative path marker 対応
-- default `.git` lambda の string marker 化
-- regression tests
+## PR 2 — string marker の正確な relative path 判定
 
 候補 branch:
 
@@ -1136,35 +879,39 @@ fix/language-mode-root-recursion
 fix/language-mode-root-patterns
 ```
 
-function pattern の callback semantics はできるだけ維持する。
+含める:
+
+- string marker の relative path semantics
+- `.git/` / `.git file`
+- substring 誤認防止
+- nested relative path
+- default `.git`
+- function callback 引数契約維持
+- 不要な繰り返し directory 列挙の回避
+- Lisp v2 `.asd` 利用者の移行
+- docstring / 契約の明文化
+- regression tests
+
+含めない:
+
+- glob support
+- URI encoding 全般
+- canonicalize / truename 全面導入
+- project finder 統合
+- multi-project workspace
+- remote LSP / TRAMP の全面対応
+
+両 PR は最新 `main` から独立して作る。
+
+PR 2 の test fixture 自体を有限終了にすれば、PR 1 branch から派生させる必要はない。
 
 ---
 
-# PR 同士の依存について
+# 概念コード
 
-Lem 本体の運用方針では PR branch 同士を不用意に依存させず、最新 `main` から独立して作る。
+以下は方向性説明用であり、そのまま実装する最終コードではない。
 
-PR 2 の誤一致テストを「上位に本物 marker を置いて必ず有限範囲で終了する」構成にすれば、PR 1 の root recursion fix がなくてもテスト可能。
-
-したがって原則として、
-
-```text
-main
-├── fix/language-mode-root-recursion
-└── fix/language-mode-root-patterns
-```
-
-と独立させられる。
-
-upstream で片方が先に merge された場合は、必要に応じてもう一方を最新 main へ rebase / 作り直す。
-
-日常利用では `local` に両方を統合する。
-
----
-
-# 修正案の概念コード
-
-以下は設計説明用であり、まだ実装していない。
+特に marker validation、function callback の列挙順、I/O 回数は実装前に詰める。
 
 ```lisp
 (defun filesystem-root-p (directory)
@@ -1172,223 +919,110 @@ upstream で片方が先に merge された場合は、必要に応じてもう�
    directory
    (uiop:pathname-parent-directory-pathname directory)))
 
-(defun match-pattern-p (pattern directory)
-  (etypecase pattern
-    (function
-     (loop :for pathname :in (list-directory directory)
-           :thereis (funcall pattern (file-namestring pathname))))
-    (string
-     (uiop:probe-file*
-      (uiop:subpathname directory pattern)))))
-
-(defun find-root-directory-1 (directory patterns)
-  (labels ((matchp (directory)
-             (dolist (pattern patterns)
-               (when (match-pattern-p pattern directory)
-                 (return-from matchp t))))
-           (recursive (directory)
-             (cond ((matchp directory)
-                    directory)
-                   ((uiop:pathname-equal directory
-                                         (user-homedir-pathname))
-                    nil)
-                   ((filesystem-root-p directory)
-                    nil)
-                   (t
-                    (recursive
-                     (uiop:pathname-parent-directory-pathname
-                      directory))))))
-    (recursive directory)))
+(defun string-root-marker-p (directory pattern)
+  ;; 実装時には pattern の契約検証を入れる。
+  (uiop:probe-file*
+   (uiop:subpathname directory pattern)))
 
 (defun find-root-directory (directory root-uri-patterns)
-  (or (find-root-directory-1
-       directory
-       (or root-uri-patterns '(".git")))
-      directory))
+  ;; default は function ではなく string ".git" へ移行する。
+  ...)
 ```
 
-このコードをそのまま採用することはまだ決定していない。
+function pattern は従来どおり直下 entry の `file-namestring` を受け取る。
 
-AI レビューでは特に次を確認したい。
-
-- `uiop:subpathname` を language spec の marker semantics に使うことの妥当性
-- Windows pathname / separator への影響
-- symlink を含む project path への影響
-- `probe-file*` の portability
-- function pattern 互換性
-- HOME stop を残すことの妥当性
-- match を stop condition より先に行う現行順序を維持すべきか
-- recursive implementation を loop に変える価値
-- root marker の存在確認で permission error 等が起きる可能性と扱い
-- LSP workspace sharing / root URI cache への副作用
-- tests の配置
-- 2 PR 分割が妥当か
-- `src/commands/project.lisp` の root finder と将来的に共有すべきか
+ただし candidate ごとの directory 列挙は可能な限り 1 回にする。
 
 ---
 
-# 既存挙動への影響評価
+# 既存挙動の扱い
 
-## 変わるべき挙動
+## 意図的に変える
 
 ```text
 .gitconfig
-```
-
-しかない directory は `".git"` root と判定されなくなる。
-
-```text
 package.json.bak
 ```
 
-しかない directory は `"package.json"` root と判定されなくなる。
+のような「marker 名を含むだけ」の path を marker として扱わなくする。
 
-これは bug fix と考える。
+普通の `.git/` directory を正しく扱う。
 
-## 維持したい挙動
+nested path marker を扱う。
 
-marker が正しく存在する最も近い ancestor を返す。
+HOME に到達しない探索でも filesystem root で終わる。
 
-marker がどこにもなければ最終的に探索開始 directory を返す。
+## 維持する
 
-function pattern を使う場合、callback へ entry の `file-namestring` を渡す既存 semantics は可能な限り維持する。
+最も近い matching ancestor を返す。
 
-`.git` が file の repository/worktree も root として扱う。
+HOME stop を残す。
 
-## 新しく正しく動くべき挙動
+match → stop の順序を残す。
 
-普通の `.git/` directory を root marker として扱う。
+marker が見つからなければ開始 directory へ fallback。
 
-nested relative path marker を扱う。
+function callback へ直下 entry の `file-namestring` を渡す。
 
-HOME 外でも探索が終了する。
+`.git` が file のケースも root marker とする。
 
----
-
-# 未確定・レビューしてほしい点
-
-## 1. HOME で探索を止める仕様そのもの
-
-現行実装は HOME を探索上限にしている。
-
-今回の無限再帰修正では、この仕様自体は変更せず filesystem root stop を追加する案にしている。
-
-しかし例えば、
-
-```text
-~/work/project/src/
-```
-
-から上へ探す場合に HOME より上を検索しないのは意図的仕様なのか、歴史的実装なのかは未確認。
-
-今回の PR 1 では scope を広げないため残すのが安全と考えている。
-
-## 2. string pattern の正式な契約
-
-現行 API 名は `root-uri-patterns` であり、docstring に string の意味が明確に定義されていない。
-
-今回の案では string を relative path と定義する。
-
-これは現行 spec 群とよく整合するが、upstream が本来 substring / glob semantics を意図していた可能性は履歴レビュー対象。
-
-## 3. wildcard
-
-過去または無効コードに wildcard 的な marker が存在する可能性は別途確認対象。
-
-今回の案の `subpathname + probe-file*` は glob matcher ではない。
-
-現行有効 spec の修正に wildcard が必要でないなら、曖昧な glob support を同 PR に追加しない方がよい。
-
-## 4. function pattern
-
-repository 外部の user config / extension が internal function `match-pattern-p` を直接呼ぶ可能性はゼロではないが、package export はされていない。
-
-一方、`root-uri-patterns` に function を設定すること自体は型として許されている。
-
-callback argument の互換性は維持する方針が安全。
+Lisp v2 の `.asd` root 探索を移行後も成立させる。
 
 ---
 
-# 調査結果から見た優先度
+# 未検証・断定しない事項
 
-## 不具合 1
+以下はまだ Lem 本体で検証していない。
 
-発生条件:
+- 全 Rove suite
+- CI 相当
+- 修正後の macOS 実機
+- Windows pathname
+- symlink を含む project
+- permission error
+- virtual filesystem / TRAMP
+- 実際にロードされている UIOP version
+- LuaLS の修正後 initialize
+- workspace 再利用問題そのものの修正
 
-- HOME 外
-- ancestor に root marker がない
+`probe-file*` の NIL を「確実に不存在」とは表現しない。
 
-頻度は環境依存。
-
-`/tmp`, `/var`, `/opt`, external volume 等で踏み得る。
-
-影響:
-
-- Lem が固まる
-
-発生頻度より影響が大きい。
-
-## 不具合 2
-
-発生条件:
-
-- `.git` marker を使う language
-- 普通の Git repository
-- または marker 名を部分文字列として含む別 entry が存在する
-
-日常利用で踏みやすい。
-
-影響:
-
-- LSP root URI が誤る
-- workspace の範囲が広がる/狭まる
-- language server が project config を正しく認識しない可能性
-- diagnostics / completion / indexing 等の動作が不自然になる可能性
-
-Lua では実際に HOME が root URI になった。
-
----
-
-# 今回確定した事実の一覧
-
-- Lua spec は `(".git")` を root marker にしている
-- 通常の `git init` は `.git/` directory を作る
-- Lem の `list-directory` はその `.git/` を pathname として返す
-- その pathname は `uiop:directory-pathname-p => T`
-- その pathname の `file-namestring => ""`
-- よって現行 `search ".git"` 判定では `.git/` 自体を検出できない
-- 実際に通常 Git repository で `find-root-directory` は project root ではなく HOME を返した
-- HOME には `.gitconfig` と `.gitconfig.local` が存在した
-- それらは現行 `search ".git"` に一致した
-- よって HOME 誤認の経路は実測で確定した
-- `/tmp/` の親は `/`
-- `/` の親は `/` 自身
-- `uiop:pathname-equal` でも root とその parent は等しい
-- 現行再帰には filesystem root stop がない
-- したがって HOME 外で marker が見つからない探索は終了できない
-- Lem 内には parent == self で root を判定する既存コードがある
-- Clojure spec には `".lsp/config.edn"` という nested relative path marker がある
-- 現行 file-namestring + search 方式ではこれを正しく表現できない
-- UIOP `subpathname` は base pathname と relative subpath を扱える
-- UIOP `probe-file*` は file / directory の存在確認に使える
+filesystem root stop を入れても、filesystem I/O error や symlink 等を含む全 path で必ず安全になるとは断定しない。
 
 ---
 
 # 次の作業
 
-AI レビュー後、指摘を反映してから実装へ進む。
-
-想定順:
-
-1. この調査・修正案をレビュー
-2. 必要なら設計修正
-3. PR 1 用 regression test を先に作成
+1. upstream 最新を fork `main` へ取り込む
+2. PR 1 branch を最新 `main` から作る
+3. PR 1 の公開関数を通る、停止保証付き regression test を先に作る
 4. PR 1 実装
-5. テスト
-6. PR 2 用 regression tests を作成
-7. PR 2 実装
-8. 全体テスト
-9. 実機 Lua LSP で root URI / diagnostics / completion を再確認
-10. upstream PR は依頼・判断後に行う
+5. Rove / 全体 test
+6. PR 2 branch を最新 `main` から独立して作る
+7. string marker の契約と validation を実装前に最終決定
+8. PR 2 の有限終了する regression tests を作る
+9. Lisp v2 `.asd` を移行
+10. PR 2 実装
+11. 全体 test
+12. 新しい Lem プロセスで LuaLS rootUri / diagnostics / completion を確認
+13. upstream PR は依頼・判断後に行う
 
-このノート作成時点では 3 以降は未着手。
+---
+
+# レビュー反映で訂正した主な点
+
+初版から以下を訂正した。
+
+- 「現行に `.asd` 利用者はない」という扱いを撤回
+- `lem-lisp-mode/v2` の `.asd` spec を互換性対象として追加
+- upstream と fork の SHA がレビュー時点では同一ではないことを明記
+- HOME 外の問題を「常に無限再帰」と過度に一般化しないよう修正
+- Typst の pattern 順序を ancestor 優先と誤解し得る表現を修正
+- helper 単体ではなく公開 `find-root-directory` を通す停止テストを要求
+- PR 2 の各 test が修正前でも有限終了する fixture を要求
+- start directory と expected root を分け、fallback で偽陽性にならないよう修正
+- workspace 再利用により root URI が再計算されない場合があることを追加
+- function callback の「完全互換」ではなく引数契約と predicate semantics の維持に限定
+- `probe-file*` の NIL と `subpathname` error の境界を追加
+- string marker の空文字、`.`、`..`、absolute path の契約を未定のままにしない方針へ変更
+- virtual filesystem / TRAMP は local filesystem 修正とは別 scope と明記
