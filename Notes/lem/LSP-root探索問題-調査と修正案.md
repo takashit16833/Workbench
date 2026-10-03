@@ -1292,6 +1292,45 @@ filesystem root stop を入れても、filesystem I/O error や symlink 等を�
 
 ---
 
+# local への統合
+
+upstream review を待つ間も日常利用できるよう、PR 1 / PR 2 の両 branch を `local` へ統合した。
+
+merge commits:
+
+```text
+5a471e3b Merge branch 'fix/language-mode-root-recursion' into local
+ba6167e1 Merge branch 'fix/language-mode-root-patterns' into local
+```
+
+両 PR は引き続き独立したままで、PR branch 同士は依存していない。未マージ修正を組み合わせて使う責務は `local` のみに持たせている。
+
+`tests/language-mode.lisp` は両 PR が新規追加していたため add/add conflict になったが、PR 2 側をベースに PR 1 の filesystem-root 用 helper と 2 test を統合して解消した。
+
+統合後に `lem-tests` を再実行し:
+
+```text
+✓ 48 tests completed
+
+Summary:
+  All 48 tests passed.
+```
+
+を確認した。
+
+現在の運用状態は:
+
+```text
+main   = upstream 追従用
+PR 1   = upstream #2334 review 待ち
+PR 2   = upstream #2335 review 待ち
+local  = PR 1 + PR 2 を統合した日常利用 branch
+```
+
+upstream への追加操作は不要。レビューコメントや merge が発生した時点で各 PR branch / `main` / `local` を更新する。
+
+---
+
 # 次の作業
 
 PR 1 / PR 2 とも実装・実機確認・PR 作成まで完了。
