@@ -205,6 +205,22 @@ Clojure にはさらに、
 
 今の「そのフォルダ直下の名前を1個ずつ調べる」方式では、こういう目印はうまく扱えない。
 
+## ただし `.asd` は既存互換として残す必要がある
+
+追加で読み込める `lem-lisp-mode/v2` では、
+
+```lisp
+:root-uri-patterns '(".asd")
+```
+
+を使っている。
+
+現在は部分一致なので `sample.asd` を見つけられる。
+
+string marker を全部「具体的な相対 path」に変えると、`project/.asd` という名前しか探さなくなって、この既存機能を壊す。
+
+そのため PR 2 では、`.asd` のような「ファイル名の条件」は function pattern へ移行し、Lisp v2 の動作を維持する必要がある。
+
 ---
 
 ## もう1つの問題: `/tmp` などで Lem が固まる
@@ -277,9 +293,9 @@ T
 / の親は /
 ```
 
-なので、何も止めなければ永遠に同じ場所を調べ続ける。
+なので、HOME に届かず、途中に marker もなく、別のエラーも起きない経路では、通常の方法では探索を終了できない。
 
-以前 `/tmp/lem-lua-test` を開いたときに Lem が固まった現象とも一致する。
+以前 `/tmp/lem-lua-test` を開いたときに Lem が固まった現象とも一致する。ただし当時 debugger/backtrace で root finder 内の停止を直接確認したわけではないため、このログだけで停止箇所を証明したとは扱わない。
 
 ---
 
@@ -423,6 +439,19 @@ package.json.bak
 
 は間違って一致しない。
 
+ただし string marker のルールは明文化する必要がある。少なくとも、
+
+```text
+空文字
+.
+../foo
+absolute path
+```
+
+のように candidate 自身や外側を指す指定は root marker として許さない方向がよい。glob や正規表現にもせず、「candidate 配下の具体的な相対 path」とする。
+
+また `probe-file*` が NIL を返した場合は「確実に存在しない」とまでは言えず、存在確認中のエラーを内部で吸収した場合もあり得る。この点も実装時の契約として意識する。
+
 ---
 
 # PR は2つに分ける予定
@@ -463,10 +492,62 @@ fix/language-mode-root-patterns
 - `.gitconfig` に間違って一致する
 - `package.json.bak` に間違って一致する
 - `.lsp/config.edn` のような指定が使えない
+- default の `.git` 判定も同じ方式へ移す
+- Lisp v2 の `.asd` 利用を function pattern へ移行する
 
 あたりをまとめて直す。
 
 2つを別 branch にすることで、片方の修正をもう片方に依存させない。
+
+---
+
+# テストするときの注意
+
+今回のレビューで特に重要だった点がある。
+
+まず、root marker の検出テストは **開始場所と期待 root を同じにしない**。
+
+たとえば、
+
+```text
+project/
+├── .git/
+└── src/
+```
+
+なら `src/` から開始して `project/` が返ることを見る。
+
+project 自身から開始すると、marker を見つけられなくても fallback で project が返り、壊れた実装でもテストが通る可能性がある。
+
+また PR 2 は PR 1 と独立した branch にするので、修正前でもテストが `/` まで行って固まらない fixture にする。上位に修正前でも確実に見つかる file marker や sentinel を置いて、必ず有限時間で失敗させる。
+
+PR 1 の停止テストも helper だけではなく、公開の、
+
+```lisp
+lem/language-mode:find-root-directory
+```
+
+を実際に呼ぶ。修正前に suite 全体が固まらないよう、timeout や訪問回数制限などで上限を付ける。
+
+---
+
+# 実機 LSP 確認の注意
+
+Lem は同じ language-id の既存 workspace を再利用する。
+
+そのため root finder を修正したあとに既存の Lua workspace をそのまま見ても、古い root URI が残っている可能性がある。
+
+修正確認は、
+
+```text
+新しい Lem プロセスを起動
+↓
+その言語のファイルを最初に開く
+```
+
+形で行う。
+
+workspace の複数 project 対応自体は別問題なので、今回の PR には混ぜない。
 
 ---
 
@@ -494,8 +575,8 @@ HOME の .gitconfig
 ではなく、
 
 ```text
-原因は確認できたので
-修正設計をレビューしてから実装する段階
+原因は確認できており
+レビュー結果を反映した設計からテスト・実装へ進む段階
 ```
 
 まで来ている。
