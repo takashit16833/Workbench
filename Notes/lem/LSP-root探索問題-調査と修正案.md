@@ -15,7 +15,7 @@ Lem の LSP root 探索で確認された不具合について、現行コード
 - テスト要件
 - 未検証事項
 
-このノートの初回改訂時点では Lem 本体への修正は未着手だったが、その後 PR 1（filesystem root で探索を停止する修正）を実装・push・PR 作成まで完了した。PR 2 は未着手。
+このノートの初回改訂時点では Lem 本体への修正は未着手だったが、その後 PR 1（filesystem root で探索を停止する修正）と PR 2（string root marker の判定修正）の両方を実装・push・実機確認・PR 作成まで完了した。現在は upstream review 待ち。
 
 ---
 
@@ -622,6 +622,193 @@ lem-sdl2/tests
 
 # 修正案 2: string marker の契約を「具体的な relative path」にする
 
+## PR 2 実装状況
+
+実装・push・実機確認・PR 作成まで完了。
+
+branch:
+
+```text
+fix/language-mode-root-patterns
+```
+
+commit:
+
+```text
+f4a946cdaecc6f3cbe95a66fa836220e8b426e6b
+fix: match language root strings as relative paths
+```
+
+upstream PR:
+
+```text
+https://github.com/lem-project/lem/pull/2335
+```
+
+PR 2 は PR 1 branch から派生させず、同じ最新 `main`
+`da26ca8443a17b9e681f191491c453dbf24e3dd9`
+から独立して作成した。PR 1（#2334）への依存はない。
+
+変更は 1 commit / 6 files。
+
+```text
+src/ext/language-mode.lisp
+tests/language-mode.lisp
+lem-tests.asd
+extensions/lisp-mode/internal-package.lisp
+extensions/lisp-mode/lisp-mode.lisp
+extensions/lisp-mode/v2/lsp-config.lisp
+```
+
+### 実装内容
+
+string pattern は direct entry の `file-namestring` に対する substring 検索ではなく、candidate directory 配下の具体的な relative path として判定するよう変更した。
+
+概略:
+
+```lisp
+(uiop:probe-file*
+ (uiop:subpathname directory pattern))
+```
+
+これにより以下を扱える。
+
+```text
+.git
+.git/
+package.json
+.lsp/config.edn
+```
+
+一方で、次のような substring 誤一致は発生しない。
+
+```text
+.gitconfig        ; ".git" では match しない
+package.json.bak ; "package.json" では match しない
+```
+
+default marker も従来の function callback から string `".git"` へ移し、通常の `.git/` directory を検出できるようにした。
+
+function pattern は既存契約を維持し、candidate directory の直下 entry の `file-namestring` を callback へ渡す。
+
+string marker の契約外入力は明示的に拒否する。
+
+```text
+空文字
+.
+.. を含む path component
+absolute path
+* / ? を含む wildcard pattern
+```
+
+trailing slash を伴う directory marker（例: `".git/"`）は許可する。
+
+### Lisp `.asd` 互換
+
+string marker の semantics を literal relative path に変更すると、従来の:
+
+```lisp
+:root-uri-patterns '(".asd")
+```
+
+が `sample.asd` を見つけられなくなる。
+
+そのため旧 `search ".asd"` semantics を明示的な predicate:
+
+```lisp
+lem-lisp-mode:asdf-root-file-p
+```
+
+へ移し、通常 Lisp mode と `lem-lisp-mode/v2` の両方で利用するよう変更した。
+
+既存 semantics を維持するため、`sample.asd.bak` も従来どおり match する。この suffix 厳格化は今回の scope には含めていない。
+
+### 自動テスト
+
+`tests/language-mode.lisp` を追加し、`lem-tests.asd` に登録した。
+
+ローカル実行結果:
+
+```text
+✓ 48 tests completed
+
+Summary:
+  All 48 tests passed.
+```
+
+末尾に `frontends/fake-interface/fake-interface.lisp` の既存 STYLE-WARNING:
+
+```text
+undefined function: LEM-CORE:SCREEN-VIEW
+undefined function: LEM-CORE:WINDOW-SCREEN
+```
+
+が出るが、test result は `All 48 tests passed.` であり、今回の変更ファイルとも無関係。
+
+PR 2 の regression test では主に以下を確認している。
+
+- `.git/` directory
+- `.git` file
+- `.gitconfig` の誤一致防止
+- `package.json.bak` の誤一致防止
+- `.lsp/config.edn` nested marker
+- default `.git`
+- nearest ancestor
+- same candidate の複数 marker
+- fallback 維持
+- directory string input
+- string + function pattern 混在
+- function callback の `file-namestring` 契約
+- invalid string pattern rejection
+- Lisp `.asd` 互換
+
+PR 2 は PR 1 を含まないため、test fixture は HOME 配下や上位 sentinel を利用し、修正前コードでも無制限に filesystem root へ進まない構成にした。
+
+### REPL 実機確認
+
+macOS 上の Lem REPL で以下を確認した。
+
+#### 普通の `.git/` directory
+
+```lisp
+#P"/Users/suzukitakashi/lem-root-pattern-test/git-project/"
+```
+
+#### `.gitconfig` の誤一致防止
+
+child directory に `.gitconfig`、上位に正しい `.git` marker を置いた状態で:
+
+```lisp
+#P"/Users/suzukitakashi/lem-root-pattern-test/"
+```
+
+を返した。
+
+#### nested `.lsp/config.edn`
+
+```lisp
+#P"/Users/suzukitakashi/lem-root-pattern-test/nested/"
+```
+
+を返した。
+
+### LuaLS 実機確認
+
+新しい Lem プロセスで通常の `git init` repository を開き、実際の LuaLS workspace root URI を確認した。
+
+```lisp
+(lem-lsp-mode::workspace-root-uri
+ (lem-lsp-mode::find-workspace "lua"))
+```
+
+結果:
+
+```lisp
+"file:///Users/suzukitakashi/lem-lua-lsp-test/"
+```
+
+修正前に発生していた HOME 誤認ではなく、Git repository 自身が LSP root として選ばれることを確認した。
+
 ## 正式な方向性
 
 string pattern は:
@@ -1087,18 +1274,17 @@ Lisp v2 の `.asd` root 探索を移行後も成立させる。
 
 # 未検証・断定しない事項
 
-以下はまだ Lem 本体で検証していない。
+以下はまだ未検証、または今回の scope 外。
 
-- 全 Rove suite
-- CI 相当
-- 修正後の macOS 実機
+- CI 相当の全環境
 - Windows pathname
 - symlink を含む project
 - permission error
 - virtual filesystem / TRAMP
-- 実際にロードされている UIOP version
-- LuaLS の修正後 initialize
+- 実際にロードされている全環境の UIOP version 差異
 - workspace 再利用問題そのものの修正
+
+一方、macOS 実機では PR 1 / PR 2 の root finder、PR 2 の `.git/`・誤一致防止・nested marker、および実 LuaLS の root URI まで確認済み。
 
 `probe-file*` の NIL を「確実に不存在」とは表現しない。
 
@@ -1108,20 +1294,18 @@ filesystem root stop を入れても、filesystem I/O error や symlink 等を�
 
 # 次の作業
 
-PR 1 は実装・実機確認・PR 作成まで完了。
+PR 1 / PR 2 とも実装・実機確認・PR 作成まで完了。
 
-次は PR 2 を、PR 1 branch に依存させず最新 `main` から独立して進める。
+```text
+PR 1: https://github.com/lem-project/lem/pull/2334
+PR 2: https://github.com/lem-project/lem/pull/2335
+```
 
-1. PR 1 の upstream review / merge を待つ
-2. PR 2 開始時点の upstream 最新を確認
-3. `fix/language-mode-root-patterns` を最新 `main` から作る
-4. string marker の契約と validation を最終決定
-5. 修正前でも有限終了する regression tests を作る
-6. Lisp v2 `.asd` 利用者を function pattern へ移行
-7. string marker の relative path 判定を実装
-8. core test / 既存 test を確認
-9. 新しい Lem プロセスで LuaLS rootUri / diagnostics / completion を確認
-10. 問題なければ PR 2 を upstream へ提出
+現在は両 PR の upstream review / merge 待ち。
+
+merge 後は fork の `main` を upstream `main` へ追従させ、必要に応じて `local` を更新する。
+
+追加の修正要求がレビューで出た場合は、それぞれの PR branch 上で scope を広げすぎないよう対応する。
 
 ---
 
