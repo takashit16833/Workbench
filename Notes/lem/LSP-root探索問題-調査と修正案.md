@@ -15,7 +15,7 @@ Lem の LSP root 探索で確認された不具合について、現行コード
 - テスト要件
 - 未検証事項
 
-このノートの改訂時点では、Lem 本体への修正、commit、push、PR はまだ行っていない。
+このノートの初回改訂時点では Lem 本体への修正は未着手だったが、その後 PR 1（filesystem root で探索を停止する修正）を実装・push・PR 作成まで完了した。PR 2 は未着手。
 
 ---
 
@@ -497,11 +497,126 @@ marker が見つからず `find-root-directory-1` が NIL なら、外側の `fi
 - workspace 管理
 - project finder 統合
 
-候補 branch:
+branch:
 
 ```text
 fix/language-mode-root-recursion
 ```
+
+## PR 1 実装状況
+
+実装・push・PR 作成まで完了。
+
+branch:
+
+```text
+fix/language-mode-root-recursion
+```
+
+commit:
+
+```text
+9ccb930426463f011365c09cf0b166dbfb1715e9
+fix: stop language-mode root search at filesystem root
+```
+
+upstream PR:
+
+```text
+https://github.com/lem-project/lem/pull/2334
+```
+
+変更は 1 commit / 3 files。
+
+```text
+src/ext/language-mode.lisp
+tests/language-mode.lisp
+lem-tests.asd
+```
+
+### 実装内容
+
+`src/ext/language-mode.lisp` に filesystem root 判定を追加した。
+
+```lisp
+(defun filesystem-root-p (directory)
+  (uiop:pathname-equal
+   directory
+   (uiop:pathname-parent-directory-pathname directory)))
+```
+
+`find-root-directory-1` の停止条件は次の順序。
+
+```text
+1. marker match
+2. HOME stop
+3. filesystem root stop
+4. parent へ再帰
+```
+
+既存の match-first、HOME stop、pattern semantics、fallback は変更していない。
+
+### 回帰テスト
+
+`tests/language-mode.lisp` を追加し、`lem-tests.asd` に登録した。
+
+テストは公開 API:
+
+```lisp
+lem/language-mode:find-root-directory
+```
+
+を直接通す。
+
+旧実装でも test suite 自体が永久に固まらないよう、filesystem root の entry 数を利用して「2回目の root 走査」に入った場合だけ callback が true になる構成にした。
+
+これにより修正前は有限時間で失敗し、修正後は root を 1 回だけ走査して終了する。
+
+また、filesystem root 自身に marker がある場合は stop より marker 判定が優先されることもテストしている。
+
+### 実機確認
+
+macOS 上の Lem REPL で確認。
+
+```lisp
+(lem/language-mode:find-root-directory
+ #P"/tmp/"
+ (list (lambda (name)
+         (declare (ignore name))
+         nil)))
+```
+
+結果:
+
+```lisp
+#P"/tmp/"
+```
+
+修正前に問題になっていた HOME 外・marker なしの探索が、filesystem root で正常終了して開始 directory へ fallback することを確認した。
+
+### テスト実行状況
+
+`make test` は以下の順で進む。
+
+```text
+lem-tests
+lem-vi-mode
+lem-transient
+lem-sdl2/tests
+```
+
+ローカル実行では `lem-transient` まで成功し、その後の `lem-sdl2/tests` 付近で従来から停止するため、全 `make test` の完走は確認できていない。
+
+今回追加した regression test を含む `lem-tests` は、それより前段で実行されている。
+
+したがって PR 本文では、
+
+- 今回の regression test / core test は通過
+- full `make test` は SDL2 後段の別件で完走未確認
+
+を分けて記載した。
+
+この SDL2 停止問題は今回の PR には含めない。
 
 ---
 
@@ -993,19 +1108,20 @@ filesystem root stop を入れても、filesystem I/O error や symlink 等を�
 
 # 次の作業
 
-1. upstream 最新を fork `main` へ取り込む
-2. PR 1 branch を最新 `main` から作る
-3. PR 1 の公開関数を通る、停止保証付き regression test を先に作る
-4. PR 1 実装
-5. Rove / 全体 test
-6. PR 2 branch を最新 `main` から独立して作る
-7. string marker の契約と validation を実装前に最終決定
-8. PR 2 の有限終了する regression tests を作る
-9. Lisp v2 `.asd` を移行
-10. PR 2 実装
-11. 全体 test
-12. 新しい Lem プロセスで LuaLS rootUri / diagnostics / completion を確認
-13. upstream PR は依頼・判断後に行う
+PR 1 は実装・実機確認・PR 作成まで完了。
+
+次は PR 2 を、PR 1 branch に依存させず最新 `main` から独立して進める。
+
+1. PR 1 の upstream review / merge を待つ
+2. PR 2 開始時点の upstream 最新を確認
+3. `fix/language-mode-root-patterns` を最新 `main` から作る
+4. string marker の契約と validation を最終決定
+5. 修正前でも有限終了する regression tests を作る
+6. Lisp v2 `.asd` 利用者を function pattern へ移行
+7. string marker の relative path 判定を実装
+8. core test / 既存 test を確認
+9. 新しい Lem プロセスで LuaLS rootUri / diagnostics / completion を確認
+10. 問題なければ PR 2 を upstream へ提出
 
 ---
 
