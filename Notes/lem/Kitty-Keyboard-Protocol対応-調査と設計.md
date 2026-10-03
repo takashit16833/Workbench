@@ -1,244 +1,246 @@
-# Lem ncurses Kitty Keyboard Protocol 対応 - 調査と設計案
+# Lem ncurses Kitty Keyboard Protocol 対応 - 調査と設計
 
-## このノートの目的
+## このノートの位置づけ
 
-Lem の ncurses フロントエンドへ Kitty Keyboard Protocol（以下 KKP）対応を追加するにあたり、仕様・現行コード・実機観測を整理し、実装案をレビューできる状態にする。
+Lem の ncurses フロントエンドへ Kitty Keyboard Protocol（以下 KKP）対応を追加するための調査・設計ノート。
 
-このノートは「確定済みの仕様書」ではない。特に設計判断については、別の AI や人間が前提からレビューできるよう、採用案だけでなく代替案・リスク・未確定点も残す。
+2026-10-03 に一度作成した設計案を、Lem 現行コードと KKP / ncurses 仕様を使ったレビュー結果を踏まえて改訂した。
 
-今回の重要な前提は次のとおり。
+このノートを、今後の実装と追加レビューの基準にする。
 
-- KKP 対応端末だけを前提にして既存入力処理を置き換えない。
-- KKP を有効化できない環境では、現在の Lem ncurses の入力処理を維持する。
-- 一方で CSI-u 形式そのものは KKP の progressive enhancement が無効でも送られる場合があるため、「KKP が有効なときだけ CSI-u を解析する」という単純な分岐にも依存しない。
-- 端末や multiplexer の名前を決め打ちせず、可能ならプロトコルの問い合わせで能力を確認する。
-- 実装前に parser と negotiation をテスト可能な形へ分離する。
+設計上の判断と、仕様・コードから確認できる事実はできるだけ分けて書く。
+
+## 結論
+
+初回実装では次の方針を採る。
+
+1. **KKP parser を先に実装し、現在の ncurses 入力経路へ統合する。**
+2. **parser が flag 1 で変化する入力を安全に扱える状態になるまで、実端末へ `CSI > 1 u` を送らない。**
+3. **CSI-u の認識は KKP 有効状態に依存させない。** legacy mode でも CSI-u が届く場合があるため。
+4. **初回は KKP support detection / query negotiation を実装しない。**
+5. **KKP の有効化は Lem ncurses の明示設定で opt-in にする。**
+6. 設定が ON のとき、ncurses screen 準備後に `CSI > 1 u` を送り、終了前に `CSI < u` を送る。
+7. KKP 非使用時は、現在成功している legacy / ncurses 入力を壊さない。
+8. `wgetch` は生バイトだけでなく ncurses の `KEY_*` 相当値も返すため、raw byte parser として作らない。
+9. Unicode codepoint と ncurses key number を混同しない。
+10. `C-]` の abort、mouse、resize、UTF-8、既存修飾キーを回帰対象にする。
+
+初回の中心は **「KKP を検出すること」ではなく、「KKP flag 1 を安全に受けられる ncurses input path を作ること」**。
 
 ## 調査時点
 
 - 調査日: 2026-10-03
 - Lem fork: `takashit16833/lem`
 - 調査した `main`: `27572e42923a99d1dee0be8b991e0bfd2113b24d`
-- 対象フロントエンド: `frontends/ncurses`
+- 対象: `frontends/ncurses`
 
 主に確認したファイル:
 
+- `frontends/ncurses/config.lisp`
 - `frontends/ncurses/input.lisp`
 - `frontends/ncurses/key.lisp`
 - `frontends/ncurses/mainloop.lisp`
 - `frontends/ncurses/term.lisp`
 - `frontends/ncurses/lem-ncurses.asd`
+- `frontends/ncurses/ncurses.lisp`
 - `src/key.lisp`
+- `src/input.lisp`
+- `src/keymap.lisp`
+- `src/event-queue.lisp`
+- `contrib/mouse-sgr1006/main.lisp`
 
-## 参照仕様・参考実装
+## 主な参照資料
 
 ### KKP 公式仕様
 
 https://sw.kovidgoyal.net/kitty/keyboard-protocol/
 
-今回特に重要な箇所:
+主に確認した箇所:
 
 - Quickstart
 - Progressive enhancement
 - Detection of support for this protocol
-- Modifiers
 - Legacy key event encoding
+- Modifiers
 - Functional key definitions
 
 ### WezTerm
 
 https://wezterm.org/config/lua/config/enable_kitty_keyboard.html
 
-`enable_kitty_keyboard = true` のとき、WezTerm はアプリケーションから送られた KKP の keyboard encoding 変更要求を処理する。
-
-### Emacs kkp
-
-https://github.com/benotn/kkp
-
-参考にした点:
-
-- KKP 対応を動的に検出している。
-- malformed reply、partial reply、slow SSH などを想定したテストがある。
-- KKP 有効時に Ctrl 系キーのバイト表現が変わることを明示している。
-
-### crossterm
-
-https://github.com/crossterm-rs/crossterm/blob/master/src/event.rs
-
-参考にした点:
-
-- `DISAMBIGUATE_ESCAPE_CODES` を明示的な enhancement flag として扱う。
-- push と pop をペアで扱う。
-- Super / Hyper / Meta を独立した modifier として扱う。
+`enable_kitty_keyboard = true` の場合、WezTerm はアプリケーションからの KKP keyboard encoding 変更要求を受け付ける。
 
 ## 用語
 
-### KKP 対応
+### CSI
 
-端末、または端末までの経路が KKP を理解できること。
+Control Sequence Introducer。
 
-端末単体が対応していても、途中に multiplexer が入り、その問い合わせや escape sequence を正しく通さなければ、アプリケーションから見て利用可能とは限らない。
-
-したがって `TERM_PROGRAM=WezTerm` のような環境変数だけで判定する方針は採らない。
-
-### KKP enhancement が有効
-
-KKP 対応端末で progressive enhancement flags が設定されている状態。
-
-今回まず使いたいのは flag `1`:
-
-```text
-Disambiguate escape codes = 0b1
-```
-
-### CSI-u
-
-`CSI ... u` 形式のキーイベント。
-
-`CSI` は実際には次の2バイト。
+今回扱う 7-bit 形式では実体は:
 
 ```text
 ESC [
 0x1b 0x5b
 ```
 
+### CSI-u
+
+`CSI ... u` で終わるキーイベント形式。
+
 例:
 
 ```text
 ESC[115;9u
 ```
 
-これは今回の実機では `Cmd+s` を表した。
+今回の実機では `Cmd+s` を表した。
 
-注意: 「CSI-u = enhancement 有効時だけの入力」ではない。公式仕様では legacy mode でも従来形式で表現できないキーを CSI-u で送ることがある。
+**CSI-u と「KKP enhancement が現在有効」は同じ意味ではない。**
 
-## KKP 仕様で確認したこと
+公式仕様では legacy mode でも、従来形式では表現できないキーを CSI-u で送る場合がある。
+
+したがって CSI-u parser 自体は KKP enable state に依存させない。
+
+### flag 1
+
+KKP progressive enhancement の:
+
+```text
+Disambiguate escape codes = 0b1
+```
+
+今回の初回実装で要求する flag。
+
+## KKP 仕様で確定していること
 
 ### Quickstart
 
-公式 Quickstart では、アプリケーション側は起動時に次を送る。
+公式 Quickstart は、アプリケーション側の基本的な利用方法として次を示している。
+
+起動時、または alternate screen に入った後:
 
 ```text
 CSI > 1 u
 ```
 
-終了時には次を送る。
+終了時、または alternate screen を抜ける前:
 
 ```text
 CSI < u
 ```
 
-`CSI > 1 u` は単なる「ON」ではなく、現在の keyboard mode を端末側スタックへ push したうえで flag 1 を使う形になる。
+`CSI > 1 u` は現在の keyboard mode を端末側 stack に push して flag 1 を適用する。
 
-`CSI < u` はスタックを pop し、アプリケーション開始前の状態へ戻す。
+`CSI < u` は stack を 1 段 pop し、以前の状態へ戻す。
 
-そのため、終了時に `CSI = 0 u` のようにゼロへ上書きするより push/pop を使うべき。
+main screen と alternate screen の stack は別。
 
-### enhancement flags の問い合わせ
+そのため、Lem では screen の準備後に push し、screen を破棄する前に pop する必要がある。
 
-現在値の問い合わせ:
+### support detection は別機能
 
-```text
-CSI ? u
-```
-
-対応端末の返答:
-
-```text
-CSI ? <flags> u
-```
-
-例:
-
-```text
-ESC[?0u
-```
-
-なら現在の enhancement flags は 0。
-
-### 対応検出
-
-公式仕様では、KKP 対応検出のために `CSI ? u` だけを送って固定 timeout 待ちするより、続けて Primary Device Attributes の問い合わせを送り、その応答を境界として使う方法が説明されている。
-
-考え方:
+公式仕様には KKP support detection の方法もある。
 
 ```text
 CSI ? u
 Primary Device Attributes query
-        ↓
-KKP reply が先に来た
-        → KKP 対応
-
-Device Attributes reply まで来たのに KKP reply がない
-        → KKP 非対応
 ```
 
-この方法なら「非対応端末なので返答がない」のか「単に遅い」のかを、固定時間だけで決めにくくできる。
+を送り、Primary DA の返答より前に KKP flags reply が来たかで判定する方法。
 
-ただし実際の Lem 実装では、問い合わせ中にユーザー入力が混ざった場合に捨てない仕組みが必要。
+ただし Quickstart は support detection を必須にはしておらず、基本利用は push / pop だけで説明されている。
 
-### flag 1 の影響
+初回実装では detection を入れない。
 
-flag 1 を有効にすると、従来は1バイトや ESC-prefix だったキーの一部が CSI-u になる。
+理由:
+
+- query reply と通常キーボード入力を同じ input path で安全に分類する必要がある。
+- Primary DA の遅延返答を通常入力へ漏らさない処理が必要。
+- timeout、partial response、古い reply、入力保全など設計範囲が大きくなる。
+- 今回まず必要なのは Cmd / Super を含む flag 1 の安全な入力処理。
+
+自動 detection は、必要性が確認できた場合に別段階で追加する。
+
+### flag 1 で変わる入力
+
+flag 1 を有効にすると、従来曖昧だった非テキストキーが CSI-u 系へ変わる。
 
 例:
 
-```text
-Ctrl+c
-Ctrl+]
-Escape
-Alt+key
-Ctrl+Alt+key
-```
+- Escape
+- Ctrl + ASCII key
+- Alt + key
+- Ctrl + Alt + key
+- Shift + Alt + key
+- non-text keypad key
 
-したがって、`Cmd+s` だけを解析できる状態で flag 1 を有効にするのは危険。
+通常のテキスト入力は UTF-8 のまま。
 
-### キーイベント形式
+Enter / Tab / Backspace は、flag 1 だけなら legacy byte を維持する。
 
-Quickstart の中心形式:
+したがって `Cmd+s` だけを対応して flag 1 を ON にする実装は不可。
+
+### 基本形式
+
+flag 1 で中心になる形式:
 
 ```text
 CSI number ; modifiers [u~]
 CSI 1 ; modifiers [ABCDEFHPQS]
 ```
 
-通常文字は flag 1 だけなら引き続き UTF-8 テキストとして届く。
+modifier がない場合、省略可能な field がある。
 
-Enter / Backspace / Tab も flag 1 だけなら legacy 表現が残る。
+例:
+
+```text
+27u       → Escape
+115u      → s
+115;9u    → Super+s
+1;9A      → Super+Up
+3;9~      → Super+Delete
+```
 
 ### modifier
 
 KKP の modifier bit:
 
 ```text
-shift  = 1
-alt    = 2
-ctrl   = 4
-super  = 8
-hyper  = 16
-meta   = 32
-caps   = 64
-num    = 128
+shift = 1
+alt   = 2
+ctrl  = 4
+super = 8
+hyper = 16
+meta  = 32
+caps  = 64
+num   = 128
 ```
 
-escape sequence 上の値は `1 + bit field`。
+escape sequence 上の modifier 値は:
 
-そのため Super のみなら:
+```text
+1 + bit field
+```
+
+なので Super のみは:
 
 ```text
 8 + 1 = 9
 ```
 
-`Cmd+s` の例:
+### functional key
+
+KKP は F13 以降や keypad 等、一部の非 Unicode key を Unicode Private Use Area の codepoint で表す。
+
+例:
 
 ```text
-ESC[115;9u
-
-115 = Unicode codepoint 's'
-9   = Super
+F13      = 57376u
+KP_Enter = 57414u
+KP_Up    = 57419u
 ```
 
-macOS では KKP の Super は Command キーに対応する。
+これらを普通の Unicode 文字として挿入してはいけない。
 
 ## 実機で確認したこと
 
@@ -246,9 +248,9 @@ macOS では KKP の Super は Command キーに対応する。
 
 - macOS
 - WezTerm
-- Lem ncurses
+- `TERM=xterm-256color`
 
-### enhancement 無効状態
+### flag 0
 
 ```sh
 printf '\033[?u'; xxd
@@ -260,23 +262,29 @@ printf '\033[?u'; xxd
 ^[[?0u
 ```
 
-よって enhancement flags は 0。
+今回の環境では enhancement flags は 0。
 
-この状態で `xxd -g 1` に対して `Cmd+s` を押すと、今回の環境では通常の `s` として見えた。
+この状態で `Cmd+s` を `xxd -g 1` へ入力すると通常の `s` として見えた。
 
-### 手動で flag 1 を push
+### flag 1 を手動 push
 
 ```sh
 printf '\033[>1u'
 ```
 
-その後 `Cmd+s` を押すと:
+`Cmd+s`:
 
 ```text
 ^[[115;9u
 ```
 
-つまり WezTerm からアプリケーションへ:
+実バイト:
+
+```text
+1b 5b 31 31 35 3b 39 75
+```
+
+つまり:
 
 ```text
 ESC[115;9u
@@ -284,44 +292,57 @@ ESC[115;9u
 
 が届いた。
 
-また、この状態では `xxd` に対する `Ctrl+C` / `Ctrl+D` / `Ctrl+Z` が従来のシグナルや EOF として働かなくなった。
+この shell 実験では Ctrl+C / Ctrl+D / Ctrl+Z の扱いも変化した。
 
-これは flag 1 によって Ctrl 系キーが escape sequence としてアプリケーションへ渡ることと一致する。
+ただし Lem 自身は `raw` mode を使うため、shell / xxd での signal 挙動をそのまま Lem の挙動として扱わない。
 
-## 現行 Lem ncurses の入力経路
+## 現行 Lem ncurses の入力構造
 
 概略:
 
 ```text
 keyboard
   ↓
-OS
-  ↓
 terminal emulator
   ↓
 PTY
   ↓
-ncurses / wgetch
+ncurses
+  ↓
+wgetch
   ↓
 frontends/ncurses/input.lisp
   ↓
-Lem Key
+Lem Key / resize / abort / mouse
 ```
 
-### `input.lisp`
+### `wgetch` は生バイト reader ではない
 
-`getch` は `wgetch` を使って ncurses から入力コードを取る。
+`input.lisp` の `getch` は `charms/ll:wgetch` を使う。
 
-通常文字は `get-key` → `char-to-key` で Lem の Key へ変換する。
+pad に `keypad` が有効なので、ncurses / terminfo が認識した escape sequence は、文字列のままではなく `KEY_*` 相当の整数へ変換される場合がある。
 
-ESC が来た場合だけ手動で続きを読む。
+つまり返り値には混在する。
 
-現状の CSI 部分は概略次の形。
+```text
+0..255      → byte 相当
+>255        → ncurses key number の可能性
+-1          → ERR
+KEY_RESIZE  → resize
+```
+
+KKP 対応のためにこれを「バイト列を読む関数」と見なしてはいけない。
+
+既存の keypad 処理は維持し、ncurses が変換しなかった CSI を追加 parser で扱う。
+
+### 現在の CSI 処理
+
+現行は概略:
 
 ```lisp
 (case (getch)
   (#.(char-code #\<)
-   ;; SGR mouse
+   ;; mouse
    ...)
   (#.(char-code #\1)
    (csi\[1))
@@ -329,55 +350,55 @@ ESC が来た場合だけ手動で続きを読む。
    (get-key-from-name "escape")))
 ```
 
-つまり `ESC [` の直後について:
+`ESC [` の後が:
 
 ```text
-<  → mouse
+<  → SGR mouse
 1  → csi[1
-その他 → Escape 扱い
+その他 → Escape
 ```
+
+という狭い処理になっている。
+
+`ESC[115;9u` は:
+
+```text
+ESC [ 1 1 5 ; 9 u
+      ↑
+```
+
+最初の `1` で `csi\[1` に入るが、その次の `1` は現行関数が期待する `;` ではない。
+
+結果として sequence の途中だけ消費し、残りが後続入力として漏れる可能性がある。
+
+したがって case の枝を単純に1つ増やすだけでは不十分。
 
 ### `csi\[1`
 
-現在は主に次のような legacy CSI を処理している。
+現在は主に:
 
 ```text
 1;2A → Shift+Up
 1;3A → Meta+Up
 1;5A → Ctrl+Up
-...
 ```
 
-modifier 2〜8 を case で個別に分け、A/B/C/D/F/H を Up/Down/Right/Left/End/Home へ変換している。
+等を処理する。
 
-この実装は:
+KKP 専用にこの関数を拡張する方針は採らない。
 
-- 数値部分が `1` 固定
-- modifier が1桁の 2〜8 固定
-- `u` 終端を扱わない
-- Super / Hyper を扱わない
+理由:
 
-ため、そのままでは KKP の `115;9u` を処理できない。
+- KKP codepoint は `97`、`115` 等、`1` 以外でも始まる。
+- modifier は 9 以上もある。
+- `u` / `~` / letter final を扱う必要がある。
+- legacy CSI も同じ collector で扱った方が境界を管理しやすい。
 
-### 重要: `C-]` の特別扱い
+## Lem Key との接続で注意すること
 
-`get-event` は通常キー変換より前に、ncurses code が `C-]` の値なら `:abort` を返している。
+### core Key は Super / Hyper をすでに持つ
 
-```text
-C-] raw byte
-  ↓
-:abort
-```
-
-flag 1 が有効になると `Ctrl+]` は CSI-u 形式になるため、現在の `abort-code` 判定を通らなくなる。
-
-したがって KKP parser が `Ctrl+]` を Lem Key にできるだけでは不十分で、従来の `:abort` セマンティクスを維持する処理が必要。
-
-これは今回特にレビューしてほしい点。
-
-### `key.lisp` と `src/key.lisp`
-
-Lem の core `key` struct はすでに次を持つ。
+`src/key.lisp` の Key は:
 
 ```lisp
 ctrl
@@ -388,135 +409,456 @@ shift
 sym
 ```
 
-つまり Super と Hyper を表すために core Key 型を拡張する必要はない。
+を持つ。
 
-一方、KKP は `alt` と `meta` を別 modifier として持つが、Lem の ncurses では従来 ESC-prefix を `:meta t` として扱っている。
+そのため Super / Hyper のために Key struct を拡張する必要はない。
 
-初期案では:
+### Unicode codepoint を `char-to-key` に流さない
+
+`frontends/ncurses/key.lisp` の `char-to-key` は、文字 codepoint で `*keycode-table*` を引く。
+
+この table には ASCII だけでなく ncurses key number も登録されている。
+
+例:
 
 ```text
-KKP alt   → Lem meta
-KKP super → Lem super
-KKP hyper → Lem hyper
-KKP meta  → 要検討
+259 → Up
 ```
 
-とする。
+一方、Unicode U+0103 も decimal 259。
 
-`KKP meta` も Lem meta へ畳み込む案はあるが、KKP alt と区別できなくなる。Lem core に Alt がないため、ここはレビュー対象。
+KKP の `CSI 259;9u` を単純に:
 
-Caps Lock / Num Lock も Lem Key に対応フィールドがない。flag 1 の初期実装では shortcut の modifier としては無視する案を考えている。
+```lisp
+(char-to-key (code-char 259))
+```
 
-### `mainloop.lisp`
+へ流すと、Unicode 文字ではなく Up と解釈する可能性がある。
 
-`invoke` は現在:
+KKP codepoint → Lem Key は独立経路にする。
+
+基本:
+
+- KKP functional key code → 明示 table
+- ASCII special key → 明示処理
+- 一般 Unicode scalar → `(make-key :sym (string ...))` 相当
+- ncurses key number → 既存 `key.lisp` の経路
+
+を分ける。
+
+### core の既存 key conversion
+
+`src/key.lisp` は:
+
+```text
+C-m → Return
+C-i → Tab
+C-[ → Escape
+```
+
+へ変換する。
+
+KKP はこれらを区別できるが、現行 core の `make-key` を通すと再び同一視される。
+
+初回 KKP 対応では既存 core 互換を優先し、この変換は変更しない。
+
+C-i と Tab 等を本当に別キーとして bind したくなった場合は core / keyspec / 他 frontend を含む別案件にする。
+
+### Shift と大文字
+
+KKP の main key codepoint は基本的に unshifted key。
+
+`Cmd+Shift+z` は例えば:
+
+```text
+codepoint = z
+shift = t
+super = t
+```
+
+となる。
+
+Lem では:
+
+```text
+Super=t Shift=t sym="z"
+```
+
+と:
+
+```text
+Super=t Shift=nil sym="Z"
+```
+
+は別 Key。
+
+既存 Meta+大文字との互換にも影響する。
+
+初回実装では **KKP の modifier 情報を正しく保持する**ことを優先し、必要な keybind は `Shift-` を含む keyspec で定義する案を基本にする。
+
+ただし既存 Meta+大文字の互換性は実装前に実機で baseline を取り、意図せず壊さない。
+
+通常文字 `A` の UTF-8 入力まで `shift=t, sym="a"` に正規化してはいけない。通常文字入力は現在どおり挿入可能な `sym="A"` とする。
+
+### Alt / Meta
+
+KKP は Alt と Meta を別 bit として持つが、Lem Key は `meta` のみ。
+
+初回方針:
+
+```text
+KKP alt  → Lem meta
+KKP meta → Lem meta
+```
+
+Alt + Meta も Lem では1つの Metaへ畳み込む。
+
+情報が失われることは仕様として明記する。
+
+Super / Hyper はそのまま対応 slot へ入れる。
+
+Caps Lock / Num Lock modifier bit は shortcut 照合から除外する。
+
+未知 modifier bit があるイベントは、既知 shortcut として誤実行せず安全側に倒す。
+
+## `C-]` abort
+
+現行 `get-event` は raw code 29、つまり `C-]` を通常 Key にせず `:abort` として扱う。
+
+flag 1 では `Ctrl+]` が CSI-u になるため、raw 29 の分岐だけでは abort が効かなくなる。
+
+方針:
+
+1. parser は `(make-key :ctrl t :sym "]")` 相当の Key を返す。
+2. `get-event` がその Key を raw `C-]` と同じ `:abort` へ変換する。
+
+Super / Shift 等の追加 modifier が付いた `Ctrl+]` まで一律 abort にしない。
+
+parser 自身に Lem の abort semantics を持たせない。
+
+## parser / collector の設計
+
+### 責務を分ける
+
+```text
+wgetch read
+  ↓
+sequence collector
+  ↓
+pure parser
+  ↓
+KKP / legacy key data
+  ↓
+Lem Key conversion
+  ↓
+get-event
+```
+
+### sequence collector
+
+役割:
+
+- CSI の開始から final byte までを1イベントとして集める。
+- partial sequence を管理する。
+- `ERR` / timeout を文字として扱わない。
+- resize 等の ncurses event を失わない。
+- 長さ / 数値桁数に上限を持つ。
+- 完全な sequence を読んだ後に、古い `csi\[1` をもう一度 stream から読ませない。
+
+ECMA-48 の CSI parameter / intermediate / final byte の境界を利用する。
+
+### pure parser
+
+端末 I/O をしない。
+
+完全な sequence を受け取り、少なくとも次を区別する。
+
+```text
+known key
+known terminal response
+unsupported complete event
+malformed sequence
+```
+
+初回では query negotiation を行わないが、`CSI ? ... u` や DA / CPR のような明らかな terminal response を普通の Key として誤解釈しない。
+
+未知 KKP event を修飾なしの通常文字へ downgrade しない。
+
+未知 PUA codepoint を文字として挿入しない。
+
+### legacy fallback
+
+「新 parser が失敗したら既存 parser に stream を戻して再実行」という fallback は採らない。
+
+一度 collector が sequence を消費した後では、旧 parser は次の入力を読むことになるため。
+
+代わりに、現在 `csi\[1` が担当している既知 legacy CSI を新 parser 側でも扱い、既存成功ケースをテストで固定する。
+
+## 初回 parser の対応範囲
+
+flag 1 を有効化するため、少なくとも次を扱う。
+
+### Unicode / control
+
+```text
+CSI number u
+CSI number ; modifiers u
+```
+
+例:
+
+```text
+27u       → Escape
+115;9u    → Super+s
+99;5u     → Ctrl+c
+93;5u     → Ctrl+]
+```
+
+modifier 省略は合法。省略時は modifier 1 相当。
+
+### cursor / Home / End / F1-F4 系
+
+```text
+CSI A
+CSI H
+CSI F
+CSI P
+CSI Q
+CSI S
+CSI 1 ; modifiers [ABCDEFHPQS]
+```
+
+F3 の `CSI R` は CPR と衝突するため採用しない。
+
+F3 は公式の `13~` 等を扱う。
+
+### tilde functional keys
+
+```text
+CSI number ~
+CSI number ; modifiers ~
+```
+
+Insert / Delete / Home / End / PageUp / PageDown / F1-F12 等、公式表と Lem named key の対応を作る。
+
+### PUA functional keys
+
+少なくとも:
+
+- F13-F24
+- non-text keypad key
+
+を安全に分類する。
+
+初回は Lem core のキー名を増やさず、keypad は既存等価キーへ正規化する案。
+
+例:
+
+```text
+KP_Enter → Return
+KP_Up    → Up
+KP_Down  → Down
+KP_Left  → Left
+KP_Right → Right
+```
+
+対応できない PUA key はイベント全体を安全に無視し、文字として挿入しない。
+
+### event type / advanced fields
+
+初回に要求する flag は 1 のみ。
+
+Report event types / alternate keys / all keys / associated text は要求しない。
+
+ただし開始前から別の mode が設定されている等で高度な形式が届く可能性はあるため、collector は colon /追加 field を壊さず1イベントとして消費できる必要がある。
+
+release event を key press としてコマンド実行しない。
+
+## ncurses event との共存
+
+collector は `wgetch` の返り値が常に byte だと仮定しない。
+
+扱いを分ける。
+
+```text
+byte / ASCII
+UTF-8 byte sequence
+ncurses KEY_*
+KEY_RESIZE
+ERR
+mouse related input
+```
+
+KKP のために `keypad` を無効化しない。
+
+既存 terminfo / SS3 / function key 処理を全面再実装する変更へ広げない。
+
+## mouse
+
+現在 SGR1006 mouse parser は `ESC [ <` が生入力として来る経路を持つ一方、ncurses / terminfo の条件によっては `KEY_MOUSE` 相当へ先に変換される可能性がある。
+
+KKP 変更で既存 mouse 問題までまとめて作り直さない。
+
+ただし同じ環境で変更前後の mouse click / drag / scroll を必ず回帰確認する。
+
+collector 中に mouse / resize が来た場合、捨てたり文字扱いしない。
+
+## timeout
+
+現行には少なくとも別の timeout 層がある。
+
+- ESC 後: `escape-delay`
+- CSI / UTF-8 追加 read: `with-getch-input-timeout`
+- ncurses 自身の `ESCDELAY`
+
+KKP 導入時に値を一括変更しない。
+
+まず existing behavior を維持する。
+
+ただし新 collector では:
+
+- partial sequence
+- `ERR`
+- timeout 後の残り
+- resize
+
+を安全に処理するテストを作る。
+
+`with-getch-input-timeout` を入れ子にすると timeout 復元が単純ではない点にも注意する。
+
+## KKP の有効化
+
+### 初回は明示設定
+
+自動 support detection をしない代わりに、既存ユーザーの端末状態を勝手に変更しない。
+
+`config.lisp` に boolean editor variable を追加する案。
+
+名前案:
+
+```lisp
+enable-kitty-keyboard-protocol
+```
+
+初期値案:
+
+```lisp
+nil
+```
+
+ユーザーが有効にした場合のみ flag 1 を push する。
+
+ユーザー側では WezTerm の `enable_kitty_keyboard = true` 等、端末側も KKP request を受け付ける設定である必要がある。
+
+将来自動 detection を追加する場合でも、この明示設定を fallback / troubleshooting 用に残すかはその時点で検討する。
+
+### なぜ自動 detection を初回から入れないか
+
+support detection 自体は公式仕様にあるが、Lem の ncurses input path では次が追加で必要になる。
+
+- query reply / DA reply の分類
+- probe 中の通常入力保全
+- delayed response の回収
+- timeout / unknown 状態
+- verification response と古い response の識別
+
+今回の目的に対して変更範囲が大きい。
+
+初回は公式 Quickstart の push/pop と明示 opt-in を組み合わせて安全性を確保する。
+
+## lifecycle
+
+目標:
 
 ```text
 term-init
   ↓
+KKP push（設定ONの場合）
+  ↓
 input-loop
   ↓
-unwind-protect cleanup
+KKP pop（pushした場合）
   ↓
 term-finalize
 ```
 
-という構造。
+### push 所有権
 
-KKP の stack は main screen と alternate screen で別管理される仕様なので、ncurses が screen をセットアップした後に push し、screen を終了する前に pop する必要がある。
+`enabled` という結果だけで pop の要否を判断しない。
 
-そのため lifecycle の位置は:
+こちらが `CSI > 1 u` の送信を開始したか、少なくとも push を所有していると判断した時点から cleanup 対象にする。
 
-```text
-term-init
-  ↓
-KKP setup
-  ↓
-input-loop
-  ↓
-KKP teardown
-  ↓
-term-finalize
-```
+二重 pop は開始前の stack entry を消す可能性があるため禁止。
 
-が自然。
+状態は session 単位で持つ。
 
-`unwind-protect` cleanup 内で KKP teardown を `term-finalize` より前に実行する。
-
-### `term.lisp`
-
-`term-init` は raw mode / keypad 等を設定する。
-
-現状、任意の control sequence を「ncurses が実際に使っている同じ TTY」へ送るための共通 API は見当たらない。
-
-`update-cursor-shape` は外部 `printf` プロセスを `:output :interactive` で呼んでいる。
-
-KKP では問い合わせと返答を厳密に同じ端末 I/O へ流したいので、外部 `printf` に依存せず、`term.lisp` に terminal sequence 書き込み関数を用意する案を考える。
-
-`term-set-tty` が使われるケースでは、process stdout と ncurses が使う TTY が一致しない可能性があるため、この点もレビュー対象。
-
-## 危険だった初期案
-
-最初に考えかけた案は:
+初回の明示 opt-in / no-query 設計なら、複雑な support state machine は不要だが:
 
 ```text
-Lem 起動
-  ↓
-無条件に CSI > 1 u
-  ↓
-KKP が使える前提で input.lisp を拡張
+push attempted / owned
+pop done
 ```
 
-だった。
+程度の cleanup ownership は必要。
 
-これは採用しない。
+### cleanup は二段にする
 
-問題:
+単純に cleanup へ:
 
-1. KKP 非対応端末で有効化できたか確認していない。
-2. flag 1 は Cmd だけでなく Ctrl / Escape / Alt 等の既存入力表現も変える。
-3. parser が部分対応のまま enhancement を有効化すると、既存キーを壊す。
-4. `C-]` の abort のように、単なる Key 変換以外の既存セマンティクスも壊れる。
-5. terminal multiplexer を挟んだとき、端末名だけで能力を判断できない。
-
-## もう一つの注意: 「有効なら KKP parser、無効なら legacy parser」も単純すぎる
-
-一見自然な案:
-
-```text
-KKP enabled
-  → KKP parser
-
-KKP disabled
-  → existing parser
+```lisp
+(teardown-kkp)
+(term-finalize)
 ```
 
-にも問題がある。
+と並べるだけでは、`teardown-kkp` がエラーになった場合 `term-finalize` が実行されない可能性がある。
 
-公式仕様では legacy mode でも、従来形式では表現できないキーイベントを CSI-u で送ることがある。
+KKP teardown が失敗しても `term-finalize` が必ず走る保護構造にする。
 
-したがって **CSI-u の構文認識そのものは KKP enabled state に依存させない** 方がよいと考える。
+### SIGKILL 等
 
-状態で分けるのは:
+`unwind-protect` で戻せない強制終了は存在する。
 
-- enhancement をこちらから要求するか
-- enhancement 有効時に期待される入力形式
-- teardown 時に pop が必要か
+これは一般的な terminal mode と同じ制約。
 
-であり、CSI-u parser 自体は additive に利用する。
+正常終了、Lisp error、setup途中失敗、editor thread終了はテストする。
 
-## 提案する設計
+## terminal writer
 
-### 方針
+KKP control sequence は、ncurses が操作している端末と同じ出力先へ送る必要がある。
 
-1. KKP の protocol parser と terminal negotiation を分離する。
-2. CSI-u parser は enhancement state に関係なく、受信したら解釈できる。
-3. enhancement は KKP 対応と要求 flag の有効化を確認できたときだけ使う。
-4. 非対応・不明なら legacy mode のまま。
-5. KKP parser が認識できない CSI は既存挙動へ fallback する。
-6. terminal state の変更は必ず push/pop で対にする。
+注意:
 
-### 新規ファイル案
+- `mainloop.lisp` は editor 実行中に `*standard-output*` 等を broadcast stream へ束縛する。
+- `term.lisp` の `*term-io*` は `term-set-tty` 経路で開く C `FILE*` で、Common Lisp stream ではない。
+- `ncurses.lisp` にはロード時の `*terminal-io*` を保存した `*terminal-io-saved*` がある。
+- ncurses の C stdio 出力と別経路の書き込みを混ぜる場合、順序と flush を考える必要がある。
+
+したがって、KKP から直接 `format t` や外部 `printf` を呼ぶ実装にはしない。
+
+`term.lisp` 側に raw terminal sequence writer を持たせ、出力先と flush を集約する案を採る。
+
+正確な実装方法は、通常 `initscr` 経路で出力 trace を確認して決める。
+
+## `term-set-tty` と初回対応範囲
+
+`term-set-tty` 経路には、KKPとは別の既存懸念がある。
+
+- `newterm` の SCREEN* 管理
+- FILE* close と `endwin` の順序
+- `delscreen` へ渡す対象
+- OS 固有 ioctl 値
+
+これらを KKP feature に抱き合わせで修正しない。
+
+初回 KKP 自動有効化の対象は **通常の `initscr` 経路**に限定する案。
+
+`term-set-tty` を使う経路は、別途確認できるまで KKP enable 対象外にする。
+
+Windows / PDCurses も初回対象外。ロード自体を壊さないことは確認する。
+
+## ファイル構成案
+
+新規:
 
 ```text
 frontends/ncurses/kitty-keyboard.lisp
@@ -530,80 +872,102 @@ package:
 
 責務:
 
-- KKP の定数
+- KKP 定数
 - modifier decode
-- CSI-u / KKP key sequence の純粋 parser
-- query reply の parser
-- enhancement state
+- KKP / CSI-u pure parser
+- KKP functional key table
+- Lem Key 変換
+- push / pop 用の小さい lifecycle helper
 
-端末から実際に読む `wgetch` 自体は `input.lisp` に残す。
+`wgetch` 自体は `input.lisp` に残す。
 
-`lem-ncurses.asd` では `key.lisp` の後、`input.lisp` の前に読み込む案。
+sequence collector を `input.lisp` に置くか、新ファイルへ置くかは実装時に依存方向を見て決める。
 
-### state
+`lem-ncurses.asd` では pure KKP code を `key.lisp` の後、`input.lisp` の前に置く案。
 
-単純な `*kitty-keyboard-enabled-p*` だけでなく、少なくとも次を区別したい。
+terminal writer は `term.lisp` に置き、KKP 側から term を呼ぶ方向にする。
+
+## 実装順
+
+### 1. baseline を取る
+
+まだ KKP flag 1 を有効にしない。
+
+現在の環境で:
+
+- 通常文字
+- UTF-8
+- Ctrl
+- Meta / Option
+- Shift+Meta
+- arrows
+- Shift/Ctrl/Meta + arrows
+- Home / End / Delete / Page
+- F keys
+- mouse
+- resize
+- `C-]` abort
+
+の現状を記録する。
+
+### 2. pure parser / Key変換
+
+端末モードを変えずに実装する。
+
+対象:
+
+- CSI-u
+- legacy functional CSI
+- tilde form
+- PUA functional key
+- keypad normalization
+- modifier mapping
+- unsupported event の安全な reject
+
+専用 unit test を作る。
+
+### 3. sequence collector を input path へ統合
+
+まだ flag 1 は有効にしない。
+
+- ncurses key number と共存
+- partial / timeout / ERR / resize
+- legacy CSI 回帰
+- mouse 回帰
+- `C-]`
+
+を通す。
+
+### 4. terminal writer / lifecycle を作る
+
+まだ実端末へ KKP push しない状態で writer を mock して:
 
 ```text
-:unknown
-:unsupported
-:enabled
+push
+input loop
+pop
+finalize
 ```
 
-ただし実装を必要以上に複雑にしないため、最終的には:
+の順序と cleanup failure をテストする。
 
-```lisp
-*kitty-keyboard-supported-p*
-*kitty-keyboard-enabled-p*
-```
+### 5. 明示設定を追加
 
-程度でもよい。
+`enable-kitty-keyboard-protocol`（仮）を追加。
 
-push 後の verification に失敗した場合は、その場で pop して enabled にしない。
+default は `nil`。
 
-### setup の案
+### 6. 実端末で flag 1 を有効化
 
-擬似コード:
+parser / input integration が完成した後に初めて:
 
 ```text
-probe KKP support
-
-unsupported / timeout / malformed
-  → legacy mode のまま
-
-supported
-  → CSI > 1 u
-  → CSI ? u で再確認
-  → bit 1 が立っている
-       → enabled
-    bit 1 が立っていない / malformed / timeout
-       → CSI < u
-       → legacy mode
+CSI > 1 u
 ```
 
-対応確認は公式仕様に合わせ、`CSI ? u` と Primary Device Attributes query の組み合わせを使う案。
+を送る。
 
-### なぜ push 後にも query するか
-
-公式仕様は実装によって enhancement の一部だけを実装する可能性にも触れている。
-
-そのため:
-
-```text
-terminal supports KKP
-```
-
-と
-
-```text
-requested flag 1 is actually active
-```
-
-を分けて確認する。
-
-### teardown
-
-enabled にできた場合だけ:
+終了時:
 
 ```text
 CSI < u
@@ -611,459 +975,232 @@ CSI < u
 
 を送る。
 
-`term-finalize` より前に行う。
+### 7. macOS 実機確認
 
-異常終了でも Common Lisp の制御が戻るケースでは `unwind-protect` で pop する。
+WezTerm / Kitty 直結で確認する。
 
-`SIGKILL` や端末自体の強制終了では cleanup 不可能。これは一般的な terminal mode と同じ制約として扱う。
+### 8. local へ統合
 
-### terminal write API
+feature branch を直接他PR branchへ依存させず、日常利用の組み合わせは `local` で行う。
 
-`term.lisp` に例えば:
+## テスト
 
-```lisp
-(write-terminal-sequence string)
-```
-
-のような API を追加する案。
-
-要件:
-
-- ncurses が実際に使用している TTY へ書く。
-- `term-set-tty` 利用時も stdout 決め打ちにしない。
-- `finish-output` 相当で問い合わせを確実に端末へ出す。
-- shell の `printf` subprocess を毎回作らない。
-
-実際に `*term-io*` / `*tty-name*` / Common Lisp stream のどれを使うのが最も安全かは要レビュー。
-
-### query 中の入力保全
-
-startup negotiation 中にユーザーがキーを押す可能性がある。
-
-問い合わせ parser が KKP reply と Device Attributes reply 以外の入力を読んだ場合、その入力を捨ててはいけない。
-
-案:
-
-- `input.lisp` に pending input queue を持つ。
-- negotiation 中の unrelated byte / event を queue へ戻す。
-- 通常 `getch` は queue を先に消費する。
-
-ncurses / cl-charms の `ungetch` が安全に使えるなら、それを使う案も比較する。
-
-ここは実装前に確認する。
-
-### CSI 読み取り
-
-現在の `case (getch)` の枝を闇雲に増やすのではなく、数字で始まる CSI key sequence をまとまりとして読む。
-
-ただし SGR mouse の:
-
-```text
-CSI < ... M/m
-```
-
-は現在の専用処理を維持する。
-
-イメージ:
-
-```text
-ESC [
-  ↓
-first char
-  ├─ <
-  │   → existing mouse parser
-  │
-  └─ number / supported CSI key prefix
-      → read key CSI sequence
-      → parse KKP / legacy functional form
-      → Lem Key
-```
-
-### `csi\[1` の扱い
-
-現在の `csi\[1` を KKP 専用に拡張する案は採らない。
-
-理由:
-
-- KKP の codepoint は `115`、`97` など `1` 以外でも始まる。
-- `1;...` 自体も legacy functional key と KKP functional key の両方で使う。
-- Super modifier は 9 以上になり、現行の1文字 case では扱いにくい。
-
-代わりに、CSI key sequence を文字列または構造として一度読み、pure parser で解釈する。
-
-既存の `csi\[1` が処理している `1;2A` 等も新 parser 側へ移す案。
-
-### parser が扱う初期範囲
-
-flag 1 を有効化する以上、`Cmd+s` だけの対応では不足。
-
-少なくとも Quickstart で flag 1 使用時に必要な形式を対象にする。
-
-#### Unicode / control key
-
-```text
-CSI number ; modifiers u
-```
-
-例:
-
-```text
-115;9u → Super+s
-99;5u  → Ctrl+c
-27u    → Escape
-```
-
-#### arrows / Home / End / F1-F4 等
-
-```text
-CSI 1 ; modifiers [ABCDEFHPQS]
-```
-
-例:
-
-```text
-1;9A → Super+Up
-```
-
-#### `~` 系 functional keys
-
-```text
-CSI number ; modifiers ~
-```
-
-Insert / Delete / PageUp / PageDown / F5 以降など、公式 Functional key table のうち Lem が named key として持つものを対応させる。
-
-### modifier mapping 案
-
-```text
-KKP shift → Lem shift
-KKP alt   → Lem meta
-KKP ctrl  → Lem ctrl
-KKP super → Lem super
-KKP hyper → Lem hyper
-KKP meta  → Lem meta ?
-```
-
-`alt → meta` は現行 ncurses が ESC-prefix を Meta として扱うこととの互換性を優先した案。
-
-`KKP meta` の扱いは要レビュー。
-
-Caps Lock / Num Lock は初期実装では Lem Key modifier に反映しない案。
-
-### `C-]` abort の維持
-
-KKP parser が生成した Key が:
-
-```lisp
-(make-key :ctrl t :sym "]")
-```
-
-なら、現在の raw `abort-code` と同じく `:abort` を返す必要がある。
-
-実装方法候補:
-
-1. parse 後の Key を `get-event` で `C-]` と比較し `:abort` へ変換する。
-2. KKP parser 自体が special event を返す。
-
-責務分離の観点では 1 を推す。
-
-parser は Key を返し、Lem ncurses 固有の abort セマンティクスは `get-event` が担当する。
-
-### Escape timeout
-
-現行 `get-event` は:
-
-- ESC の次の1文字に `escape-delay`
-- CSI 内に 100ms
-
-の timeout を使っている。
-
-flag 1 有効時は Escape キー自体が CSI-u になるため曖昧性は減るが、既存 timeout をそのまま残すと slow SSH / multiplexer で途中の sequence を切る可能性がある。
-
-今回の PR で timeout 機構まで大きく変更するかは慎重に判断する。
-
-最低限、parser 単体では partial input を誤変換しないテストを用意する。
-
-## 採用を考えている実装順
-
-これは PR を分ける意味ではなく、同一 feature branch 内で安全に確認する順番。
-
-### 1. pure parser とテスト
-
-端末状態を変更せず、文字列から Lem Key を生成する処理を作る。
-
-この段階では KKP を有効化しない。
-
-### 2. terminal query / detection
-
-`CSI ? u` + Device Attributes を使った対応確認を実装する。
-
-問い合わせ reply parser をテストする。
-
-### 3. push / verification / pop
-
-対応確認できた場合だけ flag 1 を push。
-
-再 query で flag 1 を確認。
-
-失敗時は即 pop して legacy mode に戻す。
-
-### 4. `get-event` へ統合
-
-- mouse を維持
-- CSI key parser を追加
-- existing legacy CSI を新 parser でも再現
-- `C-]` abort を維持
-
-### 5. `mainloop` lifecycle へ統合
-
-```text
-term-init
-setup KKP
-input-loop
-teardown KKP
-term-finalize
-```
-
-### 6. 実機テスト
-
-WezTerm / Kitty / KKP 無効化 WezTerm で確認する。
-
-## テスト案
-
-### parser unit test
+### pure parser
 
 最低限:
 
+| 入力 | 期待 |
+|---|---|
+| `115;9u` | Super+s |
+| `122;10u` | Shift+Super+z |
+| `99;5u` | Ctrl+c |
+| `93;5u` | Ctrl+] Key。parserではabortにしない |
+| `27u` | Escape |
+| `115u` / `115;1u` | modifierなし s |
+| `1;9A` | Super+Up |
+| `3;9~` | Super+Delete |
+| `13;9~` | Super+F3 |
+| `13;9u` | Super+Return |
+| `9;9u` | Super+Tab |
+| `127;9u` | Super+Backspace |
+| `259;9u` | Super+U+0103。Upにしない |
+| `57376u` | F13 |
+| `57414u` | KP_Enter相当 |
+| `57419u` | KP_Up相当 |
+
+追加:
+
+- modifier省略
+- unknown modifier bit
+- invalid scalar value
+- surrogate
+- U+10FFFF超
+- 長大数値 / 長大sequence
+- unknown PUA
+- malformed final
+- CPR / DA / KKP query reply を Key にしない
+- release / advanced field を press と誤解釈しない
+
+### Key / keyspec
+
+- `Super+s` が keyspec と一致する。
+- `Shift+Super+z` と `Super+Z` の違いを明示的にテストする。
+- Alt / Meta mapping。
+- C-i / C-m / C-[ の existing core conversion。
+- 一般 UTF-8 文字が挿入可能。
+
+### collector / get-event
+
+- 1byteずつ分割された CSI。
+- ESC のみ先行。
+- sequence途中でtimeout。
+- `ERR`。
+- resize。
+- ncurses変換済み `KEY_*`。
+- raw CSI と `KEY_*` の共存。
+- raw `C-]` と KKP `Ctrl+]` の両方が同じ非強制 abort。
+- mouse click / drag / scroll。
+- queue / partial data が次の通常文字へ漏れない。
+
+### lifecycle
+
+- 設定OFFなら push / pop しない。
+- 設定ONなら push 1回 / pop 1回。
+- push後の例外でも pop を試みる。
+- pop失敗でも `term-finalize` が実行される。
+- 二重popしない。
+- editor thread終了時にも cleanup。
+
+### 実機
+
+#### WezTerm
+
+端末側:
+
 ```text
-115;9u  → Super+s
-122;10u → Shift+Super+z
-99;5u   → Ctrl+c
-93;5u   → Ctrl+]
-1;9A    → Super+Up
-3;9~    → Super+Delete
+enable_kitty_keyboard = true
 ```
 
-modifier:
-
-```text
-1 → none
-2 → Shift
-3 → Alt/Meta
-5 → Ctrl
-9 → Super
-複合 bit
-```
-
-異常系:
-
-- 数値欠落
-- modifier 欠落
-- 不正 terminator
-- partial sequence
-- 非数値
-- 未知 functional key
-
-### support detection test
-
-ケース:
-
-1. KKP reply → DA reply
-   - supported
-2. DA reply だけ
-   - unsupported
-3. garbage → KKP reply → DA
-   - supported、garbage は input queue に残す
-4. partial reply
-   - fallback
-5. timeout
-   - fallback
-6. push 後 query で flag 1 が立たない
-   - pop して disabled
-
-### 既存入力の回帰
-
-- 通常文字
-- UTF-8
-- Ctrl+a 等
-- Meta/Option 系
-- Escape
-- arrow
-- Shift/Ctrl/Meta + arrow
-- Delete / Home / End / PageUp / PageDown
-- F keys
-- mouse
-- resize
-- `C-]` abort
-
-### 実機 matrix
-
-#### WezTerm / KKP 許可
+確認:
 
 - Cmd+s
 - Cmd+z
 - Cmd+Shift+z
 - Cmd+arrow
-- Ctrl 系
-- Option/Meta 系
+- Ctrl+a / Ctrl+c / Ctrl+g / Ctrl+]
+- Option/Meta + 文字
+- Option/Meta + Shift + 文字
+- Escape
+- Tab / Shift+Tab
+- Return
+- Backspace / Delete
+- F keys
 - mouse
+- resize
 - 日本語入力
-- Lem 終了後に keyboard flags が元へ戻る
-
-#### WezTerm / KKP 許可なし
-
-`enable_kitty_keyboard=false` 相当で:
-
-- KKP を enabled 扱いしない
-- legacy key handling が壊れない
-- 起動待ちが不自然に長くならない
+- paste
+- key repeat
+- Lem終了後の shell 入力
 
 #### Kitty
 
-同様に確認。
+同様に確認する。
 
-#### multiplexer
+## 初回の対象外
 
-初回 PR の必須条件にするかは要検討。ただし設計上は端末名ではなく query で判定するため、対応している経路なら自然に利用できる形を目指す。
+以下は、必要になったら別途扱う。
 
-## 既存動作を壊さないための invariants
+- KKP support auto detection
+- `CSI ? u` + Primary DA negotiation
+- push 後の query verification
+- SSH / tmux / Zellij 等の multiplexer 対応保証
+- DCS passthrough
+- suspend / resume 時の KKP stack 管理
+- `term-set-tty` 経路の KKP 有効化
+- Windows / PDCurses
+- Alt と Meta を Lem core で別 modifier にする変更
+- C-i / Tab、C-m / Return、C-[ / Escape を core で完全に分離する変更
+- event type / alternate key / associated text 等、flag 1 以外の enhancement
 
-レビュー時に特に確認してほしい条件。
+これらを「未対応だから設計失敗」とは扱わないが、対応済みとも説明しない。
 
-1. KKP 非対応なら現行 Lem と同じ入力経路で動く。
-2. KKP detection failure を「対応」と誤判定しない。
-3. enhancement 有効化前に必要 parser が揃っている。
-4. push したら、制御可能な終了経路では必ず pop する。
-5. pop は `term-finalize` より前。
-6. query reply を通常キー入力として Lem へ流さない。
-7. query 中に押されたユーザー入力を捨てない。
-8. mouse sequence を KKP parser が奪わない。
-9. `C-]` abort を維持する。
-10. legacy CSI の既存 Shift/Meta/Ctrl + arrow を壊さない。
-11. KKP enabled state と CSI-u parser の有無を同一視しない。
+## 将来 support detection を追加する場合
 
-## レビューしてほしい論点
-
-### A. support detection
-
-`CSI ? u` + Primary Device Attributes を使う同期 probe を `term-init` 後 / input-loop 前に置く案は妥当か。
-
-より良い方法として通常 event loop に query response を統合すべきか。
-
-### B. query 中の input buffering
-
-pending input queue を `input.lisp` に追加するのが妥当か。
-
-`ungetch` 等、ncurses の既存機能を使う方がよいか。
-
-### C. terminal output
-
-`term-set-tty` を考慮して、KKP control sequence をどの stream / fd へ書くべきか。
-
-`term.lisp` に汎用 raw terminal writer を追加する設計でよいか。
-
-### D. parser の常時有効化
-
-CSI-u は legacy mode でも来る可能性があるため、KKP enabled state に依存せず認識する方針でよいか。
-
-### E. Alt / Meta mapping
-
-KKP Alt と KKP Meta を Lem の単一 `meta` へどう対応させるか。
-
-### F. 初回対応範囲
-
-flag 1 を要求するなら、Quickstart に記載された key event forms を一通り実装してから有効化するべき、という判断でよいか。
-
-### G. `C-]` abort
-
-Key parser の外側で `Ctrl+]` を `:abort` へ変換する案でよいか。
-
-### H. timeout
-
-現行 100ms timeout を初回 PR では維持するか、KKP 導入と同時に見直すべきか。
-
-## 現時点の推奨案
-
-現時点では次を推す。
+必要性が出た場合は公式方式を使う。
 
 ```text
-                  ┌──────────────┐
-                  │ term-init    │
-                  └──────┬───────┘
-                         ↓
-              KKP support probe
-                         ↓
-            ┌────────────┴────────────┐
-            │                         │
-       unsupported                supported
-            │                         │
-            │                   push flag 1
-            │                         │
-            │                     query flag
-            │                         │
-            │               ┌─────────┴─────────┐
-            │               │                   │
-            │          verified             failed
-            │               │                   │
-            │          KKP enabled              pop
-            │               │                   │
-            └───────────────┴───────────────┬───┘
-                                            ↓
-                                      input-loop
-                                            ↓
-                                 CSI-u parser is additive
-                                            ↓
-                                      teardown
-                                            ↓
-                                   pop only if pushed
-                                            ↓
-                                     term-finalize
+CSI ? u
+Primary Device Attributes query
 ```
 
-重要なのは:
+ただし追加時には最低限:
+
+- input reader を1つに保つ
+- KKP reply / DA reply を通常Keyへ流さない
+- probe中のユーザー入力を捨てない
+- timeoutを unsupported と同一視しない
+- delayed reply を後続文字として漏らさない
+- old reply と verification reply を取り違えない
+
+を解決する。
+
+support detection は parser 完成後に追加する。
+
+## 守るべき条件
+
+1. 設定OFFでは既存の入力動作を変えない。
+2. CSI-u parser は KKP enable state と独立して動く。
+3. KKP flag 1 を実端末へ送る前に、その形式を input path が処理できる。
+4. `wgetch` を raw byte reader と仮定しない。
+5. Unicode codepoint を ncurses key number table へ流さない。
+6. 未知 event を既知 shortcut へ downgrade しない。
+7. terminal response を通常 Key として送らない。
+8. `C-]` abort を維持する。
+9. current mouse / resize / legacy function key を回帰させない。
+10. push / pop を対にし、二重popしない。
+11. pop失敗でも ncurses cleanup を止めない。
+12. KKP以外の既存TTY問題を feature に無理に混ぜない。
+
+## まだ実装前に決めること
+
+### 1. Shift+文字の keyspec 方針
+
+KKP の `Shift+Super+z` を、そのまま:
 
 ```text
-KKP state
+Shift + Super + sym="z"
 ```
 
-と
+として bind する方針を基本にする。
 
-```text
-CSI-u を解析できること
-```
+既存の `M-Z` 等との互換を baseline で確認する。
 
-を別物として扱うこと。
+### 2. keypad の対応表
 
-KKP enhancement が使えなくても既存処理は維持する。
+KKP PUA keypad code をどの既存 Lem named key へ正規化するか、公式表と Lem key table を並べて確定する。
 
-CSI-u が届いた場合は enhancement state にかかわらず、認識可能なら Lem Key へ変換する。
+### 3. terminal writer の実装
 
-## 実装前に追加で確認したいこと
+通常 `initscr` 経路で、ncursesの画面切替と KKP push/pop の順序を実出力で確認してから決める。
 
-- cl-charms / ncurses の `ungetch` が現在の依存バージョンで使えるか。
-- `term-set-tty` の実際の利用箇所と用途。
-- Primary Device Attributes query を現在の `wgetch` / keypad 設定下でどう受け取るか。
-- ncurses が alternate screen に入る正確なタイミングと `term-init` / `term-finalize` の関係。
-- Lem の keyspec で Super / Hyper / Shift+Super の組み合わせが想定どおり bind / print / compare できること。
-- KKP Meta と Lem Meta のマッピング方針。
+### 4. config 変数名
+
+`enable-kitty-keyboard-protocol` は仮名。
+
+Lem ncurses の既存 naming に合わせて最終決定する。
 
 ## まとめ
 
-今回の目的は `Cmd+s` を通すことだけではない。
+今回の KKP 対応は、`Cmd+s` の escape sequence を1つ追加する作業ではない。
 
-KKP の flag 1 を要求すると既存の Ctrl / Escape / Alt 等の表現まで変わるため、protocol negotiation と parser の対応範囲をセットで考える必要がある。
+flag 1 を使うと Ctrl / Escape / Alt / keypad 等の入力形式も変わる。
 
-また、KKP が無効でも CSI-u が現れる可能性があるため、`enabled?` の真偽だけで parser を完全に切り替える設計も避ける。
+一方、support detection まで初回から実装すると、query response / DA / timeout / delayed reply / input buffering まで一気に責務が広がる。
 
-現時点では:
+そのため初回は:
 
-- KKP 対応を protocol query で確認
-- flag 1 を push し、実際に有効になったことを確認
-- 非対応・失敗時は legacy mode
-- CSI-u parser は additive に常時利用可能
-- existing CSI / mouse / abort semantics を維持
-- push/pop を ncurses screen lifecycle の内側で対にする
+```text
+既存入力の baseline
+  ↓
+KKP / CSI collector + parser
+  ↓
+Lem Key 変換
+  ↓
+input.lisp 統合
+  ↓
+既存入力回帰
+  ↓
+明示 opt-in config
+  ↓
+CSI > 1 u
+  ↓
+実機確認
+  ↓
+CSI < u
+```
 
-という構成を推奨する。
+という順序で進める。
 
-この設計自体をレビューしたうえで、実装へ進む。
+**parser と activation を分離し、activation は parser が実際の input path へ統合された後にだけ行う。**
+
+これを初回実装の中心原則とする。
