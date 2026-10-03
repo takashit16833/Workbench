@@ -581,6 +581,50 @@ Summary:
 
 これで PR 1 / PR 2 は両方とも upstream のレビュー待ち。
 
+## 普段使う `local` にも取り込んだ
+
+upstream への PR は独立したままにして、日常利用用の `local` にだけ2つをまとめて入れた。
+
+```text
+PR 1 → local
+PR 2 → local
+```
+
+merge commit は:
+
+```text
+5a471e3b  PR 1 を local に merge
+ba6167e1  PR 2 を local に merge
+```
+
+両方が `tests/language-mode.lisp` を新しく追加していたので、2本目の merge で add/add conflict が出た。
+
+ここはどちらか片方を捨てず、PR 2 のテスト群に PR 1 の filesystem-root 用 2 test を追加して統合した。
+
+統合後も:
+
+```text
+✓ 48 tests completed
+
+Summary:
+  All 48 tests passed.
+```
+
+を確認済み。
+
+今は、
+
+```text
+main   → upstream 追従用
+local  → PR 1 + PR 2 入りで普段使う
+PR 1   → upstream review 待ち
+PR 2   → upstream review 待ち
+```
+
+という状態。
+
+upstream 側は今のところこちらから追加で触る必要はなく、レビューや merge を待てばよい。
+
 ---
 
 # テストするときの注意
