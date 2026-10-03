@@ -6,11 +6,348 @@ Lem の ncurses フロントエンドへ Kitty Keyboard Protocol（以下 KKP）
 
 2026-10-03 に一度作成した設計案を、Lem 現行コードと KKP / ncurses 仕様を使ったレビュー結果を踏まえて改訂した。
 
-このノートを、今後の実装と追加レビューの基準にする。
+このノートを、設計・実装・追加レビューの基準にする。
 
 設計上の判断と、仕様・コードから確認できる事実はできるだけ分けて書く。
 
-## 結論
+## 実装状況（2026-10-03）
+
+初回実装は完了し、実機で KKP 経由の Super / Shift+Super 入力まで確認できた。
+
+### ブランチ
+
+Lem fork:
+
+```text
+feat/ncurses-kitty-keyboard
+0c8ef310e7d5bffce4f17a04436d1c97259039c4
+```
+
+日常利用用:
+
+```text
+local
+f65045e869ebf6c7e8f98b95ee57f457a0dc25ab
+```
+
+`local` には KKP 実装に加えて、未マージの ncurses 端末カラーパレット修正も入っている。
+
+### 実装したファイル
+
+主な変更:
+
+- `frontends/ncurses/kitty-keyboard.lisp`
+  - KKP / CSI-u parser
+  - modifier decode
+  - functional key / keypad mapping
+  - push / pop lifecycle
+  - user setting と端末状態の同期
+- `frontends/ncurses/input.lisp`
+  - CSI sequence collector
+  - partial CSI の保全
+  - ncurses event と CSI の共存
+  - timeout の入れ子復元
+  - KKP `Ctrl+]` を既存の `:abort` へ接続
+- `frontends/ncurses/term.lisp`
+  - raw terminal sequence writer
+- `frontends/ncurses/mainloop.lisp`
+  - ncurses screen lifecycle 内で KKP push / pop
+- `frontends/ncurses/config.lisp`
+  - `enable-kitty-keyboard-protocol`
+- `frontends/ncurses/lem-ncurses.asd`
+  - KKP module の読み込み
+- `lem-ncurses-tests.asd`
+- `tests/ncurses/kitty-keyboard.lisp`
+  - KKP parser / collector / lifecycle test
+- `Makefile`
+  - ncurses tests を通常 test に追加
+- `docker/Dockerfile.test`
+  - ncurses test 用依存追加
+
+### feature branch と local の違い
+
+`feat/ncurses-kitty-keyboard` では:
+
+```lisp
+(define-editor-variable enable-kitty-keyboard-protocol nil)
+```
+
+として既存利用者へ影響しない opt-in にしている。
+
+`local` では日常利用するため:
+
+```lisp
+(define-editor-variable enable-kitty-keyboard-protocol t)
+```
+
+としている。
+
+また `local` の `term.lisp` には、別修正である端末カラーパレット変更防止も入っている。
+
+### 起動時の流れ
+
+現在の実装:
+
+```text
+term-init
+  ↓
+KKP enable
+  ↓
+editor thread 起動
+  ↓
+user init
+  ↓
+after-init-hook
+  ↓
+設定値に合わせて KKP 状態を再同期
+  ↓
+input-loop
+  ↓
+KKP disable
+  ↓
+term-finalize
+```
+
+最初に frontend default を適用し、その後 user init が `enable-kitty-keyboard-protocol` を変更した場合は `*after-init-hook*` で同期する。
+
+`enable` / `disable` は push / pop を二重に行わないよう、session 内で ownership を保持する。
+
+### 入力処理
+
+従来の:
+
+```text
+ESC [
+  ├─ < → mouse
+  ├─ 1 → csi[1
+  └─ その他 → Escape
+```
+
+という限定的な処理から、CSI を final byte まで collector で読み取って parser へ渡す形に変更した。
+
+概略:
+
+```text
+wgetch
+  ↓
+ESC [ を検出
+  ↓
+sequence collector
+  ↓
+complete / incomplete / interrupted
+  ↓
+KKP / legacy CSI parser
+  ↓
+Lem Key
+```
+
+collector は `wgetch` が ncurses の `KEY_*` 相当値も返すことを前提にしている。
+
+CSI の途中に ncurses event が来た場合は、その event を失わず pending queue へ戻す。
+
+partial CSI は Escape として処理しつつ、既に読んだ後続コードを pending queue へ戻す。
+
+### 対応している主な入力
+
+- Unicode / control の CSI-u
+- Super
+- Shift + Super
+- Ctrl
+- Alt → Lem Meta
+- KKP Meta → Lem Meta
+- Hyper
+- cursor key
+- Home / End
+- Insert / Delete
+- PageUp / PageDown
+- F1-F24 の一部・通常範囲
+- keypad の主要キー
+- Shift+Tab
+- repeat event
+- KKP `Ctrl+]` → Lem `:abort`
+
+例:
+
+```text
+ESC[115;9u   → Super+s
+ESC[122;10u  → Shift+Super+z
+ESC[99;5u    → Ctrl+c
+ESC[1;9A     → Super+Up
+ESC[3;9~     → Super+Delete
+```
+
+### Unicode と ncurses key number の衝突対策
+
+KKP codepoint を既存の `char-to-key` へ直接流さない。
+
+例えば decimal 259 は:
+
+```text
+Unicode U+0103 = 259
+ncurses KEY_UP = 259
+```
+
+のため、KKP `259;9u` を `char-to-key` へ渡すと Up と誤認する可能性がある。
+
+現在は KKP codepoint を独立経路で Lem Key に変換している。
+
+### terminal response / 未対応 event
+
+次のような terminal response は通常キーとして実行しない。
+
+- KKP flags response
+- Device Attributes
+- Cursor Position Report
+
+release event、未対応 advanced field、未知 functional key も通常文字へ downgrade せず、安全側に倒す。
+
+### timeout
+
+従来の `with-getch-input-timeout` は入れ子になると内側終了時に常に `-1` へ戻す問題があった。
+
+現在は直前の timeout 値を保存し:
+
+```text
+-1
+ ↓
+100
+ ↓
+20
+ ↓
+100
+ ↓
+-1
+```
+
+と正しく復元する。
+
+### 自動テスト
+
+手元の `make test` で以下を確認した。
+
+- `lem-tests`: 47 tests passed
+- `lem-ncurses-tests`: KKP parser / collector / lifecycle tests passed
+- `lem-vi-mode/tests`: 11 tests passed
+- `lem-transient/tests`: passed
+
+KKP tests では特に次を確認している。
+
+- Super+s
+- Shift+Super+z
+- Ctrl+c
+- Ctrl+]
+- Escape / Return / Tab / Backspace
+- Super+arrow / Delete / F3
+- Unicode 259 を Up と誤認しない
+- F13
+- keypad
+- Alt / Meta mapping
+- Caps Lock bit 無視
+- release event を実行しない
+- terminal response を Key にしない
+- malformed input
+- repeat
+- C-i / C-m / C-[ の既存 Lem core 互換
+- Ctrl+Space
+- complete / partial CSI
+- CSI 途中の ncurses event
+- nested timeout
+- KKP push / pop が1回ずつ
+- user setting による early default の解除
+
+`make test` 全体は `lem-transient/tests` の後、次の `lem-sdl2/tests` へ移る箇所で停止したため、そこで手動終了した。
+
+これは KKP test の失敗ではない。
+
+### build
+
+`make ncurses` は成功。
+
+### 実機確認
+
+環境:
+
+- macOS
+- WezTerm
+- ncurses Lem
+- `local` branch
+
+Lem 上で:
+
+```text
+Cmd+s
+→ key not found S-s
+
+Cmd+Shift+z
+→ key not found S-Shift-z
+```
+
+を確認した。
+
+つまり少なくとも:
+
+```text
+physical keyboard
+  ↓
+macOS
+  ↓
+WezTerm
+  ↓
+PTY
+  ↓
+ncurses
+  ↓
+CSI collector
+  ↓
+KKP parser
+  ↓
+Lem Key
+```
+
+まで、Super / Shift+Super が正しく到達している。
+
+`key not found` は KKP の失敗ではなく、その Lem Key にまだ command binding がないことを示している。
+
+### 現時点で未確認
+
+まだ実機で網羅確認していないもの:
+
+- Cmd+arrow
+- Ctrl 系全般
+- Option / Meta
+- Escape
+- Tab / Shift+Tab
+- Return
+- Backspace / Delete
+- F keys
+- mouse
+- resize
+- 日本語入力
+- paste
+- key repeat
+- Kitty
+- SSH / tmux / Zellij
+- suspend / resume
+- `term-set-tty`
+- Windows / PDCurses
+
+これらは Lem を日常利用しながら問題が出たものから確認・修正する。
+
+### 現時点の判断
+
+当初の目的だった:
+
+```text
+Cmd / Super を ncurses Lem で区別して Lem Key へ届ける
+```
+
+ところまでは実機で確認できた。
+
+今後は KKP 対応自体を先に広げ続けるより、`local` を普段使いしながら実際に困ったケースを直す方針とする。
+
+upstream PR は現時点では作成していない。
+
+## 設計上の結論
 
 初回実装では次の方針を採る。
 
