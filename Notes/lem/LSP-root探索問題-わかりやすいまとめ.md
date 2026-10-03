@@ -464,13 +464,45 @@ HOME外でroot探索が終わらない問題
 
 だけ直す。
 
-候補:
+branch:
 
 ```text
 fix/language-mode-root-recursion
 ```
 
-これは単純で、既存の marker の意味を変えない。
+この修正は実装・push・PR 作成まで完了。
+
+```text
+commit:
+9ccb930426463f011365c09cf0b166dbfb1715e9
+
+PR:
+https://github.com/lem-project/lem/pull/2334
+```
+
+実機でも、
+
+```lisp
+(lem/language-mode:find-root-directory
+ #P"/tmp/"
+ (list (lambda (name)
+         (declare (ignore name))
+         nil)))
+```
+
+が、
+
+```lisp
+#P"/tmp/"
+```
+
+を即座に返すことを確認した。
+
+今回追加した regression test を含む `lem-tests` は通過している。
+
+`make test` 全体は、その後の `lem-sdl2/tests` 付近で従来から停止するため完走未確認。これは今回の root 修正とは分けて扱う。
+
+PR 1 では既存の marker の意味は変えていない。
 
 ## PR 2
 
@@ -576,7 +608,7 @@ HOME の .gitconfig
 
 ```text
 原因は確認できており
-レビュー結果を反映した設計からテスト・実装へ進む段階
+PR 1 は実装・実機確認・PR提出まで完了し、PR 2 の実装へ進める段階
 ```
 
 まで来ている。
