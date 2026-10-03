@@ -512,24 +512,74 @@ root marker の探し方
 
 を直す。
 
-候補:
+branch:
 
 ```text
 fix/language-mode-root-patterns
 ```
 
-こちらで、
+この修正も実装・push・実機確認・PR 作成まで完了。
 
-- `.git/` が見つからない
-- `.gitconfig` に間違って一致する
-- `package.json.bak` に間違って一致する
-- `.lsp/config.edn` のような指定が使えない
-- default の `.git` 判定も同じ方式へ移す
-- Lisp v2 の `.asd` 利用を function pattern へ移行する
+```text
+commit:
+f4a946cdaecc6f3cbe95a66fa836220e8b426e6b
 
-あたりをまとめて直す。
+PR:
+https://github.com/lem-project/lem/pull/2335
+```
 
-2つを別 branch にすることで、片方の修正をもう片方に依存させない。
+PR 1 から派生させず、同じ最新 `main` から独立して作った。
+
+実際に直したのは主にこのあたり。
+
+- `.git/` directory を正しく見つける
+- `.gitconfig` を `.git` と誤認しない
+- `package.json.bak` を `package.json` と誤認しない
+- `.lsp/config.edn` のような nested marker を扱う
+- default の `.git` も同じ方式へ移す
+- function pattern の既存の使い方は維持
+- Lisp の `.asd` は function pattern へ移して旧挙動を維持
+- 空文字、`.`、`..`、absolute path、wildcard は string marker として拒否する
+
+自動テストは、
+
+```text
+✓ 48 tests completed
+
+Summary:
+  All 48 tests passed.
+```
+
+まで確認済み。
+
+さらに Lem REPL で、
+
+```text
+.git/ directory        → 正しい project root
+.gitconfig             → .git と誤認しない
+.lsp/config.edn        → nested marker を正しく検出
+```
+
+を確認した。
+
+最後に普通の `git init` repository で LuaLS を起動し、
+
+```lisp
+(lem-lsp-mode::workspace-root-uri
+ (lem-lsp-mode::find-workspace "lua"))
+```
+
+が、
+
+```lisp
+"file:///Users/suzukitakashi/lem-lua-lsp-test/"
+```
+
+を返すことも確認した。
+
+つまり修正前のように HOME を root と誤認せず、実際の Git repository が LuaLS の root になっている。
+
+これで PR 1 / PR 2 は両方とも upstream のレビュー待ち。
 
 ---
 
@@ -608,7 +658,7 @@ HOME の .gitconfig
 
 ```text
 原因は確認できており
-PR 1 は実装・実機確認・PR提出まで完了し、PR 2 の実装へ進める段階
+PR 1 / PR 2 とも実装・自動テスト・実機確認・PR提出まで完了している段階
 ```
 
 まで来ている。
