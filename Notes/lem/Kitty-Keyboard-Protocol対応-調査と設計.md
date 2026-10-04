@@ -10,7 +10,7 @@ Lem の ncurses フロントエンドへ Kitty Keyboard Protocol（以下 KKP）
 
 設計上の判断と、仕様・コードから確認できる事実はできるだけ分けて書く。
 
-## 実装状況（2026-10-03）
+## 実装状況（2026-10-04）
 
 初回実装は完了し、実機で KKP 経由の Super / Shift+Super 入力まで確認できた。
 
@@ -20,7 +20,7 @@ Lem fork:
 
 ```text
 feat/ncurses-kitty-keyboard
-0c8ef310e7d5bffce4f17a04436d1c97259039c4
+376d99f6ecbe3eba797f49856db4e55901596650
 ```
 
 日常利用用:
@@ -31,6 +31,130 @@ f65045e869ebf6c7e8f98b95ee57f457a0dc25ab
 ```
 
 `local` には KKP 実装に加えて、未マージの ncurses 端末カラーパレット修正も入っている。
+
+### 2026-10-04 に実機で判明した修正漏れ
+
+`Option+Shift+Left/Right` を実機確認したところ、WezTerm からは期待どおり:
+
+```text
+Option+Shift+Left  -> ESC [ 1 ; 4 D
+Option+Shift+Right -> ESC [ 1 ; 4 C
+```
+
+が送られていたにもかかわらず、Lem の `describe-key` では:
+
+```text
+C-Left  previous-word
+C-Right forward-word
+```
+
+として見えていた。
+
+原因は KKP parser 自体ではなく、`keypad` を有効にした ncurses の `wgetch` が、terminfo に登録されている modified special key を KKP parser より先に消費することだった。
+
+実際の経路:
+
+```text
+WezTerm
+  ↓
+ESC [ 1 ; 4 D
+  ↓
+ncurses wgetch
+  ↓
+extended terminfo key として解釈
+  ↓
+動的に割り当てられた整数 key code
+  ↓
+Lem の既存整数 table
+  ↓
+別の修飾キーとして誤認
+```
+
+ncurses は extended terminfo key の数値 code を実行時に割り当てるため、その値は固定ではない。
+一方、Lem の `frontends/ncurses/key.lisp` には一部の修飾付き key code が整数で固定されている。
+
+今回の実機では、ncurses が `kLFT4` に割り当てた code が Lem 側で歴史的に `C-Left` として固定されている値と衝突した。
+
+### 修正方針
+
+`keypad` 自体は無効化しない。
+
+KKP が有効なときだけ、`wgetch` が 255 を超える ncurses key code を返した場合に `keyname()` で symbolic name を取得する。
+
+ncurses の extended key name:
+
+```text
+kLFT4
+kRIT4
+kUP5
+...
+```
+
+から元の modifier field を復元し、KKP の modifier 規則で Lem Key へ変換する。
+
+例えば:
+
+```text
+kLFT4
+  ↓
+modifier field = 4
+  ↓
+Shift + Alt
+  ↓
+Lem: M-Shift-Left
+```
+
+ここで重要なのは、`kLFT4` の末尾数字を「ncurses が付けた固定 key code」として使うのではなく、元の escape sequence の modifier field として扱うこと。
+
+対応対象は ncurses が extended special key として扱う:
+
+```text
+kDC   Delete
+kDN   Down
+kEND  End
+kHOM  Home
+kLFT  Left
+kNXT  PageDown
+kPRV  PageUp
+kRIT  Right
+kUP   Up
+```
+
+とする。
+
+KKP が無効な場合は `keyname()` を使った新経路へ入らず、従来の ncurses 入力処理をそのまま維持する。
+
+### 実装修正
+
+`feat/ncurses-kitty-keyboard` に以下を追加した。
+
+- `frontends/ncurses/key.lisp`
+  - ncurses `keyname()` を Lisp string として取得する `keycode-name`
+- `frontends/ncurses/kitty-keyboard.lisp`
+  - `kLFT4` 等を KKP modifier と Lem Key へ復元する `parse-ncurses-key-name`
+- `frontends/ncurses/input.lisp`
+  - KKP 有効時だけ ncurses-generated key code を symbolic name から復元
+  - 復元できない key は従来の整数 table へ fallback
+- `tests/ncurses/kitty-keyboard.lisp`
+  - `kLFT4 -> M-Shift-Left`
+  - `kRIT4 -> M-Shift-Right`
+  - `kLFT5 -> C-Left`
+  - `kUP9 -> Super-Up`
+  - 同じ整数 code が既存 table と衝突しても KKP key name を優先する回帰テスト
+  - KKP 無効時は新経路を使わないテスト
+
+修正コミット:
+
+```text
+8d921c727cf532d9de17e1f5aae5e4dbc27ad5fa
+Fix ncurses extended keys with Kitty keyboard
+
+376d99f6ecbe3eba797f49856db4e55901596650
+Keep legacy ncurses input untouched when KKP is disabled
+```
+
+この修正後の実機確認はまだ行っていない。
+次に `Option+Shift+Left/Right` を中心に確認する。
 
 ### 実装したファイル
 
@@ -314,7 +438,8 @@ Lem Key
 
 - Cmd+arrow
 - Ctrl 系全般
-- Option / Meta
+- Option / Meta の通常文字
+- Option+Shift+arrow（2026-10-04 に問題を確認し、feature branch を修正。再確認待ち）
 - Escape
 - Tab / Shift+Tab
 - Return
@@ -343,9 +468,11 @@ Cmd / Super を ncurses Lem で区別して Lem Key へ届ける
 
 ところまでは実機で確認できた。
 
-今後は KKP 対応自体を先に広げ続けるより、`local` を普段使いしながら実際に困ったケースを直す方針とする。
+基本的な Super / Shift+Super 入力は動作しているが、2026-10-04 に ncurses が modified special key を先に数値 key code へ変換する統合上の修正漏れが見つかった。
 
-upstream PR は現時点では作成していない。
+そのため現時点では「KKP 対応完了」とは扱わず、実機で問題になった入力経路を feature branch 上で修正しながら確認を続ける。
+
+upstream PR は現時点では作成していない。今回の修正を実機確認してから、改めて PR 可否を判断する。
 
 ## 設計上の結論
 
@@ -1028,6 +1155,12 @@ mouse related input
 
 KKP のために `keypad` を無効化しない。
 
+ただし `keypad` が有効な場合、ncurses は extended terminfo key を raw CSI のまま返さず、実行時に生成した整数 key code へ変換することがある。
+
+KKP 有効時にこの generated key code を受け取った場合は、`keyname()` から `kLFT4` 等の symbolic name を取得し、元の modifier field を復元して KKP Key として扱う。
+
+generated key code の整数値自体は安定していると仮定しない。
+
 既存 terminfo / SS3 / function key 処理を全面再実装する変更へ広げない。
 
 ## mouse
@@ -1374,6 +1507,9 @@ feature branch を直接他PR branchへ依存させず、日常利用の組み�
 - `ERR`。
 - resize。
 - ncurses変換済み `KEY_*`。
+- ncurses extended key name（`kLFT4` 等）からの KKP modifier 復元。
+- generated key code が Lem の既存固定整数 table と衝突するケース。
+- KKP 無効時に従来経路へ影響しないこと。
 - raw CSI と `KEY_*` の共存。
 - raw `C-]` と KKP `Ctrl+]` の両方が同じ非強制 abort。
 - mouse click / drag / scroll。
