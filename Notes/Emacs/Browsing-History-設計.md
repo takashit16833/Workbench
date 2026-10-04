@@ -322,7 +322,12 @@ Tab Router 側からも Browsing History を必須依存にしない。
 ```elisp
 (use-package browsing-history
   :vc (:url "https://github.com/takashit16833/emacs-browsing-history.git"
-       :rev :newest))
+       :rev :newest)
+  :custom
+  (browsing-history-scope 'tab)
+  :bind
+  (("s-[" . my/browsing-history-back)
+   ("s-]" . my/browsing-history-forward)))
 ```
 
 ## 実装ファイル
