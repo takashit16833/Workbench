@@ -2,190 +2,18 @@
 
 ```toc
 minLevel: 2
+maxLevel: 3
 ```
 
-Embark は、**今選んでいる候補やカーソル位置の対象に対して操作する**ためのパッケージ。
+## Overview
+
+### Embark とは
+
+Embark は、**今選んでいる対象に対して操作する**ためのパッケージ。
 
 Consult が「探す」、Embark が「見つけたものに何かする」を担当する。
 
-## まず覚えること
-
-```text
-C-.      embark-act
-```
-
-基本はこれだけでよい。
-
-候補上で `C-.` を押すと、その対象に使える操作を選べる。
-
-```text
-consult-ripgrep
-↓
-候補を絞る
-↓
-C-.
-↓
-操作を選ぶ
-```
-
-## `embark-act`
-
-```text
-C-.
-```
-
-対象に応じた操作メニューを開く。
-
-対象の例:
-
-- ファイル
-- バッファ
-- URL
-- シンボル
-- リージョン
-- Consult の検索結果
-
-### 操作が多すぎるとき
-
-`C-.` のあとに `C-h` を押す。
-
-操作名を補完から検索できる。
-
-## よく使う Embark 操作
-
-`C-.` のあとに使う。
-
-| キー | 操作 | 用途 |
-|---|---|---|
-| `RET` | デフォルト操作 | 普通にその候補を開くなど |
-| `E` | `embark-export` | 候補一覧を専用バッファへ書き出す |
-| `S` | `embark-collect` | 候補一覧を Embark の一覧バッファにする |
-| `A` | `embark-act-all` | 複数候補へまとめて操作する |
-| `B` | `embark-become` | 今の補完を別のコマンドへ切り替える |
-| `SPC` | `embark-select` | 候補を選択・選択解除する |
-
-迷ったら **`E` を優先**する。
-
-専用の Major mode に変換できる場合、`collect` より操作しやすい。
-
-## Consult + Export
-
-### ripgrep → grep-mode
-
-```text
-consult-ripgrep
-↓
-検索結果を絞る
-↓
-C-. E
-↓
-grep-mode
-```
-
-Emacs 31 では `e` で `grep-edit-mode` に入れる。
-
-編集後:
-
-```text
-C-c C-c
-```
-
-で元ファイルへ反映する。
-
-```text
-検索
-→ 絞り込み
-→ 一覧化
-→ 複数ファイルをまとめて編集
-```
-
-### consult-line → occur-mode
-
-```text
-consult-line
-↓
-C-. E
-↓
-occur-mode
-```
-
-`e` で `occur-edit-mode` に入れる。
-
-編集後は `C-c C-c` で確定する。
-
-### ファイル候補 → Dired
-
-```text
-ファイル検索
-↓
-C-. E
-↓
-Dired
-```
-
-さらに `C-x C-q` で Wdired に入れば、ファイル名をテキストのように編集できる。
-
-## Export した後の `g`
-
-Export / Collect バッファで:
-
-```text
-g
-```
-
-元の補完セッションをやり直す。
-
-検索条件を変えたいときに使う。
-
-## 複数候補を選ぶ
-
-候補上で:
-
-```text
-C-. SPC
-```
-
-候補を選択・選択解除する。
-
-選択後:
-
-```text
-C-. A
-```
-
-選択した候補すべてに操作する。
-
-## `embark-bindings`
-
-```text
-C-h B
-```
-
-現在の対象で使える操作を一覧する。
-
-「この対象に何ができる？」を確認するときに使う。
-
-## `embark-dwim`
-
-対象に対するデフォルト操作を、メニューを出さず直接実行する。
-
-最初は `C-.` を使い、必要になってから使えばよい。
-
-## `embark-become`
-
-現在の入力を残したまま、別の補完コマンドへ切り替える。
-
-```text
-find-file
-↓
-文字を入力
-↓
-C-. B
-↓
-別のコマンドへ切り替える
-```
-
-## Embark の考え方
+### Target / Action
 
 Embark は **Target** と **Action** を分けて考える。
 
@@ -213,17 +41,78 @@ Consult の検索結果
 → Export ...
 ```
 
-全部のキーを覚える必要はない。
-
-## Tips
-
-### まず覚える3つ
+### Consult との役割分担
 
 ```text
-C-.        対象に対して操作する
-C-. E      候補を Export する
-C-h B      使える操作を確認する
+Consult
+  探す・絞り込む
+
+Embark
+  候補に対して操作する
+
+embark-consult
+  Consult の候補を Export する
 ```
+
+## Basic
+
+### `embark-act`
+
+```text
+C-.
+```
+
+対象に使える操作を選ぶ。
+
+まず覚えるのはこれだけでよい。
+
+```text
+consult-ripgrep
+↓
+候補を絞る
+↓
+C-.
+↓
+操作を選ぶ
+```
+
+### `embark-bindings`
+
+```text
+C-h B
+```
+
+現在の対象で使える操作を一覧する。
+
+「この対象に何ができる？」を確認するときに使う。
+
+### `embark-export`
+
+```text
+C-. E
+```
+
+現在の候補一覧を、その対象に適した専用バッファへ書き出す。
+
+例:
+
+```text
+consult-ripgrep → grep-mode
+consult-line    → occur-mode
+ファイル候補   → Dired
+```
+
+### `embark-collect`
+
+```text
+C-. S
+```
+
+候補一覧を Embark の一覧バッファとして残す。
+
+専用の Major mode に Export できる場合は、基本的に `embark-export` を優先する。
+
+## Workflows
 
 ### ripgrep の結果を一括編集する
 
@@ -236,12 +125,146 @@ consult-ripgrep
 → C-c C-c
 ```
 
-### 複数候補へ同じ操作をする
+`e` で `grep-edit-mode` に入り、検索結果から複数ファイルをまとめて編集できる。
+
+### consult-line の結果を編集する
 
 ```text
-C-. SPC    候補を選択
-C-. A      選択候補すべてに操作
+consult-line
+→ C-. E
+→ occur-mode
+→ e
+→ 編集
+→ C-c C-c
 ```
+
+`e` で `occur-edit-mode` に入る。
+
+### ファイル候補を Dired にする
+
+```text
+ファイル検索
+→ C-. E
+→ Dired
+```
+
+さらに、
+
+```text
+C-x C-q
+```
+
+で Wdired に入り、ファイル名をテキストのように編集できる。
+
+### 複数候補へ同じ操作をする
+
+候補を選択:
+
+```text
+C-. SPC
+```
+
+複数選択後:
+
+```text
+C-. A
+```
+
+選択した候補すべてに同じ操作を実行する。
+
+## Advanced
+
+### `embark-select`
+
+```text
+C-. SPC
+```
+
+候補を Embark の選択対象に追加・解除する。
+
+### `embark-act-all`
+
+```text
+C-. A
+```
+
+選択した複数候補へ同じ Action を実行する。
+
+### `embark-become`
+
+```text
+C-. B
+```
+
+現在の入力を残したまま、別の補完コマンドへ切り替える。
+
+```text
+find-file
+↓
+文字を入力
+↓
+C-. B
+↓
+別のコマンドへ切り替える
+```
+
+### `embark-dwim`
+
+対象に対するデフォルト操作を、メニューを出さず直接実行する。
+
+最初は `embark-act` を使い、必要になってから使えばよい。
+
+## Tips
+
+### 操作が多すぎるとき
+
+`C-.` のあとに `C-h` を押す。
+
+操作名を補完から検索できる。
+
+### Export と Collect の使い分け
+
+専用の Major mode に変換できるなら **Export**。
+
+```text
+grep-mode
+occur-mode
+Dired
+```
+
+専用モードがなく、候補一覧だけ残したいなら **Collect**。
+
+### Export 後に検索をやり直す
+
+Export / Collect バッファで:
+
+```text
+g
+```
+
+元の補完セッションをやり直す。
+
+検索条件を変えたいときに使う。
+
+### 最初に覚えるキー
+
+```text
+C-.        対象に対して操作する
+C-. E      候補を Export する
+C-h B      使える操作を確認する
+```
+
+## Command Reference
+
+| キー | コマンド | 用途 |
+|---|---|---|
+| `C-.` | `embark-act` | 対象に対して操作する |
+| `C-h B` | `embark-bindings` | 使える操作を一覧する |
+| `C-. E` | `embark-export` | 候補を専用バッファへ書き出す |
+| `C-. S` | `embark-collect` | 候補を Embark の一覧にする |
+| `C-. SPC` | `embark-select` | 候補を選択・解除する |
+| `C-. A` | `embark-act-all` | 複数候補へ同じ操作をする |
+| `C-. B` | `embark-become` | 別の補完コマンドへ切り替える |
 
 ## 参考
 
