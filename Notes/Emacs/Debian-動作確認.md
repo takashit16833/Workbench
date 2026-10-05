@@ -1,43 +1,111 @@
 # Debian での動作確認
 
-## 現場の Debian コンテナで使う最短手順
+## 現場の Debian コンテナでセットアップする最短手順
 
-**普段はここだけ見ればよい。**
+ここだけ見ればセットアップできるようにする。
 
-前提は、現在の `.emacs.d` が現場のコンテナ内にあることだけ。
+以下は **Debian 13 (trixie) で実際に確認した手順**。
+コンテナ内で root として実行する前提。
 
-例えば `~/.emacs.d` に置いた場合:
-
-```sh
-cd ~/.emacs.d
-bash scripts/debian-setup.sh
-```
-
-これで次をまとめて行う。
-
-- Debian 側に不足しているビルド依存パッケージを `apt` で入れる
-- Git / GitHub CLI / ripgrep などを入れる
-- GNU Emacs 31.1 がなければソースからビルドして `/usr/local` に入れる
-- private GitHub リポジトリを取得できるように認証する
-- UTF-8 / 256色 / true color 用の環境を付けて `emacs -nw --debug-init` を起動する
-
-GitHub に未認証なら途中で `gh auth login` が始まる。
-ブラウザを自動で開けないコンテナでは、表示された URL とコードをホスト側のブラウザで使う。
-
-2回目以降はセットアップ不要。
+### 1. 必要なパッケージを入れる
 
 ```sh
-cd ~/.emacs.d
-bash scripts/debian-emacs.sh
+apt update
+
+apt install -y \
+  build-essential \
+  ca-certificates \
+  curl \
+  gh \
+  git \
+  pkg-config \
+  ripgrep \
+  texinfo \
+  xz-utils \
+  zlib1g-dev \
+  libgccjit-14-dev \
+  libgmp-dev \
+  libgnutls28-dev \
+  libncurses-dev \
+  libsqlite3-dev \
+  libtree-sitter-dev \
+  libxml2-dev
 ```
 
-### .emacs.d がまだコンテナ内にない場合
+### 2. GNU Emacs 31.1 をビルドしてインストールする
 
-現場の構成に合わせて、ホストからマウント・コピーするか Git で取得する。
+```sh
+cd /tmp
 
-重要なのは **macOS 側の生成物をそのまま持ち込まないこと**。
+curl -LO https://ftp.gnu.org/gnu/emacs/emacs-31.1.tar.xz
+tar -xf emacs-31.1.tar.xz
+cd emacs-31.1
 
-少なくとも次は Debian 側で作り直す。
+./configure \
+  --without-x \
+  --with-native-compilation=aot \
+  --with-tree-sitter \
+  --with-sqlite3 \
+  --with-gnutls \
+  --with-modules
+
+make -j"$(nproc)"
+make install
+```
+
+確認する。
+
+```sh
+hash -r
+command -v emacs
+emacs --version | head -1
+```
+
+期待値:
+
+```text
+/usr/local/bin/emacs
+GNU Emacs 31.1
+```
+
+### 3. GitHub にログインする
+
+現在の設定は private GitHub リポジトリからテーマや自作パッケージを取得するため、GitHub 認証が必要。
+
+```sh
+gh auth login
+gh auth setup-git
+```
+
+`gh auth login` では次を選ぶ。
+
+```text
+GitHub.com
+HTTPS
+Authenticate Git with your GitHub credentials? Yes
+Login with a web browser
+```
+
+コンテナ内でブラウザを開けなくても問題ない。
+表示された URL をホスト側のブラウザで開き、表示されたワンタイムコードを入力する。
+
+確認:
+
+```sh
+gh auth status
+```
+
+### 4. .emacs.d を取得する
+
+新規構築なら GitHub から clone するのが簡単。
+
+```sh
+git clone https://github.com/takashit16833/.emacs.d.git ~/.emacs.d
+```
+
+すでに `~/.emacs.d` がある場合は clone し直さず、その環境に合わせて更新する。
+
+macOS の `.emacs.d` をファイルコピーする場合は、少なくとも次の生成物は持ち込まない。
 
 ```text
 elpa/
@@ -46,74 +114,93 @@ tree-sitter/
 *.elc
 ```
 
----
+これらは Debian 側で作り直す。
 
-## この検証の目的
+### 5. UTF-8 と true color を設定する
 
-今回 Docker で Debian を試した目的は、「専用の検証コンテナなら動く」ことを確認するためではない。
-
-**実際の現場にある Debian 系コンテナへ入ったとき、何を用意すれば現在の Emacs 環境を動かせるかを確認するため**。
-
-検証の結果、必要だったものは大きく次の4つだった。
-
-1. GNU Emacs 31.1
-2. Emacs 31.1 のビルドに必要な Debian パッケージ
-3. UTF-8 / true color の端末環境
-4. private GitHub リポジトリを取得するための認証
-
-これらを現場コンテナ内でまとめて準備するために `scripts/debian-setup.sh` を追加した。
-
-## 現場用スクリプト
-
-### scripts/debian-setup.sh
-
-**既存の Debian 系コンテナ内で実行する。**
-
-検証用コンテナを新しく作るスクリプトではない。
-
-主な処理:
-
-- `apt-get update`
-- 必要パッケージのインストール
-- Debian のバージョンに合わせて `libgccjit-*-dev` を検出
-- GNU Emacs 31.1 のビルド・インストール
-- GitHub 認証
-- Emacs の起動
-
-root でなければ `sudo` を使う。
-root 権限も `sudo` もなければ停止する。
-
-Emacs 31.1 がすでに `/usr/local/bin/emacs` にあれば再ビルドしない。
-
-### scripts/debian-emacs.sh
-
-セットアップ済みの現場コンテナで Emacs を起動するための薄いラッパー。
-
-```sh
-bash scripts/debian-emacs.sh
-```
-
-次の環境を Emacs プロセスにだけ付けて起動する。
+今回、何も設定しない状態では次だった。
 
 ```text
-LANG=C.UTF-8
-TERM=xterm-256color
-COLORTERM=truecolor
+LANG=
+TERM=xterm
+COLORTERM=
 ```
 
-## 検証で実際に見つかった問題
+その結果、日本語が `?????` になり、色も8色相当になった。
 
-### Debian 標準の Emacs が古かった
+Emacs を起動する前に設定する。
 
-Debian trixie で、
+```sh
+export LANG=C.UTF-8
+export TERM=xterm-256color
+export COLORTERM=truecolor
+```
+
+確認:
+
+```sh
+printf 'LANG=%s\nTERM=%s\nCOLORTERM=%s\n' \
+  "$LANG" "$TERM" "$COLORTERM"
+
+infocmp "$TERM" | grep -E 'colors#|RGB|setaf|setab'
+```
+
+少なくとも `TERM=xterm-256color` で `colors#256` 相当になっていることを確認する。
+
+### 6. Emacs を起動する
+
+初回はエラーを確認しやすいように `--debug-init` を付ける。
+
+```sh
+emacs -nw --debug-init
+```
+
+正常に起動できたら、普段は次でよい。
+
+```sh
+emacs -nw
+```
+
+---
+
+## この手順で確認している範囲
+
+今回の検証目的は、専用の検証コンテナが動くことではない。
+
+**現場ですでに存在している Debian 系コンテナに入り、現在の Emacs 31.1 + `.emacs.d` 環境を構築するために何が必要か確認すること**。
+
+Debian 13 (trixie) 上で、少なくとも次を実測した。
+
+- GNU Emacs 31.1 のソースビルド
+- native compilation
+- Tree-sitter
+- GnuTLS
+- SQLite
+- dynamic modules
+- inotify
+- 現在の `.emacs.d` の起動
+- 日本語表示
+- true color
+- private GitHub リポジトリからの `package-vc` インストール
+
+Ubuntu や別バージョンの Debian では、特に `libgccjit-14-dev` などのパッケージ名が異なる可能性がある。
+その場合はパッケージ名を推測して変更せず、その環境の `apt-cache search` などで確認する。
+
+## 今回見つかった問題
+
+### Debian 標準 Emacs のバージョン差
+
+最初に Debian trixie で、
 
 ```sh
 apt install emacs-nox
 ```
 
-すると、検証時点では Emacs 30.1 が入った。
+したところ、Emacs 30.1 が入った。
 
-現在の設定は Emacs 31.1 前提なので、
+現在の設定は Emacs 31.1 前提で、`config/ui.el` では Emacs 31.1 の display table slot を使用している。
+
+そのため、
 
 ```text
 Invalid display-table slot name: box-vertical
@@ -121,13 +208,13 @@ Invalid display-table slot name: box-vertical
 
 で停止した。
 
-これは Debian 非対応ではなく **Emacs 30.1 と 31.1 の API 差**。
+これは Debian 非対応ではなく、Emacs 30.1 と 31.1 の API 差。
 
-そのため現場でも Debian 標準の Emacs バージョンに設定を合わせず、Emacs 31.1 を用意する。
+このプロジェクトでは Emacs 31.1 を対象にしているため、Emacs 30 系向けの互換処理は追加せず、Debian 側にも Emacs 31.1 を入れる。
 
-### private GitHub リポジトリを取得できなかった
+### package-vc から private リポジトリを取得できない
 
-`package-vc` がテーマを取得するとき、
+Emacs 31.1 にした後、
 
 ```text
 Empty checkout for retro-hacker-blue-theme
@@ -135,22 +222,18 @@ Empty checkout for retro-hacker-blue-theme
 
 になった。
 
-リポジトリが空だったのではなく、コンテナに GitHub 認証がなかったことが原因。
-
-現場コンテナでは `gh` を入れ、未認証なら、
+リポジトリが空なのではなく、コンテナに GitHub 認証がなかったことが原因だった。
 
 ```sh
 gh auth login
 gh auth setup-git
 ```
 
-を行えば取得できる。
+後は正常に取得できた。
 
-`scripts/debian-setup.sh` はこの処理も行う。
+### 日本語が ????? になる
 
-### 日本語が ????? になった
-
-初期状態は、
+初期状態:
 
 ```text
 LANG=
@@ -158,24 +241,22 @@ LC_ALL=
 LC_CTYPE="POSIX"
 ```
 
-だった。
-
 ```sh
 export LANG=C.UTF-8
 ```
 
-で正常になった。
+後は正常に日本語を表示できた。
 
-### 色がおかしかった
+### 色がおかしい
 
-初期状態は、
+初期状態:
 
 ```text
 TERM=xterm
 COLORTERM=
 ```
 
-で、terminfo 上も、
+`infocmp` では、
 
 ```text
 colors#8
@@ -183,7 +264,7 @@ colors#8
 
 だった。
 
-次で正常になった。
+次を設定すると正常になった。
 
 ```sh
 export TERM=xterm-256color
@@ -206,6 +287,17 @@ emacs --version | head -1
 GNU Emacs 31.1
 ```
 
+### configure の機能確認
+
+`./configure` の最後で、少なくとも次を確認する。
+
+```text
+Does Emacs use -lgnutls?                 yes
+Does Emacs use -ltree-sitter?            yes
+Does Emacs have dynamic modules support? yes
+Does Emacs have native lisp compiler?    yes
+```
+
 ### UTF-8
 
 ```sh
@@ -214,19 +306,11 @@ locale
 locale -a
 ```
 
-少なくとも UTF-8 ロケールが使えることを確認する。
-
-今回の環境では、
-
-```text
-C.utf8
-```
-
-が利用できた。
+今回の Debian では `C.utf8` が存在し、`LANG=C.UTF-8` で正常に動作した。
 
 ### 色
 
-Emacs を起動する前のシェルで確認する。
+Emacs 起動前のシェルで確認する。
 
 ```sh
 printf 'TERM=%s\nCOLORTERM=%s\n' "$TERM" "$COLORTERM"
@@ -240,7 +324,7 @@ TERM=xterm-256color
 COLORTERM=truecolor
 ```
 
-Emacs 内の色数は、
+Emacs 側の色数は、
 
 ```elisp
 (display-color-cells)
@@ -254,7 +338,7 @@ Emacs 内の色数は、
 gh auth status
 ```
 
-未認証なら、
+認証されていなければ、
 
 ```sh
 gh auth login
@@ -263,54 +347,40 @@ gh auth setup-git
 
 を行う。
 
+## TERM を Emacs 内から確認するときの注意
+
+今回 Emacs 内で、
+
+```elisp
+(getenv "TERM")
+```
+
+を評価すると `"dumb"` が返った。
+
+Emacs は起動後、子プロセス向けの環境として `TERM=dumb` を設定する場合があるため、この値だけで Emacs 自身が現在の端末をどう認識しているか判断しない。
+
+端末側の `TERM` は Emacs 起動前のシェルで確認する。
+
 ## 検証用 Docker 環境
 
-`.emacs.d` には別途、
+`.emacs.d` には、今回の手順をまっさらな Debian で再確認するための検証環境も置いている。
 
 ```text
 docker/debian/
 scripts/debian-test.sh
 ```
 
-も置いている。
+これは **現場コンテナに Emacs を導入するための手順ではない**。
 
-こちらは **現場へ導入するためのものではない**。
-
-まっさらな Debian 環境から現在の設定が再現できるかを継続的に確認するための検証用。
+用途は、今後 `.emacs.d` を変更したときに、Debian trixie + Emacs 31.1 の新規環境でも引き続き起動できるか確認すること。
 
 ```sh
+cd ~/.emacs.d
 bash scripts/debian-test.sh
 ```
 
-とすれば、Debian trixie + Emacs 31.1 の使い捨て環境を作って確認できる。
+コンテナ内のシェルで調査したい場合:
 
-役割を分けると次の通り。
-
-```text
-現場に既存の Debian コンテナがある
-    → scripts/debian-setup.sh
-
-セットアップ後、普段 Emacs を起動する
-    → scripts/debian-emacs.sh
-
-まっさらな Debian で再現性を検証する
-    → scripts/debian-test.sh
+```sh
+bash scripts/debian-test.sh --shell
 ```
-
-## 現時点で確認済み
-
-Debian trixie 上で次を確認した。
-
-- GNU Emacs 31.1 のソースビルド成功
-- native compilation 有効
-- Tree-sitter 有効
-- GnuTLS 有効
-- SQLite 有効
-- dynamic modules 有効
-- inotify 有効
-- 現在の `.emacs.d` が起動
-- 日本語表示
-- true color
-- private repository からの `package-vc` インストール
-
-今後 OS 差の問題が出た場合も、まず現場コンテナ上の実際の値を確認してから設定を変更する。
