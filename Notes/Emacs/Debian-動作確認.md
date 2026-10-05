@@ -77,22 +77,25 @@ apt update
 apt install -y \
   build-essential \
   ca-certificates \
+  cmake \
   curl \
   gh \
   git \
-  ncurses-bin \
-  pkg-config \
-  ripgrep \
-  texinfo \
-  xz-utils \
-  zlib1g-dev \
   libgccjit-14-dev \
   libgmp-dev \
   libgnutls28-dev \
   libncurses-dev \
   libsqlite3-dev \
+  libtool-bin \
   libtree-sitter-dev \
-  libxml2-dev
+  libvterm-dev \
+  libxml2-dev \
+  ncurses-bin \
+  pkg-config \
+  ripgrep \
+  texinfo \
+  xz-utils \
+  zlib1g-dev
 ```
 
 このパッケージ名は Debian 13 (trixie) で確認したもの。
@@ -104,6 +107,34 @@ apt-cache search '^libgccjit-[0-9].*-dev$'
 ```
 
 推測で別バージョン名に置き換えない。
+
+### vterm のビルド依存
+
+`vterm` は Emacs Lisp だけで完結するパッケージではなく、初回利用時に C の動的モジュールをビルドする。
+
+検証コンテナで `vterm` を起動した際、次のエラーを確認した。
+
+```text
+Vterm needs CMake to be compiled.  Please, install CMake
+```
+
+直接の原因はコンテナに `cmake` が入っていなかったこと。
+
+そのため Debian 検証環境では次を追加する。
+
+```text
+cmake
+libtool-bin
+libvterm-dev
+```
+
+役割は次の通り。
+
+- `cmake`: vterm のネイティブモジュールをビルドするために必要
+- `libtool-bin`: ビルド用ツール。内蔵 libvterm を使う場合にも備えて入れる
+- `libvterm-dev`: Debian が提供する libvterm の開発用ファイル。必須ではないが、外部から libvterm のソースを取得してビルドする必要を減らせるため、検証環境の再現性を上げる目的で入れる
+
+Emacs 自体は後述のとおり `--with-modules` を付けてビルドしているため、この問題に対して Emacs の configure オプションを変更する必要はない。
 
 ## 3. GNU Emacs 31.1 をビルドする
 
