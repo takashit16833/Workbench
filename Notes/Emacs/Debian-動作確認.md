@@ -1,210 +1,156 @@
 # Debian での動作確認
 
-## 最短手順
+## 現場の Debian コンテナで使う最短手順
 
-普段はここだけ見ればよい。
+**普段はここだけ見ればよい。**
 
-前提:
+前提は、現在の `.emacs.d` が現場のコンテナ内にあることだけ。
 
-- Docker または Colima が起動している
-- GitHub CLI (`gh`) が入っている
-- `gh auth login` 済み
-
-`.emacs.d` で実行する。
+例えば `~/.emacs.d` に置いた場合:
 
 ```sh
 cd ~/.emacs.d
-bash scripts/debian-test.sh
+bash scripts/debian-setup.sh
 ```
 
-これで Debian trixie + GNU Emacs 31.1 の検証環境を作り、現在の設定で `emacs -nw --debug-init` を起動する。
+これで次をまとめて行う。
 
-GitHub の認証で止まった場合だけ、ホスト側で次を実行してからやり直す。
+- Debian 側に不足しているビルド依存パッケージを `apt` で入れる
+- Git / GitHub CLI / ripgrep などを入れる
+- GNU Emacs 31.1 がなければソースからビルドして `/usr/local` に入れる
+- private GitHub リポジトリを取得できるように認証する
+- UTF-8 / 256色 / true color 用の環境を付けて `emacs -nw --debug-init` を起動する
+
+GitHub に未認証なら途中で `gh auth login` が始まる。
+ブラウザを自動で開けないコンテナでは、表示された URL とコードをホスト側のブラウザで使う。
+
+2回目以降はセットアップ不要。
 
 ```sh
-gh auth login
+cd ~/.emacs.d
+bash scripts/debian-emacs.sh
 ```
 
-Emacs を起動せず、Debian コンテナ内を調査したい場合は次。
+### .emacs.d がまだコンテナ内にない場合
 
-```sh
-bash scripts/debian-test.sh --shell
-```
+現場の構成に合わせて、ホストからマウント・コピーするか Git で取得する。
 
-正常に起動したなら、以降の説明を読む必要はない。
+重要なのは **macOS 側の生成物をそのまま持ち込まないこと**。
 
----
-
-## 目的
-
-macOS で作っている CLI 用 Emacs 設定が、Debian 系 Linux でも自然に動くか確認する。
-
-対象は GNU Emacs 31.1 とし、`emacs -nw` で利用する。
-
-単に一度起動できることだけではなく、今後も同じ環境を簡単に作り直せることを目的として、Docker による検証環境を `.emacs.d` 側に用意した。
-
-## 結論
-
-現在の `.emacs.d` は、Debian trixie + GNU Emacs 31.1 の組み合わせで起動できた。
-
-次回からは `.emacs.d` のリポジトリ直下で次の1コマンドを実行する。
-
-```sh
-bash scripts/debian-test.sh
-```
-
-このコマンドで、
-
-1. Debian trixie の Docker イメージを用意する
-2. GNU Emacs 31.1 をソースからビルドする
-3. UTF-8 と true color 用の端末環境を設定する
-4. ホストの現在の `.emacs.d` を読み取り専用で渡す
-5. macOS 由来の生成物を除いて Debian 側の `~/.emacs.d` を作る
-6. GitHub の private リポジトリを取得できるように一時的に認証する
-7. `emacs -nw --debug-init` を起動する
-
-ところまで行う。
-
-初回だけ Emacs のビルドに時間がかかる。2回目以降は Docker のキャッシュが使われる。
-
-## 前提
-
-ホスト側で次が利用できる必要がある。
-
-- Docker または Colima
-- GitHub CLI (`gh`)
-- `gh auth login` 済みの GitHub 認証
-
-GitHub の認証が必要なのは、テーマや自作パッケージを `package-vc` から private リポジトリとして取得しているため。
-
-## 検証環境
-
-Docker のベースは次。
+少なくとも次は Debian 側で作り直す。
 
 ```text
-debian:trixie
-```
-
-Emacs は Debian の `emacs-nox` パッケージを使わず、GNU Emacs 31.1 を公式ソースからビルドする。
-
-現在のビルド設定は次。
-
-```sh
-./configure \
-  --without-x \
-  --with-native-compilation=aot \
-  --with-tree-sitter \
-  --with-sqlite3 \
-  --with-gnutls \
-  --with-modules
-```
-
-実際の configure 結果では、少なくとも次を確認した。
-
-```text
-GnuTLS              yes
-Tree-sitter         yes
-GMP                 yes
-zlib                yes
-dynamic modules     yes
-native Lisp compiler yes
-file notification   yes (inotify)
-```
-
-GUI は対象外なので X は無効にしている。
-
-## 自動化ファイル
-
-`.emacs.d` に次を追加した。
-
-```text
-docker/
-  debian/
-    Dockerfile
-    entrypoint.sh
-
-scripts/
-  debian-test.sh
-```
-
-### scripts/debian-test.sh
-
-ホスト側で実行する入口。
-
-主な処理は次。
-
-- Docker イメージをビルド
-- `gh auth token` から現在の GitHub 認証を取得
-- 認証情報を実行時だけ `GH_TOKEN` としてコンテナへ渡す
-- `.emacs.d` を読み取り専用でマウント
-- コンテナを対話 TTY 付きで起動
-
-認証トークンは Docker イメージには書き込まない。
-
-コンテナは `--rm` で起動するため、終了後にコンテナ自体も残さない。
-
-### docker/debian/entrypoint.sh
-
-コンテナ起動時に、ホストの `.emacs.d` をそのまま Emacs の設定ディレクトリとして使わない。
-
-一度 `/root/.emacs.d` に設定ソースをコピーしてから Emacs を起動する。
-
-これは、Emacs がパッケージやキャッシュを生成してもホスト側の `.emacs.d` を変更しないため。
-
-また、次のような macOS 側で生成されたものはコピーしない。
-
-```text
-.git/
 elpa/
 eln-cache/
 tree-sitter/
-transient/
-auto-save-list/
-history
-projects.eld
 *.elc
-その他の Emacs 生成状態
 ```
 
-そのため Debian 側ではパッケージやネイティブコンパイル済みファイルを新しく作り直す。
+---
 
-## 今回見つかった問題
+## この検証の目的
 
-### 1. Debian 標準 Emacs のバージョン差
+今回 Docker で Debian を試した目的は、「専用の検証コンテナなら動く」ことを確認するためではない。
 
-最初に Debian trixie で `apt install emacs-nox` したところ、Emacs 30.1 が入った。
+**実際の現場にある Debian 系コンテナへ入ったとき、何を用意すれば現在の Emacs 環境を動かせるかを確認するため**。
 
-現在の設定は Emacs 31.1 を対象にしており、`config/ui.el` で Emacs 31.1 の display table slot を使用している。
+検証の結果、必要だったものは大きく次の4つだった。
 
-そのため次のエラーになった。
+1. GNU Emacs 31.1
+2. Emacs 31.1 のビルドに必要な Debian パッケージ
+3. UTF-8 / true color の端末環境
+4. private GitHub リポジトリを取得するための認証
+
+これらを現場コンテナ内でまとめて準備するために `scripts/debian-setup.sh` を追加した。
+
+## 現場用スクリプト
+
+### scripts/debian-setup.sh
+
+**既存の Debian 系コンテナ内で実行する。**
+
+検証用コンテナを新しく作るスクリプトではない。
+
+主な処理:
+
+- `apt-get update`
+- 必要パッケージのインストール
+- Debian のバージョンに合わせて `libgccjit-*-dev` を検出
+- GNU Emacs 31.1 のビルド・インストール
+- GitHub 認証
+- Emacs の起動
+
+root でなければ `sudo` を使う。
+root 権限も `sudo` もなければ停止する。
+
+Emacs 31.1 がすでに `/usr/local/bin/emacs` にあれば再ビルドしない。
+
+### scripts/debian-emacs.sh
+
+セットアップ済みの現場コンテナで Emacs を起動するための薄いラッパー。
+
+```sh
+bash scripts/debian-emacs.sh
+```
+
+次の環境を Emacs プロセスにだけ付けて起動する。
+
+```text
+LANG=C.UTF-8
+TERM=xterm-256color
+COLORTERM=truecolor
+```
+
+## 検証で実際に見つかった問題
+
+### Debian 標準の Emacs が古かった
+
+Debian trixie で、
+
+```sh
+apt install emacs-nox
+```
+
+すると、検証時点では Emacs 30.1 が入った。
+
+現在の設定は Emacs 31.1 前提なので、
 
 ```text
 Invalid display-table slot name: box-vertical
 ```
 
-これは Debian 非対応ではなく、Emacs 30.1 と 31.1 の API 差だった。
+で停止した。
 
-今回の設定では Emacs 30 系との互換処理を追加せず、検証環境側を Emacs 31.1 に合わせることにした。
+これは Debian 非対応ではなく **Emacs 30.1 と 31.1 の API 差**。
 
-### 2. package-vc から private リポジトリを取得できない
+そのため現場でも Debian 標準の Emacs バージョンに設定を合わせず、Emacs 31.1 を用意する。
 
-Emacs 31.1 にした後、次のエラーになった。
+### private GitHub リポジトリを取得できなかった
+
+`package-vc` がテーマを取得するとき、
 
 ```text
 Empty checkout for retro-hacker-blue-theme
 ```
 
-対象リポジトリには実際にファイルが存在していた。
+になった。
 
-原因は、まっさらなコンテナに GitHub の認証情報がなく、private リポジトリを Git が取得できなかったこと。
+リポジトリが空だったのではなく、コンテナに GitHub 認証がなかったことが原因。
 
-手動検証ではコンテナ内で `gh auth login` と `gh auth setup-git` を行うと解消した。
+現場コンテナでは `gh` を入れ、未認証なら、
 
-自動化後は、ホストの `gh auth token` から得た認証を実行時だけコンテナへ渡し、コンテナ内で `gh auth setup-git` する。
+```sh
+gh auth login
+gh auth setup-git
+```
 
-### 3. 日本語が ????? になる
+を行えば取得できる。
 
-コンテナ内を確認すると次の状態だった。
+`scripts/debian-setup.sh` はこの処理も行う。
+
+### 日本語が ????? になった
+
+初期状態は、
 
 ```text
 LANG=
@@ -212,221 +158,159 @@ LC_ALL=
 LC_CTYPE="POSIX"
 ```
 
-UTF-8 ロケールとして起動していなかったため、日本語コメントが `?????` のように表示されていた。
-
-次を設定すると正常に表示された。
+だった。
 
 ```sh
 export LANG=C.UTF-8
 ```
 
-自動化環境では最初から `LANG=C.UTF-8` を設定する。
+で正常になった。
 
-### 4. Retro Hacker Blue の色がおかしい
+### 色がおかしかった
 
-最初のコンテナでは次だった。
+初期状態は、
 
 ```text
 TERM=xterm
 COLORTERM=
 ```
 
-さらに、
-
-```sh
-infocmp "$TERM"
-```
-
-では、
+で、terminfo 上も、
 
 ```text
 colors#8
 ```
 
-となっており、8色端末として扱われていた。
+だった。
 
-次を設定すると正常な色で表示できた。
+次で正常になった。
 
 ```sh
 export TERM=xterm-256color
 export COLORTERM=truecolor
 ```
 
-自動化環境でも次を固定している。
+## うまくいかないとき
+
+### Emacs のバージョン
+
+```sh
+command -v emacs
+emacs --version | head -1
+```
+
+期待値:
 
 ```text
-LANG=C.UTF-8
+/usr/local/bin/emacs
+GNU Emacs 31.1
+```
+
+### UTF-8
+
+```sh
+printf 'LANG=%s\nLC_ALL=%s\n' "$LANG" "$LC_ALL"
+locale
+locale -a
+```
+
+少なくとも UTF-8 ロケールが使えることを確認する。
+
+今回の環境では、
+
+```text
+C.utf8
+```
+
+が利用できた。
+
+### 色
+
+Emacs を起動する前のシェルで確認する。
+
+```sh
+printf 'TERM=%s\nCOLORTERM=%s\n' "$TERM" "$COLORTERM"
+infocmp "$TERM" | grep -E 'colors#|RGB|setaf|setab'
+```
+
+今回正常だった値:
+
+```text
 TERM=xterm-256color
 COLORTERM=truecolor
 ```
 
-## TERM を Emacs 内から調べるときの注意
-
-今回 Emacs 内で、
-
-```elisp
-(getenv "TERM")
-```
-
-を評価すると `"dumb"` が返った。
-
-Emacs は起動後、子プロセス向けの環境として `TERM=dumb` を設定する場合があるため、この値だけで Emacs 自身が現在の端末をどう認識しているか判断しない。
-
-端末側は Emacs 起動前のシェルで、
-
-```sh
-echo "$TERM"
-infocmp "$TERM"
-```
-
-を確認する。
-
-Emacs 側で色数を確認するときは、
+Emacs 内の色数は、
 
 ```elisp
 (display-color-cells)
 ```
 
-などを使う。
+で確認できる。
 
-## 使い方
-
-### 通常の Debian 動作確認
-
-```sh
-cd ~/.emacs.d
-bash scripts/debian-test.sh
-```
-
-正常なら Debian コンテナ内で、
-
-```text
-GNU Emacs 31.1
-```
-
-の `emacs -nw --debug-init` が起動する。
-
-### コンテナ内のシェルで調査する
-
-Emacs をすぐ起動せず、Debian 内部を調べたい場合は、
-
-```sh
-bash scripts/debian-test.sh --shell
-```
-
-を使う。
-
-例えば、
-
-```sh
-emacs --version
-locale
-echo "$TERM"
-echo "$COLORTERM"
-infocmp "$TERM" | grep -E 'colors#|RGB|setaf|setab'
-```
-
-などを確認できる。
-
-## トラブル時の切り分け
-
-### GitHub の取得で止まる
-
-ホスト側で確認する。
+### GitHub 認証
 
 ```sh
 gh auth status
-gh auth token -h github.com >/dev/null && echo OK
 ```
 
-認証されていなければ、
+未認証なら、
 
 ```sh
 gh auth login
+gh auth setup-git
 ```
 
 を行う。
 
-### 日本語が化ける
+## 検証用 Docker 環境
+
+`.emacs.d` には別途、
+
+```text
+docker/debian/
+scripts/debian-test.sh
+```
+
+も置いている。
+
+こちらは **現場へ導入するためのものではない**。
+
+まっさらな Debian 環境から現在の設定が再現できるかを継続的に確認するための検証用。
 
 ```sh
-echo "$LANG"
-locale
+bash scripts/debian-test.sh
 ```
 
-を見る。
+とすれば、Debian trixie + Emacs 31.1 の使い捨て環境を作って確認できる。
 
-期待値は少なくとも UTF-8 ロケールで、現在の検証環境では、
+役割を分けると次の通り。
 
 ```text
-LANG=C.UTF-8
+現場に既存の Debian コンテナがある
+    → scripts/debian-setup.sh
+
+セットアップ後、普段 Emacs を起動する
+    → scripts/debian-emacs.sh
+
+まっさらな Debian で再現性を検証する
+    → scripts/debian-test.sh
 ```
 
-を使用する。
+## 現時点で確認済み
 
-### 色がおかしい
+Debian trixie 上で次を確認した。
 
-コンテナ内で、
+- GNU Emacs 31.1 のソースビルド成功
+- native compilation 有効
+- Tree-sitter 有効
+- GnuTLS 有効
+- SQLite 有効
+- dynamic modules 有効
+- inotify 有効
+- 現在の `.emacs.d` が起動
+- 日本語表示
+- true color
+- private repository からの `package-vc` インストール
 
-```sh
-echo "$TERM"
-echo "$COLORTERM"
-infocmp "$TERM" | grep -E 'colors#|RGB|setaf|setab'
-```
-
-を確認する。
-
-現在の期待値は、
-
-```text
-TERM=xterm-256color
-COLORTERM=truecolor
-```
-
-。
-
-## 設計上の判断
-
-### Debian 標準の Emacs に合わせない
-
-このプロジェクトの対象は Emacs 31.1。
-
-Debian 側がまだ Emacs 30 系を配布している場合でも、設定を古い API に合わせるのではなく、検証環境側で Emacs 31.1 を用意する。
-
-これにより、
-
-```text
-macOS / Emacs 31.1
-Debian / Emacs 31.1
-```
-
-を比較でき、OS 差と Emacs バージョン差を混ぜずに調べられる。
-
-### ホストの生成物を使い回さない
-
-`elpa/`、`eln-cache/`、`tree-sitter/` などを macOS から Debian へコピーしない。
-
-特にネイティブコンパイル済みファイルや共有ライブラリは OS・CPU・ビルド環境に依存しうるため、Debian 側で作り直す。
-
-### ホストの設定ソースは読み取り専用
-
-コンテナからホストの `.emacs.d` を直接書き換えない。
-
-これにより、Debian 検証中に package.el、Custom、キャッシュなどがホスト環境へ混入するのを防ぐ。
-
-## 今後確認する項目
-
-起動確認の次は、必要に応じて次を Debian 側で確認する。
-
-- Kitty Keyboard Protocol
-- Cmd / Super 系キーバインド
-- project.el / project-ripgrep
-- Tree-sitter
-- LSP
-- tab-router
-- browsing-history
-- Corfu / Vertico
-- 外部コマンド依存
-- ERT 全テスト
-
-問題が出た場合は、macOS と Debian の設定を同時に変えず、Debian 内で実際の値を観測してから原因を切り分ける。
+今後 OS 差の問題が出た場合も、まず現場コンテナ上の実際の値を確認してから設定を変更する。
