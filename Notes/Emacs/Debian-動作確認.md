@@ -1,5 +1,40 @@
 # Debian での動作確認
 
+## 最短手順
+
+普段はここだけ見ればよい。
+
+前提:
+
+- Docker または Colima が起動している
+- GitHub CLI (`gh`) が入っている
+- `gh auth login` 済み
+
+`.emacs.d` で実行する。
+
+```sh
+cd ~/.emacs.d
+bash scripts/debian-test.sh
+```
+
+これで Debian trixie + GNU Emacs 31.1 の検証環境を作り、現在の設定で `emacs -nw --debug-init` を起動する。
+
+GitHub の認証で止まった場合だけ、ホスト側で次を実行してからやり直す。
+
+```sh
+gh auth login
+```
+
+Emacs を起動せず、Debian コンテナ内を調査したい場合は次。
+
+```sh
+bash scripts/debian-test.sh --shell
+```
+
+正常に起動したなら、以降の説明を読む必要はない。
+
+---
+
 ## 目的
 
 macOS で作っている CLI 用 Emacs 設定が、Debian 系 Linux でも自然に動くか確認する。
