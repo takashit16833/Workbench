@@ -1,5 +1,10 @@
 # Debian コンテナで Emacs 開発環境を構築する
 
+```toc
+minLevel: 2
+maxLevel: 3
+```
+
 ## 目的
 
 業務ですでに存在している Debian 系コンテナの中で、現在の `.emacs.d` を使って `emacs -nw` を開発環境として使える状態にする。
@@ -20,9 +25,9 @@
 
 ---
 
-# 現場で使う手順
+## 現場コンテナで使う
 
-## 1. TTY と端末環境を付けてコンテナに入る
+### 1. TTY と端末環境を付けてコンテナに入る
 
 Docker の場合:
 
@@ -67,7 +72,7 @@ TERM=xterm-256color
 COLORTERM=truecolor
 ```
 
-## 2. 必要なパッケージを入れる
+### 2. 必要なパッケージを入れる
 
 以下は root で実行する。
 
@@ -108,7 +113,7 @@ apt-cache search '^libgccjit-[0-9].*-dev$'
 
 推測で別バージョン名に置き換えない。
 
-### vterm のビルド依存
+#### vterm のビルド依存
 
 `vterm` は Emacs Lisp だけで完結するパッケージではなく、初回利用時に C の動的モジュールをビルドする。
 
@@ -136,7 +141,7 @@ libvterm-dev
 
 Emacs 自体は後述のとおり `--with-modules` を付けてビルドしているため、この問題に対して Emacs の configure オプションを変更する必要はない。
 
-## 3. GNU Emacs 31.1 をビルドする
+### 3. GNU Emacs 31.1 をビルドする
 
 ```sh
 cd /tmp
@@ -181,7 +186,7 @@ dynamic modules
 native lisp compiler
 ```
 
-## 4. GitHub にログインする
+### 4. GitHub にログインする
 
 現在の設定は private GitHub リポジトリからテーマや自作 Emacs パッケージを取得するため、GitHub 認証が必要。
 
@@ -209,7 +214,7 @@ Login with a web browser
 gh auth status
 ```
 
-## 5. .emacs.d を取得する
+### 5. `.emacs.d` を取得する
 
 新規構築:
 
@@ -230,7 +235,7 @@ tree-sitter/
 
 Debian 側で作り直す。
 
-## 6. 端末環境を確認する
+### 6. 端末環境を確認する
 
 ```sh
 locale
@@ -258,7 +263,7 @@ colors#8
 
 `LANG=C.UTF-8`、`TERM=xterm-256color`、`COLORTERM=truecolor` にした後は正常に表示できた。
 
-## 7. Emacs を起動する
+### 7. Emacs を起動する
 
 初回:
 
@@ -274,9 +279,9 @@ emacs -nw
 
 ---
 
-# 修飾キーを確認する
+## 端末入力を確認する
 
-## 前提
+### Kitty Keyboard Protocol の前提
 
 ホスト側の WezTerm は Kitty Keyboard Protocol を利用できる設定になっている。
 
@@ -306,7 +311,7 @@ ESC [ 118 ; 9 u
 
 したがって、Docker の PTY が CSI-u / KKP の入力を途中で通常文字へ変換しているわけではない。
 
-## Emacs 側で KKP を確認する
+### Emacs 側で KKP を確認する
 
 Emacs 内で、
 
@@ -349,7 +354,7 @@ Ctrl+...       -> C-...
 
 ここで期待したキー名になれば、修飾キーはコンテナ越しでも Emacs まで届いている。
 
-## bash 上で KKP の文字列が見えても異常ではない
+### bash 上で KKP の文字列が見えても異常ではない
 
 通常の bash は KKP の `Super+V` などを Emacs のようには解釈しない。
 
@@ -365,7 +370,7 @@ Ctrl+...       -> C-...
 
 ---
 
-# 現在残っている重要な問題: Cmd+C / Cmd+V
+### Cmd+C / Cmd+V
 
 修飾キーの伝送とは別に、現在の `.emacs.d` のクリップボード実装は macOS 専用になっている。
 
@@ -405,7 +410,7 @@ Emacs 31.1 の TTY 実装には OSC 52 を使った端末クリップボード�
 
 ---
 
-# 開発環境として確認する項目
+## 開発環境として確認する
 
 Emacs が起動しただけでは完了にしない。
 
@@ -436,7 +441,7 @@ LSP サーバーや言語処理系はプロジェクトごとに異なるので�
 
 ---
 
-# コンテナ再作成時の注意
+## コンテナ再作成時の注意
 
 `docker exec` でコンテナ内に直接 `apt install` や `make install` した内容は、コンテナを作り直すと消える。
 
@@ -455,9 +460,9 @@ LSP サーバーや言語処理系はプロジェクトごとに異なるので�
 
 ---
 
-# トラブル時
+## トラブルシューティング
 
-## Emacs のバージョン
+### Emacs のバージョン
 
 ```sh
 command -v emacs
@@ -471,7 +476,7 @@ emacs --version | head -1
 GNU Emacs 31.1
 ```
 
-## UTF-8
+### UTF-8
 
 ```sh
 printf 'LANG=%s\nLC_ALL=%s\n' "$LANG" "$LC_ALL"
@@ -481,7 +486,7 @@ locale -a
 
 今回の Debian では `C.utf8` が利用できた。
 
-## 色
+### 色
 
 ```sh
 printf 'TERM=%s\nCOLORTERM=%s\n' "$TERM" "$COLORTERM"
@@ -501,7 +506,7 @@ Emacs 内:
 (display-color-cells)
 ```
 
-## GitHub 認証
+### GitHub 認証
 
 ```sh
 gh auth status
@@ -514,7 +519,7 @@ gh auth login
 gh auth setup-git
 ```
 
-## package-vc で Empty checkout
+### package-vc で Empty checkout
 
 今回:
 
@@ -526,7 +531,7 @@ Empty checkout for retro-hacker-blue-theme
 
 まず `gh auth status` を確認する。
 
-## TERM を Emacs 内から見たら dumb
+### TERM を Emacs 内から見たら dumb
 
 Emacs 内で、
 
@@ -547,9 +552,11 @@ infocmp "$TERM"
 
 ---
 
-# 検証用 Docker
+## 検証用 Docker
 
-`.emacs.d` には、まっさらな Debian で再現性を確認するための検証環境もある。
+### 目的
+
+`.emacs.d` には、まっさらな Debian で再現性を確認するための検証環境がある。
 
 ```text
 docker/debian/
@@ -558,15 +565,175 @@ scripts/debian-test.sh
 
 これは現場環境そのものではない。
 
-用途は、今後 `.emacs.d` を変更したときに Debian trixie + Emacs 31.1 の新規環境でも起動できるか確認すること。
+用途は、`.emacs.d` を変更したときに Debian trixie + Emacs 31.1 の新規環境でも起動・操作できるか確認すること。
+
+検証用イメージには、現在の動作確認に必要な Lua / Haskell の Tree-sitter grammar、Lua Language Server、GHC、Cabal、Haskell Language Server、Fourmolu も含めている。
+
+### 構成
+
+ホスト側の `.emacs.d` はコンテナへ read-only でマウントする。
+
+```text
+ホスト: /src/emacs.d
+       ↓ rsync
+コンテナ: /root/.emacs.d
+```
+
+コンテナ内では `/root/.emacs.d` を実際の Emacs 設定として使用する。
+
+GitHub の認証情報はイメージへ保存せず、ホスト側の `gh auth token` から取得した `GH_TOKEN` をコンテナ起動時に渡す。
+
+### 基本操作
+
+`~/.emacs.d` で実行する。
 
 ```sh
 cd ~/.emacs.d
+```
+
+引数を省略した場合は `emacs` と同じ。
+
+```sh
 bash scripts/debian-test.sh
 ```
 
-コンテナ内のシェルへ入る場合:
+利用できるコマンドは次の通り。
+
+```text
+start    検証用コンテナをバックグラウンドで起動する
+shell    検証用コンテナのシェルを開く
+emacs    検証用コンテナで Emacs を開く
+stop     検証用コンテナを削除する
+rebuild  コンテナを削除してイメージを再ビルドし、起動する
+```
+
+例:
+
+```sh
+bash scripts/debian-test.sh start
+bash scripts/debian-test.sh shell
+bash scripts/debian-test.sh emacs
+bash scripts/debian-test.sh stop
+bash scripts/debian-test.sh rebuild
+```
+
+従来の `--shell` も `shell` の別名として利用できる。
 
 ```sh
 bash scripts/debian-test.sh --shell
 ```
+
+### コンテナのライフサイクル
+
+現在のスクリプトは、Emacs を終了しただけではコンテナを削除しない。
+
+```text
+emacs
+  ↓
+既存コンテナへ接続
+  ↓
+Emacsを終了
+  ↓
+コンテナはバックグラウンドで起動したまま
+```
+
+そのため、動作確認のたびにコンテナを作り直す必要はない。
+
+次回はそのまま、
+
+```sh
+bash scripts/debian-test.sh emacs
+```
+
+または、
+
+```sh
+bash scripts/debian-test.sh shell
+```
+
+で同じコンテナへ再接続できる。
+
+不要になったら明示的に削除する。
+
+```sh
+bash scripts/debian-test.sh stop
+```
+
+`stop` はコンテナを削除するため、コンテナ内だけに生成された状態は失われる。Docker イメージ自体は削除しない。
+
+### 設定同期の仕組み
+
+`start` でコンテナを新規作成するときと、`shell` / `emacs` を実行するときに、ホスト側の `.emacs.d` を `/root/.emacs.d` へ同期する。
+
+そのため、ホスト側で Emacs 設定を変更した後にイメージやコンテナを作り直す必要はない。
+
+```text
+ホストで設定を編集
+  ↓
+bash scripts/debian-test.sh emacs
+  ↓
+起動前に設定を同期
+  ↓
+変更後の設定で Emacs が起動
+```
+
+同期時には設定ソースを更新する一方、Debian 側で生成した次のようなものは保持する。
+
+```text
+elpa/
+eln-cache/
+tree-sitter/
+transient/
+各種履歴・キャッシュ
+*.elc
+```
+
+これにより、Emacs を閉じて再度起動したときにパッケージを毎回入れ直す必要がない。
+
+### イメージを作り直す
+
+Dockerfile や、イメージ内に入れる外部ツールを変更した場合は `rebuild` を使う。
+
+```sh
+bash scripts/debian-test.sh rebuild
+```
+
+`rebuild` は、
+
+```text
+既存コンテナを削除
+↓
+Dockerイメージを再ビルド
+↓
+新しいコンテナをバックグラウンド起動
+```
+
+を行う。
+
+通常の `.emacs.d` の Lisp 設定変更だけなら `rebuild` は不要。
+
+### 典型的な使い方
+
+普段の設定変更確認では、
+
+```sh
+bash scripts/debian-test.sh emacs
+```
+
+だけでよい。
+
+コンテナ内でコマンドを確認したい場合は、
+
+```sh
+bash scripts/debian-test.sh shell
+```
+
+を使う。
+
+Dockerfile や言語ツールなど、イメージそのものを変更した場合だけ、
+
+```sh
+bash scripts/debian-test.sh rebuild
+```
+
+を使う。
