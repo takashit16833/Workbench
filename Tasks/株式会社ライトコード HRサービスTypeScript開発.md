@@ -1,5 +1,5 @@
 ---
-status: todo
+status: dropped
 projects:
   - "[[案件管理]]"
 agent: レバテック
@@ -81,6 +81,8 @@ TypeScriptを用いたWebアプリケーション開発案件。
 Angularが必須として厳密に見られる場合は書類通過リスクが高い。
 ただしTypeScript / Node.js、設計、GCP / Firebaseはかなり強く合うため、Angular未経験を明示したうえで提案可能か営業側が許容するなら応募候補にはなる。
 Angularを即戦力として求める案件なら優先度は下げる。
+
+**辞退（2026-10-08）**: Angularの実務経験がなく、必須要件を満たしていないため見送り。
 
 ## 会社情報
 株式会社ライトコード。
