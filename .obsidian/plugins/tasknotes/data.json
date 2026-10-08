@@ -6375,7 +6375,7 @@
       ]
     }
   ],
-  "lastNotifiedReleaseVersion": "4.13.7",
+  "lastNotifiedReleaseVersion": "4.13.8",
   "completionMenuAsSubmenu": true,
   "lastSelectedTaskPath": "Tasks/RS-0024 subtask OpenTelemetry SDKライフサイクルとMetrics基盤を実装する.md"
 }
