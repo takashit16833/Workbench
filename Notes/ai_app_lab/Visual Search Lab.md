@@ -1,6 +1,6 @@
 # Visual Search Lab
 
-> **画像Embeddingと類似検索の原理を学ぶための任意の小アプリ**。AI Support Desk、Agent Workerの後に取り組む。全体方針は[[README]]を参照。
+> **画像Embeddingと類似検索の原理を学ぶための任意の小アプリ**。AI Support Desk、Agent Workerの後に取り組む。全体方針は[README](README.md)を参照。
 
 ## 目的
 

@@ -1,6 +1,6 @@
 # AI Support Desk
 
-> **学習用の小さなRAGバックエンド**。このノートがAI Support Deskの機能範囲の正本。全体方針は[[README]]を参照。
+> **学習用の小さなRAGバックエンド**。このノートがAI Support Deskの機能範囲の正本。全体方針は[README](README.md)を参照。
 
 ## 目的と学べること
 
