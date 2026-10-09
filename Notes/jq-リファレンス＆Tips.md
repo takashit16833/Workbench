@@ -1,22 +1,11 @@
 # jq リファレンス & Tips
 
-## 目次
-
-- [Overview](#overview) — jq の役割、JSON とフィルターの考え方
-- [Quick Start](#quick-start) — インストール、整形、ファイル・クリップボードからの入力
-- [Basic Syntax](#basic-syntax) — `.`、`[]`、`|`、`,` と結果の流れ
-- [Data Access](#data-access) — 配列、オブジェクト、入れ子、存在しない項目
-- [Filter & Transform](#filter--transform) — 条件抽出、必要な項目だけを残す、形を変える
-- [Sort & Aggregate](#sort--aggregate) — 並べ替え、重複除去、件数・分類別の集計
-- [Output](#output) — JSON、文字列、TSV、CSV
-- [Options](#options) — `-r`、`-c`、`-s`、`-n`、`-R`、`--arg` など
-- [Tips](#tips) — クリップボード、複数 JSON、シェルとの組み合わせ
-- [PGroonga Examples](#pgroonga-examples) — トークン解析結果から単語・品詞などを取り出す
-- [Troubleshooting](#troubleshooting) — よくあるエラーと勘違い
-- [Exercises](#exercises) — 少しずつ試す練習問題と解答
-- [Cheat Sheet](#cheat-sheet) — 早見表と公式資料
-
-## Overview
+```toc
+title: 目次
+minLevel: 2
+maxLevel: 2
+```
+## Overview — jq の役割と考え方
 
 ### jq とは
 
@@ -57,7 +46,7 @@ echo '[1,2,3]' | jq '.[]'
 
 出力は「3 個の JSON 値」であり、`[1,2,3]` という 1 個の配列ではない。
 
-## Quick Start
+## Quick Start — 導入と JSON の整形
 
 ### インストールと確認
 
@@ -117,7 +106,7 @@ jq -c '.' data.json             # 1 行の JSON にする
 
 以下の例で `tokens.json` とある部分は、クリップボードに同じ JSON をコピーしていれば `pbpaste | jq '...'` に置き換えてよい。
 
-## Basic Syntax
+## Basic Syntax — 基本構文
 
 ### `.` — 現在の入力
 
@@ -183,7 +172,7 @@ jq '[.[].value]' tokens.json
 
 `,` は複数の結果を続けて出す。`[ ... ]` は式が生んだ結果を **1 つの配列にまとめる**。
 
-## Data Access
+## Data Access — 配列とオブジェクトの値を取得
 
 ### 配列と切り出し
 
@@ -227,7 +216,7 @@ echo '[{"name":"A"},null]' | jq '.[] | .name?'
 
 `?` が不要な場面で多用すると、想定外のデータを見逃すので注意。
 
-## Filter & Transform
+## Filter & Transform — 絞り込みと変換
 
 ### `select` — 条件に一致したものだけ残す
 
@@ -282,7 +271,7 @@ jq 'map({word: .value, class: .metadata.class})' tokens.json
 
 元の項目名と同じ名前なら `{value, position}` のように省略できる。
 
-## Sort & Aggregate
+## Sort & Aggregate — 並べ替えと集計
 
 ### 件数を数える
 
@@ -332,7 +321,7 @@ jq 'group_by(.metadata.class) |
 
 `group_by` は同じキーの要素を集めた「配列の配列」を返す。
 
-## Output
+## Output — 表示形式と出力
 
 ### JSON と生の文字列（`-r`）
 
@@ -389,7 +378,7 @@ jq -r 'map(.value) | join("")' tokens.json
 # pgvectorは何をするものですか？
 ```
 
-## Options
+## Options — コマンドのオプション
 
 | オプション | 意味 | 例 |
 | --- | --- | --- |
@@ -415,7 +404,7 @@ jq --argjson min 5 'map(select(.position >= $min))' tokens.json
 
 `--arg min 5` では `$min` は文字列 `"5"`。数値として渡すなら `--argjson`。
 
-## Tips
+## Tips — 実用的な使い方
 
 ### macOS のクリップボードで即座に試す
 
@@ -478,7 +467,7 @@ jq --arg klass "$klass" 'map(select(.metadata.class == $klass))' tokens.json
 
 jq の式をシェルの文字列展開で組み立てず、`--arg` で値を渡す。
 
-## PGroonga Examples
+## PGroonga Examples — トークン解析 JSON の実例
 
 題材は上の `tokens.json`。各要素は `value`（トークン文字列）、`position`（位置）、`force_prefix_search`（接頭辞検索の指定）、`metadata.class`（品詞）などを持つ。
 
@@ -541,7 +530,7 @@ jq 'group_by(.metadata.class) |
 
 トークン解析方法を変えたときに、品詞の分布を比較する材料になる。
 
-## Troubleshooting
+## Troubleshooting — よくある問題
 
 ### `jq .[].value` がシェルで失敗する
 
@@ -601,7 +590,7 @@ jq '[.[] | select(.position > 100)]' tokens.json
 
 後者のように `[ ... ]` で包めば、該当 0 件も空配列として確認できる。
 
-## Exercises
+## Exercises — 練習問題と解答
 
 問題は `tokens.json` を入力として考える。まずは解答を見ずに式を書いてみる。
 
@@ -638,7 +627,7 @@ jq -r 'map(.value) | join("")' tokens.json
 # pgvectorは何をするものですか？
 ```
 
-## Cheat Sheet
+## Cheat Sheet — 早見表と公式資料
 
 | やりたいこと | jq の式 |
 | --- | --- |
