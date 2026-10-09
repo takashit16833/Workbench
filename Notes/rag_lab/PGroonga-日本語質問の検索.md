@@ -55,7 +55,36 @@ FROM unnest(
   pgroonga_tokenize('pgvectorは何をするものですか？',
                     'tokenizer', 'TokenBigram')
 ) AS t(token);
+```
 
+**実測結果**
+
+```text
+ word
+------
+ pg
+ gv
+ ve
+ ec
+ ct
+ to
+ or
+ rは
+ は何
+ 何を
+ をす
+ する
+ るも
+ もの
+ ので
+ です
+ すか
+ か？
+ ？
+(19 rows)
+```
+
+```sql
 -- 単語と品詞を取得。
 SELECT token ->> 'value' AS word,
        token -> 'metadata' ->> 'class' AS class
@@ -65,7 +94,22 @@ FROM unnest(
 ) AS t(token);
 ```
 
-実測：`TokenBigram` は `pg`、`gv`、`ve` … と分割。`TokenMecab` は `pgvector(名詞)`、`は(助詞)`、`何(名詞)` などに分割できた。
+**実測結果**
+
+```text
+   word   | class
+----------+--------
+ pgvector | 名詞
+ は       | 助詞
+ 何       | 名詞
+ を       | 助詞
+ する     | 動詞
+ もの     | 名詞
+ です     | 助動詞
+ か       | 助詞
+ ？       | 記号
+(9 rows)
+```
 
 ## Step 13：名詞だけ抽出
 
@@ -77,7 +121,18 @@ FROM unnest(
 ) AS t(token);
 ```
 
-実測：`pgvector`、`何`、`もの`。**名詞だけでは不要な語も残る**。
+**実測結果**
+
+```text
+   word
+----------
+ pgvector
+ 何
+ もの
+(3 rows)
+```
+
+**名詞だけでは不要な語も残る**。
 
 ## Step 14：OR検索
 
@@ -88,9 +143,19 @@ WHERE content &@| ARRAY['pgvector', 'ベクトル']
 ORDER BY id;
 ```
 
+**実測結果**（`content` の表示は読みやすいよう短縮）
+
+```text
+ id | content
+----+------------------------------------------------------
+  1 | # pgvector / pgvectorはPostgreSQLでベクトルを保存...
+  2 | # pgvector / ベクトル同士の距離を計算して...
+(2 rows)
+```
+
 `&@|` は「いずれかの単語が一致したら取得」。`&@~ 'pgvector OR ベクトル'` と同等の条件になる。
 
-実測：`docs/pgvector.md` の2チャンクがヒットした。
+
 
 ## Step 15：名詞の細分類を見る（未検証）
 
@@ -103,6 +168,19 @@ FROM unnest(
   pgroonga_tokenize('pgvectorは何をするものですか？',
                     'tokenizer', 'TokenMecab("include_class", true)')
 ) AS t(token);
+```
+
+**出力例（未実測）**：細分類の値はMeCabの辞書によって変わる。以下は典型的な分類の例で、実際の結果として確定したものではない。
+
+```text
+   word   | class | subclass0 | subclass1
+----------+-------+-----------+----------
+ pgvector | 名詞  | 一般      |
+ は       | 助詞  | 係助詞    |
+ 何       | 名詞  | 代名詞    | 一般
+ ...
+ もの     | 名詞  | 非自立    | 一般
+ ...
 ```
 
 `何` が「代名詞」、`もの` が「非自立」に分類されるかを実測する。辞書により結果は変わる。
@@ -120,6 +198,15 @@ FROM unnest(
 ) AS t(token);
 ```
 
+**期待する結果（未実測）**：Step 15で上記の細分類が確認できた場合。
+
+```text
+   word
+----------
+ pgvector
+(1 row)
+```
+
 `target_class` の `-` は指定した品詞・細分類の除外。目的は `pgvector` だけを残すこと。Step 15の実測結果と照合する。
 
 ## Step 17：単語を配列に戻す（未検証）
@@ -130,6 +217,15 @@ FROM unnest(
   pgroonga_tokenize('pgvectorは何をするものですか？',
                     'tokenizer', 'TokenMecab("target_class", "名詞")')
 ) AS t(token);
+```
+
+**予想される結果（未実測）**：Step 13で確認済みの名詞3語を配列に戻す。
+
+```text
+       words
+-------------------
+ {pgvector,何,もの}
+(1 row)
 ```
 
 `json[]` → `unnest` でJSONの各行 → `->> 'value'` で `text` → `array_agg` で `text[]`。
@@ -155,6 +251,16 @@ FROM chunks AS c
 CROSS JOIN keywords
 WHERE c.content &@| keywords.words
 ORDER BY score DESC, c.id ASC;
+```
+
+**検索結果の表示イメージ（未実測）**：Step 16で `pgvector` が残る場合。本文は短縮し、`score` の値は未確認のため省略。
+
+```text
+ id | content                                         | score
+----+-------------------------------------------------+------
+  1 | # pgvector / pgvectorはPostgreSQLでベクトルを... | ...
+  2 | # pgvector / ベクトル同士の距離を計算して...       | ...
+(2 rows)
 ```
 
 `WITH` で1行の検索語配列 `keywords.words` を作り、`CROSS JOIN` で各チャンクと組み合わせる。`&@|` でOR検索し、得点順に並べる。
