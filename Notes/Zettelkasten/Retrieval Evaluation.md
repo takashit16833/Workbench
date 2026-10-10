@@ -1,3 +1,10 @@
+---
+aliases:
+  - 検索評価
+tags:
+  - rag
+  - evaluation
+---
 # Retrieval Evaluation
 あらかじめ定義した正解チャンクと実際の検索結果を比較し、検索性能を数値で評価する仕組み。
 ## 指標
