@@ -4,28 +4,26 @@
 GitHub: https://github.com/takashit16833/agent-worker
 仕様: https://github.com/takashit16833/Workbench/blob/main/Notes/ai_app_lab/Agent%20Worker.md
 
-## 状態（GitHubで確認）
+## 目的・進め方
 
-- ユーザーが新しいリポジトリ `takashit16833/agent-worker` を作成した。
-- 2026-10-11 19:37頃、main `d73a6a2b0e62b98fed5cadc3f2fb4cd6e24a62ee` で初期Pythonコード実装を確認。`python/tool_call.py` は Ollamaの `chat` と `qwen3:1.7b` を使い、`get_metrics` のツール仕様（Python辞書）を渡す。実行処理はまだなく、ツール選択要求の表示のみ。
-- ユーザー提示のローカル実行ログ：`.venv/bin/python python/tool_call.py` が `Tool: get_metrics` / `Arguments: {'service': 'service-a'}` と出力し正常終了。**モデルからツール要求を取得できたことだけ**が確認済み。メトリクス実行、引数検証、ツール結果のLLMへの返送、Agent Loopは未実装・未検証。
-- rag-labから、別のAIシステム（Tool Calling・Agent Loop）へ経験を広げる文脈。
+- 模擬システム障害について、LLMが調査ツールを選択し、Haskellが許可・引数を検証して読み取り専用の模擬データを取得し、LLMが根拠つきの報告を作る。
+- PythonはOllamaによるLLM呼び出しとTool Calling、Haskellはツールの検証・実行と今後の制御ループを担当する。
+- A1を小さく完成させる。実サーバへの変更や任意コマンド実行は行わない。
+- ユーザー自身でコード入力・実行しながら情報の流れを理解することを重視。推測による修正より実測、各段階の確認を優先する。
 
-## アプリの目的（設計資料から）
+## 最新の実装（GitHub mainで確認）
 
-- 架空のシステム障害について、ユーザー依頼→LLMによるツール選択→Haskellによる実行可否と引数の検証→ローカルの模擬ログ/メトリクス/デプロイ履歴の取得→LLMによる根拠つき原因候補と対応案の提示。
-- LLMからのtool requestは、実行命令ではなく検証対象の**提案**。実サーバや外部サービスは初期スコープ外。実際の変更、再起動、通知はしない。
-- 設計上、HaskellはAgent Loop・許可リスト・状態・停止条件、PythonはLLM推論/Tool Calling/構造化出力を担当。詳細は実装段階で判断。
+- **2026-10-11 21:57 JST時点**で main は `912339b71eb22ba836ee420b86be075569cb0bf2`。
+- `python/tool_call.py`: Ollama `chat(model="qwen3:1.7b", tools=[get_metrics], think=False)` により、`service-a` のCPU使用率を尋ねる。モデルの `tool_calls` と `content` をJSONにして標準出力へ送る。ツール実行自体はしない。
+- `app/Main.hs`: 標準入力のJSONをaesonで読み、`get_metrics` および `service-a` のみ許可。純粋関数 `runTool` が固定の `service-a CPU usage: 85%` を返し、`handleTool` が表示する。未知のツール名・サービス名は拒否する。
+- `.dir-locals.el` に `Run Project`（`.venv/bin/python python/tool_call.py | cabal run agent-worker`）、Pythonのlint/format確認・修正コマンド等がある。
+- `test/Main.hs` はまだスタブ（実質的なテストなし）。
+- **ソースコードで実装を確認しただけで、Python→Haskell連携全体の手元実行は未確認。** 以前ユーザーから報告された実測はPython単体の `Tool: get_metrics / Arguments: {'service': 'service-a'}` まで。
 
-## 次の段階 A1（まだ未着手）
+## 現在地・次の一歩
 
-- 最小の模擬データと読み取り専用ツールから始める。
-- LLMが選んだツール名・引数・実行回数・結果が追跡でき、最終報告が得られる状態がA1の完了条件。
-- いきなりA2以降（承認・複数ツール・評価）へ広げない。
-- 最初のTool Calling例をユーザーが手元で実装・実行してpush済み。`get_metrics` は実行関数ではなくツール仕様の辞書、`chat` が返す `tool_calls` は実行前の要求であるとAIが説明した（ユーザーによる理解の確認はまだ）。
-
-## 学習支援上の注意
-
-- rag-labのとき、AIが実験や改善の目的・判断理由・結果の見方を共有せず進めたことでユーザーが全体像を見失った。Agent Workerでは「アプリの目的、今回の作業、終わりの条件」を最初に伝え、必要最小限の実装から始める。
-- ユーザー自身がコードを書くことを重視。新規APIは入力・出力・役割と採用理由を説明し、過度な抽象化を避ける。
-- 具体的な着手時には最新版の設計メモとリポジトリの最新mainを再確認する。
+- A1の「LLMがツールを選択 → Haskellが検証 → 模擬メトリクスを返す」はコード上存在する。
+- A1の「ツール結果を再びLLMに渡し、観測内容に基づく最終報告を得る」は未実装。
+- まずユーザー環境で `Run Project` を実行し、`Tool result: service-a CPU usage: 85%` が表示されるか確認する。未確認のまま次のコード修正はしない。
+- 次は、HaskellからPythonにツール結果を渡してLLMを再度呼ぶ最小の流れを学習・実装する。A2（複数ツール、回数制限、Pydantic、承認）に先走らない。
+- `get_metrics` はツールの**仕様**であり、モデルの `tool_calls` は実行済みの結果ではなく**提案**。この区別の理解確認はこれから。
