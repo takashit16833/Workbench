@@ -7,8 +7,8 @@ GitHub: https://github.com/takashit16833/agent-worker
 ## 状態（GitHubで確認）
 
 - ユーザーが新しいリポジトリ `takashit16833/agent-worker` を作成した。
-- 2026-10-11の確認時点ではリポジトリは**空**（まだ実装はない）。
-- 学習テーマとしてAgent Workerを提案し、ユーザーはリポジトリを作成した。**詳細な実装方針の決定・動作確認は未実施**。
+- 2026-10-11 19:37頃、main `d73a6a2b0e62b98fed5cadc3f2fb4cd6e24a62ee` で初期Pythonコード実装を確認。`python/tool_call.py` は Ollamaの `chat` と `qwen3:1.7b` を使い、`get_metrics` のツール仕様（Python辞書）を渡す。実行処理はまだなく、ツール選択要求の表示のみ。
+- ユーザー提示のローカル実行ログ：`.venv/bin/python python/tool_call.py` が `Tool: get_metrics` / `Arguments: {'service': 'service-a'}` と出力し正常終了。**モデルからツール要求を取得できたことだけ**が確認済み。メトリクス実行、引数検証、ツール結果のLLMへの返送、Agent Loopは未実装・未検証。
 - rag-labから、別のAIシステム（Tool Calling・Agent Loop）へ経験を広げる文脈。
 
 ## アプリの目的（設計資料から）
@@ -22,7 +22,7 @@ GitHub: https://github.com/takashit16833/agent-worker
 - 最小の模擬データと読み取り専用ツールから始める。
 - LLMが選んだツール名・引数・実行回数・結果が追跡でき、最終報告が得られる状態がA1の完了条件。
 - いきなりA2以降（承認・複数ツール・評価）へ広げない。
-- ユーザーは「これはどのようなアプリですか？」と聞き、まず全体の用途と動作例の理解を求めている。技術的な詳細説明・理解度はまだ未確認。
+- 最初のTool Calling例をユーザーが手元で実装・実行してpush済み。`get_metrics` は実行関数ではなくツール仕様の辞書、`chat` が返す `tool_calls` は実行前の要求であるとAIが説明した（ユーザーによる理解の確認はまだ）。
 
 ## 学習支援上の注意
 
