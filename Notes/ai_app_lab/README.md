@@ -1,6 +1,6 @@
 # AIアプリ開発・学習計画
 
-> 2026-10-09 時点の学習方針。**市場の要求から逆算して、実装を通じて技術を学ぶためのノート**。採用応募や実務経験の代替を目的としない。
+> 2026-10-12 時点の学習方針。**市場の要求から逆算して、実装を通じて技術を学ぶためのノート**。採用応募や実務経験の代替を目的としない。
 >
 > **このREADMEと各アプリノートが、今後の実装で守るべきスコープの基準。** 新しいアイデアを思いついても、黙って仕様に加えない。
 
@@ -26,7 +26,7 @@ Workbenchに記録したAI関連案件と、DrumRole・DMM・Insight Edge・Pref
 
 | 領域 | 主な知識 | 学ぶアプリ |
 | --- | --- | --- |
-| RAG・AI検索 | Chunking、Embedding、pgvector、Hybrid、Rerank、引用 | AI Support Desk（rag-labの成果を利用） |
+| RAG・AI検索 | Chunking、Embedding、pgvector、Hybrid、Rerank、引用 | AI Support Desk |
 | AI出力の品質評価 | 評価データ、Recall@K / MRR、回答評価、回帰テスト | AI Support Desk、Agent Worker |
 | Python AIバックエンド | FastAPI、Pydantic、型、API契約、エラー処理 | AI Support Desk、Agent Worker |
 | LLM API・構造化出力 | プロンプト、JSONスキーマ、モデルの切替 | AI Support Desk、Agent Worker |
@@ -45,7 +45,7 @@ Workbenchに記録したAI関連案件と、DrumRole・DMM・Insight Edge・Pref
 | [[Agent Worker]] | 模擬障害情報をツールで調べ、原因候補と対応案を作り、人間が承認するエージェント | Function/Tool Calling、ワークフロー、構造化出力、安全性・評価 | **2** |
 | [[Visual Search Lab]] | 画像をベクトル化して類似画像を検索し、検索品質を測る | PyTorch、画像Embedding、マルチモーダル検索 | **3：任意** |
 
-**rag-lab**（https://github.com/takashit16833/rag-lab）は先行するRAGの仕組み学習。次のRetrieval Evaluationを終えたら、AI Support Deskの実装へ知識・必要なコードを持ち込む。初めから複数リポジトリを共通ライブラリ化しない。
+**AI Support Deskは独立した新規プロジェクトとしてゼロから実装する。** rag-lab（https://github.com/takashit16833/rag-lab）のコード・成果物・評価データは引き継がない。rag-labの進捗を開始条件にもせず、検索から回答生成までの仕組みを改めて作り、理解・評価・改善する。
 
 **RAGScope**（https://github.com/takashit16833/RAGScope）は既存の設計資料・構想を参照してよいが、**RAGScopeのすべての要求やロードマップを新アプリへ移植しない**。
 
@@ -69,9 +69,8 @@ Workbenchに記録したAI関連案件と、DrumRole・DMM・Insight Edge・Pref
 
 ## 進める順番
 
-1. rag-labでRetrieval Evaluationを作り、検索方式の比較を経験する。
-2. [[AI Support Desk]] の最小完成版 → 回答評価 → LLMOps/コスト → 必要ならクラウド。
-3. [[Agent Worker]] の最小完成版 → Tool Calling・承認 → 評価。
-4. 興味が続く場合に [[Visual Search Lab]] を実施する。
+1. [[AI Support Desk]] をゼロから始め、検索→回答が動く最小構成を作る。動作の観察・検索と回答の評価→改善実験→LLMOps/コスト→必要ならクラウドへ進む。
+2. [[Agent Worker]] の最小完成版 → Tool Calling・承認 → 評価。
+3. 興味が続く場合に [[Visual Search Lab]] を実施する。
 
 **最初に全部作らない。** その時点の完成品を使い、次に学びたい技術に必要な一段だけ加える。
