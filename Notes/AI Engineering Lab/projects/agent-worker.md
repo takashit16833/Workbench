@@ -4,26 +4,25 @@
 GitHub: https://github.com/takashit16833/agent-worker
 設計資料: https://github.com/takashit16833/Workbench/blob/main/Notes/ai_app_lab/Agent%20Worker.md
 
-## 目的と合意済みスコープ
-- HaskellとPythonで「模擬システム障害の一次調査エージェント」を作る。LLMが読み取り専用ツールを選び、Haskellが検証・実行、結果をLLMに返して報告させる。
-- ユーザーは以前の実装を流用せず、最初から設計し直すことを明示。実務相当のコード品質、実装とテストをセット、ユーザー自身でコード入力・実行、設計理由の説明を重視。
-- 以前の重複状態の設計を踏襲しない。実行中の会話履歴は一元管理し、LLMのツール要求はそこから読み取る。
-- agent-workerリポジトリ自体はユーザーの明示指示がない限り編集・pushしない。
+## 目的・進め方
+- HaskellとPythonで模擬システム障害の一次調査エージェントを作る。実務相当の品質、実装とテストをセットにする、ユーザーがコードを入力・実行する、重要な設計理由を説明する。
+- 過去の実装は2026-10-12に初期化され、新しい設計から再開。LLMツール要求の重複した管理は避け、Haskell側の会話履歴を唯一の情報源とする。PythonはOllama SDK通信を担当する。
+- agent-worker自体はユーザーの明示依頼がない限りAIから編集・pushしない。
 
-## GitHubの実際の状態（2026-10-12の確認結果）
-- 最新 main: `22be53b2da7e7448d37d132d539105b364fac9e5`（コミット日時 2026-10-12 10:09頃JST）。
-- 直近のリセットにより初期雛形の状態。Python実装は無し（`python/.gitkeep` のみ）。
-- `app/Main.hs` / `src/MyLib.hs` は雛形、`test/Main.hs` は未実装、`agent-worker.cabal` にライブラリ・実行・テストの枠組みのみ存在。
-- 前回の記録（2026-10-11, `912339b...`）にある実装状態は**過去の状態**であり、現在の main ではない。ローカル作業の有無・内容は未確認。
+## 2026-10-12 のGitHub mainと実装
+- 最終GitHub main確認: `e9c083e605e1221ba0e8a0683d8f7fa5feb475d4`。
+- `src/Agent/Tool.hs`: `get_metrics` の仕様、未検証ToolCall、許可・引数検証、`service-a` のCPU使用率85%を返す純粋関数 `runTool`、Ollama応答の解析。
+- `app/Main.hs`: Haskellが履歴と進行を管理。標準入出力でPythonプロセスを都度呼び出し、初回LLM要求を検証・ツール実行、履歴にassistant+tool結果を追加してもう一度LLMを呼ぶ。最大1件のツール実行。
+- `python/llm.py`: Pydantic `InferenceRequest` で入力を検証し、Ollama `qwen3:1.7b` に1回問い合わせ、メッセージを返す。`JsonValue`を利用し、SDK由来の型警告1件だけ局所抑制。
+- `python/test_llm.py`: 現在2件のテスト。SDKの `ChatResponse` を使い、外部通信のみ模擬した正しい引数・出力の確認、不正な会話履歴型の拒否。
+- `test/Main.hs`: HUnitで正常ツール実行、未知のツール・サービス、必須/型/余分な引数、LLM通常回答/ツール解析の計8件。
 
-## 第1回の設計提案（未適用・未コミット）
-- A1として一回のTool Callingを縦に接続する。最初は `get_metrics(service-a)` → CPU 85% 模擬値 → LLM最終報告。1ツール・最大1実行・LLM呼び出し最大2回。無制限ループは作らない。
-- Haskellがツール仕様JSON、サービス許可条件、`runTool`、会話履歴、実行回数の制限を持つ。PythonはOllamaへの問い合わせのみ。Pythonプロセスには `messages` と `tools` を入力し、LLMのassistantメッセージ1件だけを返す。履歴を別フィールドへ重複保持しない。
-- Haskell: `ToolCall` = 名前 + 未検証のJSON引数、`ToolError` = 未知のツール/不正引数/未知のサービス。正当な呼び出しは固定JSON結果を返す。
-- LLMへのツール仕様と実行時のチェックは同じHaskellモジュールから提供する。Pythonはツール仕様をハードコードしない。
-- 提案コード: `src/Agent/Tool.hs`, `app/Main.hs`, `test/Main.hs`, `python/llm.py`, `python/test_llm.py`, `requirements.txt`, cabal依存修正。**ユーザー環境へは未反映**。
+## ユーザーからの実測（2026-10-12 15:19 JST）
+- `cabal test`: GHC 9.10.3、`Cases: 8 Tried: 8 Errors: 0 Failures: 0`、PASS。
+- `cabal run agent-worker -- service-aのCPU使用率を調べて`: `Tool request: get_metrics`、`Tool result: {"cpu_percent":85,"service":"service-a"}`、`Answer: service-aの現在のCPU使用率は85%です。`。ビルド・実行終了成功。
+- Pythonテスト2件もユーザーから「テストOK」と報告済。basedpyrightの複数診断を整理し、残ったOllama SDKの部分的な未知型警告に局所ignoreを適用、ユーザーがpush。
+- **確認済みなのは正常系の一連の通信1件と純粋処理の単体テスト。** LLMがツールを呼ばないケースと実システムでの拒否/複数呼び出しは未実測。
 
-## 検証と次の対応
-- Python側の3件の単体テストは、Ollama SDK部分を模擬して手元で実行済み。実SDKとの通信は未実行。
-- HaskellコンパイルとHUnitテストは未実行（AI側環境にGHCが無い）。
-- ユーザーにコードとテストを提示し、`python -m unittest` → `cabal test` → 実Ollamaで `cabal run` を実測してもらう。結果を受け取るまでは動作確定しない。
+## 次の候補
+- A1設計資料の「ツールなしで回答可能なケース」と「ツール選択の引数・回数の追跡」を確認してA1を区切る。その後A2の複数ツール、上限、エラー時停止に進む。
+- テストは数合わせを避け、何が壊れたら失敗するのかが説明可能なものに限定。LLMの非決定的な結果は単体テストへ依存させない。
