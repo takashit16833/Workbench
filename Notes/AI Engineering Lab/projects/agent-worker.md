@@ -1,29 +1,29 @@
 # agent-worker — 学習プロジェクト引き継ぎ
 
-最終確認: 2026-10-11
+最終確認: 2026-10-12 JST
 GitHub: https://github.com/takashit16833/agent-worker
-仕様: https://github.com/takashit16833/Workbench/blob/main/Notes/ai_app_lab/Agent%20Worker.md
+設計資料: https://github.com/takashit16833/Workbench/blob/main/Notes/ai_app_lab/Agent%20Worker.md
 
 ## 目的・進め方
+- HaskellとPythonで模擬システム障害の一次調査エージェントを作る。実務相当の品質、実装とテストをセットにする、ユーザーがコードを入力・実行する、重要な設計理由を説明する。
+- 過去の実装は2026-10-12に初期化され、新しい設計から再開。LLMツール要求の重複した管理は避け、Haskell側の会話履歴を唯一の情報源とする。PythonはOllama SDK通信を担当する。
+- agent-worker自体はユーザーの明示依頼がない限りAIから編集・pushしない。
 
-- 模擬システム障害について、LLMが調査ツールを選択し、Haskellが許可・引数を検証して読み取り専用の模擬データを取得し、LLMが根拠つきの報告を作る。
-- PythonはOllamaによるLLM呼び出しとTool Calling、Haskellはツールの検証・実行と今後の制御ループを担当する。
-- A1を小さく完成させる。実サーバへの変更や任意コマンド実行は行わない。
-- ユーザー自身でコード入力・実行しながら情報の流れを理解することを重視。推測による修正より実測、各段階の確認を優先する。
+## 2026-10-12 のGitHub mainと実装
+- 最終GitHub main確認: `e9c083e605e1221ba0e8a0683d8f7fa5feb475d4`。
+- `src/Agent/Tool.hs`: `get_metrics` の仕様、未検証ToolCall、許可・引数検証、`service-a` のCPU使用率85%を返す純粋関数 `runTool`、Ollama応答の解析。
+- `app/Main.hs`: Haskellが履歴と進行を管理。標準入出力でPythonプロセスを都度呼び出し、初回LLM要求を検証・ツール実行、履歴にassistant+tool結果を追加してもう一度LLMを呼ぶ。最大1件のツール実行。
+- `python/llm.py`: Pydantic `InferenceRequest` で入力を検証し、Ollama `qwen3:1.7b` に1回問い合わせ、メッセージを返す。`JsonValue`を利用し、SDK由来の型警告1件だけ局所抑制。
+- `python/test_llm.py`: 現在2件のテスト。SDKの `ChatResponse` を使い、外部通信のみ模擬した正しい引数・出力の確認、不正な会話履歴型の拒否。
+- `test/Main.hs`: HUnitで正常ツール実行、未知のツール・サービス、必須/型/余分な引数、LLM通常回答/ツール解析の計8件。
 
-## 最新の実装（GitHub mainで確認）
+## ユーザーからの実測（2026-10-12 15:19 JST）
+- `cabal test`: GHC 9.10.3、`Cases: 8 Tried: 8 Errors: 0 Failures: 0`、PASS。
+- `cabal run agent-worker -- service-aのCPU使用率を調べて`: `Tool request: get_metrics`、`Tool result: {"cpu_percent":85,"service":"service-a"}`、`Answer: service-aの現在のCPU使用率は85%です。`。ビルド・実行終了成功。
+- Pythonテスト2件もユーザーから「テストOK」と報告済。basedpyrightの複数診断を整理し、残ったOllama SDKの部分的な未知型警告に局所ignoreを適用、ユーザーがpush。
+- 2026-10-12 15:21 JST、ユーザーが `cabal run agent-worker -- "こんにちは。自己紹介を一文でお願いします。"` を実行。`Tool request` を表示せず `私はAIモデルで、あなたの質問や要求を理解し、適切な回答を提供します。` と回答し、終了コード0。**ツールなしの経路も実測済み**。
+- LLMがツールを使う正常系・使わない正常系、Haskell 8件の単体テスト、Python 2件の単体テストは確認済み。A1完成条件のツール名・入力引数・呼び出し回数の追跡については、現在のログは名前と結果だけで、元の引数と件数の記録は未実装。実システムでの拒否/複数呼び出しは未実測。
 
-- **2026-10-11 21:57 JST時点**で main は `912339b71eb22ba836ee420b86be075569cb0bf2`。
-- `python/tool_call.py`: Ollama `chat(model="qwen3:1.7b", tools=[get_metrics], think=False)` により、`service-a` のCPU使用率を尋ねる。モデルの `tool_calls` と `content` をJSONにして標準出力へ送る。ツール実行自体はしない。
-- `app/Main.hs`: 標準入力のJSONをaesonで読み、`get_metrics` および `service-a` のみ許可。純粋関数 `runTool` が固定の `service-a CPU usage: 85%` を返し、`handleTool` が表示する。未知のツール名・サービス名は拒否する。
-- `.dir-locals.el` に `Run Project`（`.venv/bin/python python/tool_call.py | cabal run agent-worker`）、Pythonのlint/format確認・修正コマンド等がある。
-- `test/Main.hs` はまだスタブ（実質的なテストなし）。
-- **ソースコードで実装を確認しただけで、Python→Haskell連携全体の手元実行は未確認。** 以前ユーザーから報告された実測はPython単体の `Tool: get_metrics / Arguments: {'service': 'service-a'}` まで。
-
-## 現在地・次の一歩
-
-- A1の「LLMがツールを選択 → Haskellが検証 → 模擬メトリクスを返す」はコード上存在する。
-- A1の「ツール結果を再びLLMに渡し、観測内容に基づく最終報告を得る」は未実装。
-- まずユーザー環境で `Run Project` を実行し、`Tool result: service-a CPU usage: 85%` が表示されるか確認する。未確認のまま次のコード修正はしない。
-- 次は、HaskellからPythonにツール結果を渡してLLMを再度呼ぶ最小の流れを学習・実装する。A2（複数ツール、回数制限、Pydantic、承認）に先走らない。
-- `get_metrics` はツールの**仕様**であり、モデルの `tool_calls` は実行済みの結果ではなく**提案**。この区別の理解確認はこれから。
+## 次の候補
+- 次はA1の元の引数・呼び出し回数の記録を小さく実装・確認して区切る。その後A2の複数ツール、上限、エラー時停止に進む。
+- テストは数合わせを避け、何が壊れたら失敗するのかが説明可能なものに限定。LLMの非決定的な結果は単体テストへ依存させない。
