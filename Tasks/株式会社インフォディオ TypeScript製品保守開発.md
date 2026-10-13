@@ -79,7 +79,7 @@ AIを活用したプロダクト開発や顧客への導入支援にも関われ
 
 Node.js、TypeScript、PostgreSQL、AWS、GitHub Actions、設計～リリースは実務経験とよく合う。
 一方、Angularが必須であるのに対し、経歴書からAngularの実務経験は確認できない。
-Redis、Dockerについても経歴書上の明示的な実務経験を確認できず、必須条件を厳密に見る場合は書類通過リスクがある。
+Redis・Dockerの実務経験は本人確認済み（[[案件評価用スキル補足]]）。この2点を不足として扱わない。Angularの実務経験が確認できないことが主な書類通過リスク。
 
 - ◎ Node.jsバックエンド:
   - 2025/01～2025/09にJavaScript / Node.js 20 / Expressでバックエンド設計・実装を担当。
@@ -87,15 +87,15 @@ Redis、Dockerについても経歴書上の明示的な実務経験を確認で
 - × Angular:
   - Angularの実務経験は経歴書から確認できない。
   - JavaScript / TypeScriptやフロントエンド経験はあるが、Angular経験としては扱えない。
-- △ PostgreSQL / Redis / JSONによるデータ連携:
+- ○ PostgreSQL / Redis / JSONによるデータ連携:
   - PostgreSQLは2025/01～2025/09の案件で実務利用。
   - Web API、データ収集・加工、TypeScript / JavaScriptの経験はある。
-  - Redisの実務経験は経歴書から確認できない。
+  - Redisは本人確認済みの実務経験あり（[[案件評価用スキル補足]]）。具体的な案件・期間・用途は未記録。
   - JSONを利用したデータ連携についても、募集要件と同じ形での明示的な実務記載はない。
-- △～○ Git / Docker / GitHub Actionsによるチーム開発:
+- ○ Git / Docker / GitHub Actionsによるチーム開発:
   - GitおよびGitHub Actionsは複数案件で実務経験あり。
   - GitHub Packagesを利用した社内パッケージ管理やCI/CD構築も経験。
-  - Dockerの実務経験は経歴書から確認できない。
+  - Dockerは本人確認済みの実務経験あり（[[案件評価用スキル補足]]）。具体的な案件・期間・用途は未記録。
 - ◎ AWS:
   - 2025/01～2025/09の案件でAWS環境を利用。
   - 2023/04～2024/12にもAWS / Azure上の環境へのリリースまで担当。
@@ -124,7 +124,7 @@ Redis、Dockerについても経歴書上の明示的な実務経験を確認で
 Angularを必須として即戦力で求める場合は見送り寄り。
 一方で、バックエンド側はNode.js / TypeScript、PostgreSQL、AWS、GitHub Actions、設計～リリースまでかなり強く合うため、Angular未経験でも提案可能かを営業側が確認できるなら応募候補になる。
 
-RedisとDockerも経歴書上は不足しているため、「Angularだけ未経験」という整理ではなく、必須条件全体の許容度を確認してから応募するのが安全。
+RedisとDockerには実務経験があり、これらを不足とする以前の評価は誤り。残る大きな不足はAngularの実務経験。Angularを必須とする募集条件により、応募優先度は低い。
 
 ## 会社情報
 
