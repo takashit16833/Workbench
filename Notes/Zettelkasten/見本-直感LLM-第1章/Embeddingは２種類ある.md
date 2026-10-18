@@ -1,10 +1,13 @@
-# Embeddingは２種類ある
+# Transformerの入力Embeddingと文脈を考慮したEmbedding
 ## 入力Embedding
 Tokenizerが文章を受け取り、トークンとトークンIDを出力する。
 そのトークンIDがLLMに入力され、トークンIDに対応する入力EmbeddingをEmbedding行列から取得する。
+
+同じトークンIDからは、基本的に同じ入力Embeddingが対応する。
 
 ## 文脈を考慮したEmbedding
 入力EmbeddingはTransformerのEncoderブロックを順番に通過する。
 この過程で周囲のトークン情報を取り込む。
 
 最終的に、文脈を考慮したEmbeddingが生成される。
+（文脈を考慮しているため）同じトークンでも内部表現が異なるベクトルになる。
