@@ -1,7 +1,7 @@
 # TokenizerはEncode, Decodeを行う
-入力された文章をトークンIDに変換し、LLMが文章を生成するための橋渡しを行う。
+Tokenizerは、入力文章をトークンIDに変換するEncodeと、トークンIDを文章に戻すDecodeを行う。
 
-なお、Embeddingへの変換は行わない。（Embedding層が行う）
+なお、Embeddingへの変換は行わない。これはEmbedding層の役割である。
 
 ## Encode
 ```text
@@ -19,7 +19,7 @@
 トークンID
 [27746, 5281]
 ↓
-トークン化
+IDからトークンを復元
 ["apolog", "izing"]
 ↓
 文章化
