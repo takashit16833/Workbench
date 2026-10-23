@@ -1,4 +1,4 @@
-# 修正版：GitHub Actions イベント一覧
+# GitHub Actions イベント一覧
 |イベント|説明|
 |---|---|
 |`branch_protection_rule`|ブランチ保護ルールが作成・変更・削除されたとき|
