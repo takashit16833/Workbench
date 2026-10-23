@@ -539,12 +539,12 @@
     "defaultReminderMinutes": null
   },
   "enableDebugLogging": false,
-  "lastSeenVersion": "4.13.5",
+  "lastSeenVersion": "4.13.10",
   "pomodoroState": {
     "isRunning": false,
     "timeRemaining": 1500
   },
-  "lastPomodoroDate": "2026-09-16",
+  "lastPomodoroDate": "2026-10-19",
   "pomodoroHistory": [
     {
       "id": "1786413262882",
@@ -6375,7 +6375,8 @@
       ]
     }
   ],
-  "lastNotifiedReleaseVersion": "4.13.8",
+  "lastNotifiedReleaseVersion": "4.14.0",
   "completionMenuAsSubmenu": true,
-  "lastSelectedTaskPath": "Tasks/RS-0024 subtask OpenTelemetry SDKライフサイクルとMetrics基盤を実装する.md"
+  "lastSelectedTaskPath": "Tasks/RS-0024 subtask OpenTelemetry SDKライフサイクルとMetrics基盤を実装する.md",
+  "nlpEnterToSubmit": false
 }
