@@ -1,11 +1,13 @@
 ---
-status: todo
+status: dropped
 projects:
   - "[[文書取り込み機能作成]]"
 branch: document-ingestion/integrate-ingest-command
 dateCreated: 2026-09-29T06:44:00+09:00
 tags:
   - task
+dateModified: 2026-11-02T22:51:49.017+09:00
+completedDate: 2026-11-02
 ---
 
 ## 実装
