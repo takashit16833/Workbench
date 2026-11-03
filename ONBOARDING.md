@@ -8,7 +8,7 @@ Vaultルートで実行します。
 bash Scripts/install.sh
 ```
 
-このスクリプトは Config Layer のsubmoduleを初期化・ビルドしてVaultへ配置し、Workbenchで使うcommunity pluginもインストールします。
+このスクリプトは 中央の `~/obsidian-config-layer` を参照します。存在しない場合は初回だけ取得・ビルドし、Workbench から `main.js`・`manifest.json` へシンボリックリンクを作成します。既存のプラグイン本体ファイルはバックアップし、Vault 固有の `data.json` は変更しません。その他の community plugin もインストールします。
 
 Obsidianを再起動またはVaultをreloadします。
 
