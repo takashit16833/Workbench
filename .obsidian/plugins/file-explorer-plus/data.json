@@ -130,6 +130,13 @@
         "type": "DIRECTORIES",
         "pattern": "Vendor",
         "patternType": "STRICT"
+      },
+      {
+        "name": "",
+        "active": true,
+        "type": "DIRECTORIES",
+        "pattern": "Tasks",
+        "patternType": "STRICT"
       }
     ],
     "frontMatter": [
