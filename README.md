@@ -8,9 +8,9 @@ Task / Idea / Note / Project を扱う、自分 + AI 共用の作業台。
 bash Scripts/install.sh
 ```
 
-`install.sh` は `~/obsidian-config-layer` を中央の管理元として利用します。存在しなければ初回だけ取得し、`main.js` がない場合だけビルドします。Workbench では `main.js`・`manifest.json`（存在すれば `styles.css`）をシンボリックリンクで参照し、`data.json` は Vault 固有のまま保持します。既存のコピーはバックアップして移行し、その他の community plugin もインストールします。
+`install.sh` は `~/workspace/obsidian-config-layer` を中央の管理元として利用します。存在しなければ初回だけ取得し、`main.js` がない場合だけビルドします。Workbench では `main.js`・`manifest.json`（存在すれば `styles.css`）をシンボリックリンクで参照し、`data.json` は Vault 固有のまま保持します。既存のコピーはバックアップして移行し、その他の community plugin もインストールします。
 
-Config Layer の更新時は `~/obsidian-config-layer` で `git pull`・`npm run build` を実行して Obsidian を再読み込みします。各 Vault でのコピーや個別ビルドは不要です。中央リポジトリを別の場所に置く場合は `CONFIG_LAYER_DIR` を指定します。
+Config Layer の更新時は `~/workspace/obsidian-config-layer` で `git pull`・`npm run build` を実行して Obsidian を再読み込みします。各 Vault でのコピーや個別ビルドは不要です。中央リポジトリを別の場所に置く場合は `CONFIG_LAYER_DIR` を指定します。
 
 Obsidianを再起動し、[[ONBOARDING]] の初回設定を行います。
 

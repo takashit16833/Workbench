@@ -3,7 +3,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-CONFIG_SOURCE="${CONFIG_LAYER_DIR:-$HOME/obsidian-config-layer}"
+CONFIG_SOURCE="${CONFIG_LAYER_DIR:-$HOME/workspace/obsidian-config-layer}"
 CONFIG_DEST="$ROOT/.obsidian/plugins/config-layer"
 
 if [[ ! -d "$CONFIG_SOURCE" ]]; then
@@ -12,6 +12,7 @@ if [[ ! -d "$CONFIG_SOURCE" ]]; then
     exit 1
   fi
   command -v git >/dev/null || { echo 'git is required to clone Config Layer' >&2; exit 1; }
+  mkdir -p "$(dirname "$CONFIG_SOURCE")"
   echo "Cloning Config Layer to $CONFIG_SOURCE ..."
   git clone https://github.com/takashit16833/obsidian-config-layer.git "$CONFIG_SOURCE"
 fi
