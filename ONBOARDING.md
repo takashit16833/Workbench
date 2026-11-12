@@ -33,7 +33,7 @@ Obsidian の **Settings → Config Layer** で以下を設定します。
 | Watch external files | ON |
 
 **Shared CSS** で必要な CSS を有効にし、**Apply shared hotkeys** と **Apply required plugins** を実行します。
-Windows では共通 `hotkeys.json` に `hotkeys.win32.json` を重ねます。左サイドバーは `Alt+B`、太字は `Ctrl+B`、タブの並べ替えは `Ctrl+Shift+PageUp/PageDown` です。Mac の割り当ては変わりません。
+Mac と Windows で同じ `hotkeys.json` を使用します。`Mod` は Mac では Cmd、Windows では Ctrl です。左サイドバーは `Alt+B`、太字は `Mod+B`、タブの並べ替えは `Ctrl+Shift+PageUp/PageDown` です。
 
 ## 2. Fileclass
 
@@ -166,9 +166,13 @@ Show in Edit:     ON
 
 ### Hotkey
 
-Settings -> Hotkeys:
+Workbench 固有の割り当て（両 OS 共通）:
 
-- **TaskNotes: Create new task** に好みのキーを割り当てる
+- **Alt+T**: Task 作成
+- **Alt+D**: Dashboard
+- **Alt+Z**: 表示領域の最大化
+
+Mac の **Alt** は **Option（⌥）** に対応します。これらは Vault の `.obsidian/hotkeys.json` に初期設定済みです。
 
 ## 4. Homepage
 
@@ -176,7 +180,7 @@ Settings -> Hotkeys:
 
 - Homepage: `Dashboard`
 - 起動時にDashboardを開く
-- **⌥D**: Dashboardへ戻る
+- **Alt+D（Mac は ⌥D）**: Dashboardへ戻る
 
 ## 5. First run
 
