@@ -44,6 +44,7 @@ foreach ($plugin in $plugins) {
                 if ($asset -ne 'styles.css') {
                     throw "Failed to download $url : $_"
                 }
+                Remove-Item -LiteralPath $outFile -Force -ErrorAction SilentlyContinue
             }
         }
 
