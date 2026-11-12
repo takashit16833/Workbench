@@ -1,0 +1,57 @@
+name: Windows setup
+
+on:
+  push:
+    paths:
+      - 'Scripts/*.ps1'
+      - '.github/workflows/windows-setup.yml'
+  pull_request:
+    paths:
+      - 'Scripts/*.ps1'
+      - '.github/workflows/windows-setup.yml'
+
+jobs:
+  test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate PowerShell syntax
+        shell: pwsh
+        run: |
+          $scripts = Get-ChildItem Scripts -Filter '*.ps1'
+          foreach ($script in $scripts) {
+            $tokens = $null
+            $errors = $null
+            [void][System.Management.Automation.Language.Parser]::ParseFile($script.FullName, [ref]$tokens, [ref]$errors)
+            if ($errors.Count -gt 0) {
+              throw "$($script.Name): $($errors -join '; ')"
+            }
+          }
+      - name: Check Config Layer links preserve vault data
+        shell: pwsh
+        run: |
+          $fakeSource = Join-Path $env:RUNNER_TEMP 'config-layer-test'
+          New-Item -ItemType Directory -Path $fakeSource -Force | Out-Null
+          [IO.File]::WriteAllText((Join-Path $fakeSource 'manifest.json'), '{}')
+          [IO.File]::WriteAllText((Join-Path $fakeSource 'main.js'), 'module.exports = {};')
+          $env:CONFIG_LAYER_DIR = $fakeSource
+
+          $dest = Join-Path (Get-Location) '.obsidian\plugins\config-layer'
+          New-Item -ItemType Directory -Path $dest -Force | Out-Null
+          [IO.File]::WriteAllText((Join-Path $dest 'main.js'), 'old runtime')
+          [IO.File]::WriteAllText((Join-Path $dest 'data.json'), 'vault setting')
+
+          & .\Scripts\install-config-layer.ps1
+          & .\Scripts\install-config-layer.ps1
+
+          foreach ($asset in @('main.js', 'manifest.json')) {
+            $link = Get-Item -LiteralPath (Join-Path $dest $asset) -Force
+            if ($link.LinkType -ne 'SymbolicLink') { throw "Not a symlink: $asset" }
+          }
+          if ([IO.File]::ReadAllText((Join-Path $dest 'data.json')) -ne 'vault setting') {
+            throw 'Vault-local data.json was changed.'
+          }
+          $backup = Get-ChildItem -LiteralPath $dest -Directory -Filter '.pre-symlink-backup.*' | Select-Object -First 1
+          if (-not $backup -or -not (Test-Path -LiteralPath (Join-Path $backup.FullName 'main.js'))) {
+            throw 'Previous runtime was not backed up.'
+          }
