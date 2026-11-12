@@ -4,13 +4,36 @@
 
 Vaultルートで実行します。
 
+macOS:
+
 ```bash
 bash Scripts/install.sh
+```
+
+Windows（PowerShell）:
+
+```powershell
+.\Scripts\install.ps1
 ```
 
 このスクリプトは、中央の `~/workspace/obsidian-config-layer` を参照します。存在しない場合は初回だけ取得・ビルドし、Workbench から `main.js`・`manifest.json` へシンボリックリンクを作成します。既存のプラグイン本体ファイルはバックアップし、Vault 固有の `data.json` は変更しません。その他の community plugin もインストールします。
 
 Obsidianを再起動またはVaultをreloadします。
+
+### Config Layer（各 OS の初回のみ）
+
+共通設定のリポジトリ `dotfiles` を `~/workspace/dotfiles` に置きます。
+Obsidian の **Settings → Config Layer** で以下を設定します。
+
+| 項目 | 値 |
+| --- | --- |
+| CSS folder | `~/workspace/dotfiles/obsidian/css` |
+| Hotkeys folder | `~/workspace/dotfiles/obsidian` |
+| Plugins folder | 空欄 |
+| Watch external files | ON |
+
+**Shared CSS** で必要な CSS を有効にし、**Apply shared hotkeys** と **Apply required plugins** を実行します。
+Windows では共通 `hotkeys.json` に `hotkeys.win32.json` を重ねるため、左サイドバーは `Alt+B`、太字は `Ctrl+B` になります。Mac の割り当ては変わりません。
 
 ## 2. Fileclass
 
