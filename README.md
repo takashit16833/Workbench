@@ -15,6 +15,7 @@ bash Scripts/install.sh
 Obsidian（Windows 版）、Git、Node.js を用意します。シンボリックリンクのため、Windows の開発者モードを有効にするか、PowerShell を管理者として実行してください。
 
 ```powershell
+New-Item -ItemType Directory -Path "$HOME\workspace" -Force | Out-Null
 git clone https://github.com/takashit16833/Workbench.git "$HOME\workspace\Workbench"
 git clone https://github.com/takashit16833/dotfiles.git "$HOME\workspace\dotfiles"
 cd "$HOME\workspace\Workbench"
