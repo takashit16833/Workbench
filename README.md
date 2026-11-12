@@ -4,13 +4,29 @@ Task / Idea / Note / Project を扱う、自分 + AI 共用の作業台。
 
 ## Start
 
+### macOS
+
 ```bash
 bash Scripts/install.sh
 ```
 
+### Windows 11
+
+Obsidian（Windows 版）、Git、Node.js を用意します。シンボリックリンクのため、Windows の開発者モードを有効にするか、PowerShell を管理者として実行してください。
+
+```powershell
+git clone https://github.com/takashit16833/Workbench.git "$HOME\workspace\Workbench"
+git clone https://github.com/takashit16833/dotfiles.git "$HOME\workspace\dotfiles"
+cd "$HOME\workspace\Workbench"
+.\Scripts\install.ps1
+```
+
+既にリポジトリがあれば `git clone` は不要です。PowerShell でスクリプト実行が禁止されている環境では、管理者の許可なく実行ポリシーを変更しないでください。
+
+
 `install.sh` は `~/workspace/obsidian-config-layer` を中央の管理元として利用します。存在しなければ初回だけ取得し、`main.js` がない場合だけビルドします。Workbench では `main.js`・`manifest.json`（存在すれば `styles.css`）をシンボリックリンクで参照し、`data.json` は Vault 固有のまま保持します。既存のコピーはバックアップして移行し、その他の community plugin もインストールします。
 
-Config Layer の更新時は `~/workspace/obsidian-config-layer` で `git pull`・`npm run build` を実行して Obsidian を再読み込みします。各 Vault でのコピーや個別ビルドは不要です。中央リポジトリを別の場所に置く場合は `CONFIG_LAYER_DIR` を指定します。
+Config Layer の更新時は `~/workspace/obsidian-config-layer` で `git pull` と `npm run build` を実行して Obsidian を再読み込みします。Windows では `npm.cmd run build` を使えます。各 Vault でのコピーや個別ビルドは不要です。中央リポジトリを別の場所に置く場合は `CONFIG_LAYER_DIR` を指定します。
 
 Obsidianを再起動し、[[ONBOARDING]] の初回設定を行います。
 
