@@ -33,7 +33,7 @@ Obsidian の **Settings → Config Layer** で以下を設定します。
 | Watch external files | ON |
 
 **Shared CSS** で必要な CSS を有効にし、**Apply shared hotkeys** と **Apply required plugins** を実行します。
-Windows では共通 `hotkeys.json` に `hotkeys.win32.json` を重ねるため、左サイドバーは `Alt+B`、太字は `Ctrl+B` になります。Mac の割り当ては変わりません。
+Windows では共通 `hotkeys.json` に `hotkeys.win32.json` を重ねます。左サイドバーは `Alt+B`、太字は `Ctrl+B`、タブの並べ替えは `Ctrl+Shift+PageUp/PageDown` です。Mac の割り当ては変わりません。
 
 ## 2. Fileclass
 
