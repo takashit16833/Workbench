@@ -13,4 +13,5 @@
 
 # Projects
 
-![[Dashboard.base#Projects]]
+```workbench-projects
+```
