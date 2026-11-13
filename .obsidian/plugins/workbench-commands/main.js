@@ -1,11 +1,14 @@
 const {
   MarkdownView,
+  MarkdownRenderChild,
+  FuzzySuggestModal,
   Modal,
   Notice,
   Plugin,
   Setting,
   TFile,
   stringifyYaml,
+  setIcon,
 } = require("obsidian");
 
 const DATA_FOLDERS = ["Tasks", "Ideas", "Projects"];
@@ -561,13 +564,188 @@ class ShiftPreviewModal extends Modal {
   onClose() { this.contentEl.empty(); }
 }
 
+
+function buildProjectHierarchy(files, getParentPath) {
+  const ordered = [...files].sort((a, b) => a.path.localeCompare(b.path));
+  const nodes = new Map(ordered.map((file) => [file.path, { file, children: [] }]));
+  const parents = new Map(ordered.map((file) => [file.path, getParentPath(file)]));
+  const roots = [];
+  for (const file of ordered) {
+    const parentPath = parents.get(file.path);
+    let ancestor = parentPath;
+    const seen = new Set();
+    while (ancestor && nodes.has(ancestor) && !seen.has(ancestor)) {
+      if (ancestor === file.path) break;
+      seen.add(ancestor);
+      ancestor = parents.get(ancestor);
+    }
+    // Broken and cyclic links leave Projects visible as roots.
+    if (!nodes.has(parentPath) || ancestor === file.path) roots.push(nodes.get(file.path));
+    else nodes.get(parentPath).children.push(nodes.get(file.path));
+  }
+  return roots;
+}
+
+class ProjectPickerModal extends FuzzySuggestModal {
+  constructor(app, placeholder, items, onChoose) {
+    super(app);
+    this.items = items;
+    this.onChoose = onChoose;
+    this.setPlaceholder(placeholder);
+  }
+  getItems() { return this.items; }
+  getItemText(item) { return item.label; }
+  onChooseItem(item) { this.onChoose(item.file); }
+}
+
 module.exports = class WorkbenchCommands extends Plugin {
   onload() {
     this.addCommand({ id: "clear-project", name: "Clear Project", callback: () => this.openClearProject() });
     this.addCommand({ id: "clear-all", name: "Clear All", callback: () => this.openClearAll() });
     this.addCommand({ id: "create-holiday", name: "Create Holiday", callback: () => this.openCreateHoliday() });
     this.addCommand({ id: "shift-schedule", name: "Shift Schedule", callback: () => this.openShiftSchedule() });
+    this.addCommand({ id: "set-parent-project", name: "Set Parent Project", callback: () => this.openSetParentProject() });
+    this.registerProjectTree();
     this.registerDomEvent(document, "keydown", (event) => this.handleDashboardKeydown(event));
+  }
+
+
+  projectParentPath(file) {
+    const link = this.normalizeLinkpath(this.frontmatter(file).parent);
+    if (!link) return null;
+    const parent = this.app.metadataCache.getFirstLinkpathDest(link, file.path);
+    return parent && parent.extension === "md" && parent.path.startsWith("Projects/")
+      ? parent.path : null;
+  }
+
+  createsProjectCycle(child, proposedParent) {
+    const seen = new Set();
+    let path = proposedParent.path;
+    while (path && !seen.has(path)) {
+      if (path === child.path) return true;
+      seen.add(path);
+      const file = this.app.vault.getAbstractFileByPath(path);
+      path = file instanceof TFile ? this.projectParentPath(file) : null;
+    }
+    return false;
+  }
+
+  openSetParentProject() {
+    const projects = this.projects();
+    if (projects.length === 0) {
+      new Notice("Projectがありません。");
+      return;
+    }
+    const choices = projects.map((file) => ({ file, label: this.projectName(file) }));
+    new ProjectPickerModal(this.app, "子Projectを選択", choices, (child) => {
+      const candidates = projects
+        .filter((file) => !this.createsProjectCycle(child, file))
+        .map((file) => ({ file, label: this.projectName(file) }));
+      new ProjectPickerModal(
+        this.app, "親Projectを選択（先頭は親なし）",
+        [{ file: null, label: "親Projectなし" }, ...candidates],
+        (parent) => { void this.setParentProject(child, parent); }
+      ).open();
+    }).open();
+  }
+
+  async setParentProject(child, parent) {
+    const file = this.app.vault.getAbstractFileByPath(child.path);
+    const currentParent = parent && this.app.vault.getAbstractFileByPath(parent.path);
+    if (!(file instanceof TFile) || (parent && !(currentParent instanceof TFile))) {
+      new Notice("Projectが見つかりません。");
+      return;
+    }
+    if (currentParent && this.createsProjectCycle(file, currentParent)) {
+      new Notice("循環する親子関係は設定できません。");
+      return;
+    }
+    try {
+      await this.app.fileManager.processFrontMatter(file, (fm) => {
+        if (currentParent) fm.parent = "[[" + currentParent.path.replace(/\.md$/i, "") + "]]";
+        else delete fm.parent;
+      });
+      new Notice(currentParent ? "親Projectを設定しました。" : "親Projectを解除しました。");
+    } catch (error) {
+      console.error("Workbench set parent project failed:", error);
+      new Notice("親Projectの設定に失敗しました: " + errorMessage(error));
+    }
+  }
+
+  renderProjectTree(el, collapsed) {
+    el.empty();
+    el.addClass("workbench-project-tree");
+    const projects = this.projects();
+    if (projects.length === 0) {
+      el.createEl("p", { text: "Projectはありません。" });
+      return;
+    }
+    const roots = buildProjectHierarchy(projects, (file) => this.projectParentPath(file));
+    const renderNode = (node, parentEl) => {
+      const item = parentEl.createDiv({ cls: "workbench-project-item" });
+      const row = item.createDiv({ cls: "workbench-project-row" });
+      const expandable = node.children.length > 0;
+      const toggle = row.createEl("button", {
+        cls: "workbench-project-toggle",
+        attr: { type: "button" },
+      });
+      if (expandable) {
+        toggle.setAttribute("aria-label", node.file.basename + "を展開・折りたたみ");
+      } else {
+        toggle.addClass("is-placeholder");
+        toggle.disabled = true;
+        toggle.setAttribute("aria-hidden", "true");
+      }
+      const link = row.createEl("a", {
+        cls: "internal-link workbench-project-link",
+        text: node.file.basename,
+        attr: { href: node.file.path, "data-href": node.file.path },
+      });
+      link.addEventListener("click", (event) => {
+        event.preventDefault();
+        void this.app.workspace.openLinkText(
+          node.file.path, DASHBOARD_PATH, event.ctrlKey || event.metaKey
+        );
+      });
+      if (!expandable) return;
+      const childrenEl = item.createDiv({ cls: "workbench-project-children" });
+      for (const child of node.children) renderNode(child, childrenEl);
+      const update = () => {
+        const isCollapsed = collapsed.has(node.file.path);
+        childrenEl.style.display = isCollapsed ? "none" : "";
+        toggle.setAttribute("aria-expanded", String(!isCollapsed));
+        toggle.empty();
+        setIcon(toggle, isCollapsed ? "chevron-right" : "chevron-down");
+      };
+      toggle.addEventListener("click", () => {
+        if (collapsed.has(node.file.path)) collapsed.delete(node.file.path);
+        else collapsed.add(node.file.path);
+        update();
+      });
+      update();
+    };
+    for (const root of roots) renderNode(root, el);
+  }
+
+  registerProjectTree() {
+    this.registerMarkdownCodeBlockProcessor("workbench-projects", (_source, el, ctx) => {
+      const collapsed = new Set();
+      const refresh = () => this.renderProjectTree(el, collapsed);
+      const child = new MarkdownRenderChild(el);
+      ctx.addChild(child);
+      child.registerEvent(this.app.metadataCache.on("changed", (file) => {
+        if (file.path.startsWith("Projects/")) refresh();
+      }));
+      for (const event of ["create", "delete"]) {
+        child.registerEvent(this.app.vault.on(event, (file) => {
+          if (file.path.startsWith("Projects/")) refresh();
+        }));
+      }
+      child.registerEvent(this.app.vault.on("rename", (file, oldPath) => {
+        if (file.path.startsWith("Projects/") || oldPath.startsWith("Projects/")) refresh();
+      }));
+      refresh();
+    });
   }
 
   activeDashboardReadingView() {
