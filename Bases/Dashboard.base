@@ -29,13 +29,3 @@ views:
       note.status: 120
       note.review_gate: 420
       note.created: 140
-  - type: table
-    name: Projects
-    filters:
-      and:
-        - file.folder == "Projects"
-        - file.ext == "md"
-    order:
-      - file.name
-    columnSize:
-      file.name: 320
