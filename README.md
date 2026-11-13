@@ -37,7 +37,7 @@ Obsidianを再起動し、[[ONBOARDING]] の初回設定を行います。
 - Maximize pane: **Alt+Z** / Pane Relief の **Maximize active tab (Toggle)**
 - Idea: `Ideas/`
 - Note: `Notes/`
-- Project: `Projects/`
+- Project: `Projects/`（Dashboardでは親子階層で表示）
 
 Mac の **Alt** は **Option（⌥）** です。これらのショートカットは Windows と共通です。共通の Obsidian ホットキーは `dotfiles/obsidian/hotkeys.json` で管理し、`Mod` は Mac では Cmd、Windows では Ctrl に対応します。
 
@@ -49,6 +49,9 @@ DashboardにはToday / Tasksを表示します。Reading viewでは **c** でCal
 - **Workbench: Clear All**: Workbench全体を整理する。`完了のみ` / `すべて`
 - **Workbench: Create Holiday**: Projectの休みを登録する
 - **Workbench: Shift Schedule**: Projectの予定をworkday単位で前後へずらす。Holidayは除外する
+- **Workbench: Set Parent Project**: 子Projectと親Projectを選ぶ。親なしも選択可能
 
 Clear系は`Notes/`を変更せず、対象をTrashへ移動します。
 HolidayはCalendarに表示し、通常のTask一覧とStatisticsからは除外します。
+
+Projectの階層は **Workbench: Set Parent Project** で設定します。DashboardのProjects欄では矢印で開閉し、名前を押すとProjectを開きます。Taskの所属先は従来どおりTaskNotesで設定します。

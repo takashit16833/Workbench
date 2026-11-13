@@ -1,0 +1,34 @@
+.workbench-project-tree .workbench-project-row {
+  display: flex;
+  align-items: center;
+  gap: 0.35em;
+  min-height: 1.9em;
+}
+.workbench-project-tree .workbench-project-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 1.5em;
+  width: 1.5em;
+  height: 1.5em;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-s);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.workbench-project-tree .workbench-project-toggle:not(.is-placeholder):hover {
+  background: var(--background-modifier-hover);
+}
+.workbench-project-tree .workbench-project-toggle.is-placeholder {
+  visibility: hidden;
+}
+.workbench-project-tree .workbench-project-link {
+  text-decoration: none;
+}
+.workbench-project-tree .workbench-project-children {
+  margin-left: 0.75em;
+  padding-left: 0.75em;
+  border-left: 1px solid var(--background-modifier-border);
+}
