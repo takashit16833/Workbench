@@ -539,7 +539,7 @@
     "defaultReminderMinutes": null
   },
   "enableDebugLogging": false,
-  "lastSeenVersion": "4.13.10",
+  "lastSeenVersion": "4.12.3",
   "pomodoroState": {
     "isRunning": false,
     "timeRemaining": 1500
@@ -6375,7 +6375,7 @@
       ]
     }
   ],
-  "lastNotifiedReleaseVersion": "4.16.1",
+  "lastNotifiedReleaseVersion": "4.18.2",
   "completionMenuAsSubmenu": true,
   "lastSelectedTaskPath": "Tasks/RS-0024 subtask OpenTelemetry SDKライフサイクルとMetrics基盤を実装する.md",
   "nlpEnterToSubmit": false
