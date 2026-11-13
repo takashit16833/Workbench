@@ -76,6 +76,9 @@ Workbench optimizes for the **next correct action**, not for completeness.
 - Use TaskNotes' standard Projects feature for Task association.
 - Idea / Note use the same `projects` property and Project notes.
 - Do not introduce a parallel grouping concept or property.
+- Project notes may have one `parent` wikilink to another Project. It defines Project hierarchy only, not Task membership.
+- Render the hierarchy on Dashboard; leave TaskNotes Project assignment and Project-scoped commands as direct-only unless separately specified.
+- Reject cycles when assigning a parent. Missing, self-referential, or cyclic links must not hide Projects from Dashboard.
 
 ## Clear commands
 
