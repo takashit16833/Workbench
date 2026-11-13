@@ -642,7 +642,7 @@ module.exports = class WorkbenchCommands extends Plugin {
         .filter((file) => !this.createsProjectCycle(child, file))
         .map((file) => ({ file, label: this.projectName(file) }));
       new ProjectPickerModal(
-        this.app, "親Projectを選択（先頭は親なし）",
+        this.app, "親Projectを選択（「親Projectなし」も選択可）",
         [{ file: null, label: "親Projectなし" }, ...candidates],
         (parent) => { void this.setParentProject(child, parent); }
       ).open();
@@ -703,6 +703,7 @@ module.exports = class WorkbenchCommands extends Plugin {
       });
       link.addEventListener("click", (event) => {
         event.preventDefault();
+        event.stopPropagation();
         void this.app.workspace.openLinkText(
           node.file.path, DASHBOARD_PATH, event.ctrlKey || event.metaKey
         );
