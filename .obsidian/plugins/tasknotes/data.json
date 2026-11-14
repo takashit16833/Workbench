@@ -542,9 +542,10 @@
   "lastSeenVersion": "4.12.3",
   "pomodoroState": {
     "isRunning": false,
-    "timeRemaining": 1500
+    "timeRemaining": 1500,
+    "nextSessionType": "work"
   },
-  "lastPomodoroDate": "2026-10-19",
+  "lastPomodoroDate": "2026-11-13",
   "pomodoroHistory": [
     {
       "id": "1786413262882",
@@ -6373,10 +6374,109 @@
           "endTime": "2026-09-17T12:38:57.444+09:00"
         }
       ]
+    },
+    {
+      "id": "1794618401650",
+      "startTime": "2026-11-14T10:06:41.650+09:00",
+      "endTime": "2026-11-14T10:51:37.541+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "taskPath": "Tasks/SC 第1章を読み終える.md",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-11-14T10:06:41.650+09:00",
+          "endTime": "2026-11-14T10:08:24.079+09:00"
+        },
+        {
+          "startTime": "2026-11-14T10:28:19.970+09:00",
+          "endTime": "2026-11-14T10:51:37.541+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1794621099348",
+      "startTime": "2026-11-14T10:51:39.348+09:00",
+      "endTime": "2026-11-14T10:56:39.348+09:00",
+      "plannedDuration": 5,
+      "type": "short-break",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-11-14T10:51:39.348+09:00",
+          "endTime": "2026-11-14T10:56:39.348+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1794621691862",
+      "startTime": "2026-11-14T11:01:31.862+09:00",
+      "endTime": "2026-11-14T15:05:05.880+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "taskPath": "Tasks/SC 第1章を読み終える.md",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-11-14T11:01:31.862+09:00",
+          "endTime": "2026-11-14T11:09:16.970+09:00"
+        },
+        {
+          "startTime": "2026-11-14T11:19:04.643+09:00",
+          "endTime": "2026-11-14T11:20:39.582+09:00"
+        },
+        {
+          "startTime": "2026-11-14T14:49:25.927+09:00",
+          "endTime": "2026-11-14T15:05:05.880+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1794636308049",
+      "startTime": "2026-11-14T15:05:08.049+09:00",
+      "endTime": "2026-11-14T15:10:08.049+09:00",
+      "plannedDuration": 5,
+      "type": "short-break",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-11-14T15:05:08.049+09:00",
+          "endTime": "2026-11-14T15:10:08.049+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1794638237394",
+      "startTime": "2026-11-14T15:37:17.394+09:00",
+      "endTime": "2026-11-14T16:02:17.394+09:00",
+      "plannedDuration": 25,
+      "type": "work",
+      "taskPath": "Tasks/SC 第1章を読み終える.md",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-11-14T15:37:17.394+09:00",
+          "endTime": "2026-11-14T16:02:17.394+09:00"
+        }
+      ]
+    },
+    {
+      "id": "1794639738510",
+      "startTime": "2026-11-14T16:02:18.509+09:00",
+      "endTime": "2026-11-14T16:07:18.509+09:00",
+      "plannedDuration": 5,
+      "type": "short-break",
+      "completed": true,
+      "activePeriods": [
+        {
+          "startTime": "2026-11-14T16:02:18.509+09:00",
+          "endTime": "2026-11-14T16:07:18.509+09:00"
+        }
+      ]
     }
   ],
   "lastNotifiedReleaseVersion": "4.18.2",
   "completionMenuAsSubmenu": true,
-  "lastSelectedTaskPath": "Tasks/RS-0024 subtask OpenTelemetry SDKライフサイクルとMetrics基盤を実装する.md",
+  "lastSelectedTaskPath": "Tasks/SC 第1章を読み終える.md",
   "nlpEnterToSubmit": false
 }
