@@ -5,7 +5,7 @@ title: SC科目Aの過去問を10問解く
 status: todo
 priority: medium
 scheduled: "2026-11-21"
-recurrence: "DTSTART:20261121;FREQ=WEEKLY;BYDAY=SA"
+recurrence: "DTSTART:20261121;FREQ=WEEKLY;BYDAY=SA;UNTIL=20270219"
 recurrence_anchor: scheduled
 projects:
   - "[[Projects/SC 情報処理安全確保支援士]]"
