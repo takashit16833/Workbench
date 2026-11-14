@@ -73,6 +73,8 @@ Workbench optimizes for the **next correct action**, not for completeness.
 ## Project
 
 - 1 Project = 1 Markdown file under `Projects/`.
+- Project notes are ordinary Markdown, not TaskNotes Tasks. Create them directly under `Projects/`, never via Task capture, and never give them `tags: task` or Task-only `status` / `priority`.
+- The `projects` property assigns Tasks / Ideas / Notes to a Project; it is not a parent relationship between Projects. Use the Project note's `parent` property for hierarchy.
 - Use TaskNotes' standard Projects feature for Task association.
 - Idea / Note use the same `projects` property and Project notes.
 - Do not introduce a parallel grouping concept or property.

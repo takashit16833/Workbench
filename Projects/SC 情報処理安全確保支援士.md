@@ -1,9 +1,5 @@
 ---
-tags:
-  - task
 title: 情報処理安全確保支援士（SC）
-status: doing
-priority: medium
 ---
 
 # 情報処理安全確保支援士（SC）

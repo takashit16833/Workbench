@@ -54,4 +54,4 @@ DashboardにはToday / Tasksを表示します。Reading viewでは **c** でCal
 Clear系は`Notes/`を変更せず、対象をTrashへ移動します。
 HolidayはCalendarに表示し、通常のTask一覧とStatisticsからは除外します。
 
-Projectの階層は **Workbench: Set Parent Project** で設定します。DashboardのProjects欄では矢印で開閉し、名前を押すとProjectを開きます。Taskの所属先は従来どおりTaskNotesで設定します。
+Project は TaskNotes の Task 作成ではなく、`Projects/` に通常の Markdown として作ります。親子関係は **Workbench: Set Parent Project** で設定します（`projects` ではなく `parent` を使用）。Dashboard の Projects 欄では矢印で開閉し、名前を押すと Project を開きます。Task の所属先は従来どおり TaskNotes で設定します。

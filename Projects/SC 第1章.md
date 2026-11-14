@@ -1,11 +1,6 @@
 ---
-tags:
-  - task
 title: "第1章：What Is Cybersecurity?"
-status: doing
-priority: medium
-projects:
-  - "[[Projects/SC 情報処理安全確保支援士]]"
+parent: "[[Projects/SC 情報処理安全確保支援士]]"
 ---
 
 # 第1章：What Is Cybersecurity?
