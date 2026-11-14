@@ -37,7 +37,7 @@
   "app:toggle-left-sidebar": [
     {
       "modifiers": [
-        "Alt"
+        "Mod"
       ],
       "key": "B"
     }
@@ -45,7 +45,7 @@
   "editor:toggle-bold": [
     {
       "modifiers": [
-        "Mod"
+        "Ctrl"
       ],
       "key": "B"
     }
@@ -113,18 +113,18 @@
     {
       "modifiers": [
         "Ctrl",
-        "Shift"
+        "Mod"
       ],
-      "key": "PageUp"
+      "key": "ArrowLeft"
     }
   ],
   "tab-shifter:move-tab-next": [
     {
       "modifiers": [
         "Ctrl",
-        "Shift"
+        "Mod"
       ],
-      "key": "PageDown"
+      "key": "ArrowRight"
     }
   ]
 }

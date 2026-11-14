@@ -1,5 +1,8 @@
 ---
 title: 情報処理安全確保支援士（SC）
+status: todo
+priority: medium
+dateModified: 2026-11-14T09:03:53.940+09:00
 ---
 
 # 情報処理安全確保支援士（SC）
